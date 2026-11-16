@@ -1,0 +1,2429 @@
+{
+ "toc": [
+  {
+   "title": "Welcome!",
+   "local": "welcome.htm"
+  },
+  {
+   "title": "PDF Annotator Manual",
+   "local": "index.htm"
+  },
+  {
+   "title": "Managing PDF Files",
+   "local": "fileschapter.htm"
+  },
+  {
+   "title": "Opening Documents",
+   "local": "filesopen.htm"
+  },
+  {
+   "title": "Saving Documents",
+   "local": "filessave.htm"
+  },
+  {
+   "title": "Creating New Documents",
+   "local": "filesnew.htm"
+  },
+  {
+   "title": "Working with Templates",
+   "local": "filestemplates.htm"
+  },
+  {
+   "title": "Opening Image Files and Convert to PDF",
+   "local": "filesopenimages.htm"
+  },
+  {
+   "title": "Creating PDF Documents from Other Applications",
+   "local": "pdfprinter.htm"
+  },
+  {
+   "title": "Combining Files",
+   "local": "filescombine.htm"
+  },
+  {
+   "title": "Working with Multiple Documents",
+   "local": "filesmultidoc.htm"
+  },
+  {
+   "title": "Presenting PDF",
+   "local": "presentations.htm"
+  },
+  {
+   "title": "Printing",
+   "local": "filesprint.htm"
+  },
+  {
+   "title": "Creating Digital Copies",
+   "local": "filesdigitalcopy.htm"
+  },
+  {
+   "title": "Document Properties and Security Settings",
+   "local": "filesproperties.htm"
+  },
+  {
+   "title": "Password Protecting PDF Documents",
+   "local": "filespassword.htm"
+  },
+  {
+   "title": "Managing Backups",
+   "local": "filesbackup.htm"
+  },
+  {
+   "title": "PDF Annotator as Default PDF Application",
+   "local": "filesdefaultapp.htm"
+  },
+  {
+   "title": "Reading Annotated Documents in Other Applications",
+   "local": "filesopenwith.htm"
+  },
+  {
+   "title": "Editing and Commenting Documents",
+   "local": "toolschapter.htm"
+  },
+  {
+   "title": "Pen and Marker",
+   "local": "toolspenmarker.htm"
+  },
+  {
+   "title": "Text Annotations",
+   "local": "toolstext.htm"
+  },
+  {
+   "title": "Links",
+   "local": "toolslinks.htm"
+  },
+  {
+   "title": "Lines and Arrows",
+   "local": "toolslinearrow.htm"
+  },
+  {
+   "title": "Rectangles and Ellipses",
+   "local": "toolsrectangleellipse.htm"
+  },
+  {
+   "title": "Polygons",
+   "local": "toolspolygon.htm"
+  },
+  {
+   "title": "Stamps",
+   "local": "toolsstamps.htm"
+  },
+  {
+   "title": "Erasing and Deleting",
+   "local": "toolserasedelete.htm"
+  },
+  {
+   "title": "Selecting and Editing Annotations",
+   "local": "toolsselectedit.htm"
+  },
+  {
+   "title": "Group and Lock Annotations",
+   "local": "toolsgrouplock.htm"
+  },
+  {
+   "title": "Taking Snapshots",
+   "local": "toolssnapshot.htm"
+  },
+  {
+   "title": "Working with Selected Text",
+   "local": "toolsextracttext.htm"
+  },
+  {
+   "title": "Measuring and Dimensioning",
+   "local": "toolsmeasure.htm"
+  },
+  {
+   "title": "Capturing Photos from a Camera",
+   "local": "toolscapturecamera.htm"
+  },
+  {
+   "title": "Inserting Images",
+   "local": "toolsinsertimage.htm"
+  },
+  {
+   "title": "Editing Images",
+   "local": "toolsimageeditor.htm"
+  },
+  {
+   "title": "Inserting Formulas",
+   "local": "toolsformula.htm"
+  },
+  {
+   "title": "Toolbox and Favorites",
+   "local": "toolstoolbox.htm"
+  },
+  {
+   "title": "The Tool Switch",
+   "local": "toolswitch.htm"
+  },
+  {
+   "title": "Melting Annotations",
+   "local": "annmelt.htm"
+  },
+  {
+   "title": "Annotations Sidebar",
+   "local": "annsidebar.htm"
+  },
+  {
+   "title": "Printing Lists of all Annotations",
+   "local": "annlistprint.htm"
+  },
+  {
+   "title": "Exporting and Importing Annotations",
+   "local": "annexportimport.htm"
+  },
+  {
+   "title": "Annotating PDF Forms",
+   "local": "annforms.htm"
+  },
+  {
+   "title": "Navigating in Documents",
+   "local": "navchapter.htm"
+  },
+  {
+   "title": "Pan Tool",
+   "local": "navhand.htm"
+  },
+  {
+   "title": "Page Navigation",
+   "local": "navpages.htm"
+  },
+  {
+   "title": "Text Search",
+   "local": "navsearch.htm"
+  },
+  {
+   "title": "Viewing Documents",
+   "local": "viewchapter.htm"
+  },
+  {
+   "title": "Page Layout",
+   "local": "viewmodes.htm"
+  },
+  {
+   "title": "Zoom",
+   "local": "viewzoom.htm"
+  },
+  {
+   "title": "Full Screen Mode",
+   "local": "viewfullscreen.htm"
+  },
+  {
+   "title": "Hiding Annotations",
+   "local": "annhide.htm"
+  },
+  {
+   "title": "Show Auxiliary Lines",
+   "local": "viewauxlines.htm"
+  },
+  {
+   "title": "Page Management",
+   "local": "pageschapter.htm"
+  },
+  {
+   "title": "The Sidebar",
+   "local": "windowsidebar.htm"
+  },
+  {
+   "title": "The Page Preview",
+   "local": "pagesthumbs.htm"
+  },
+  {
+   "title": "Selecting Pages",
+   "local": "pagesselect.htm"
+  },
+  {
+   "title": "Adding and Deleting Pages",
+   "local": "pagesadddelete.htm"
+  },
+  {
+   "title": "Copy and Paste Pages",
+   "local": "pagescopypaste.htm"
+  },
+  {
+   "title": "Extracting Pages",
+   "local": "pagesextract.htm"
+  },
+  {
+   "title": "Inserting Documents",
+   "local": "docadddelete.htm"
+  },
+  {
+   "title": "Moving Pages",
+   "local": "pagesmove.htm"
+  },
+  {
+   "title": "Rotating Pages",
+   "local": "pagesrotate.htm"
+  },
+  {
+   "title": "Adding Page Margins",
+   "local": "pagesaddmargins.htm"
+  },
+  {
+   "title": "Cropping Pages",
+   "local": "pagescrop.htm"
+  },
+  {
+   "title": "Adding Page Headers &amp; Footers",
+   "local": "pagesaddheaders.htm"
+  },
+  {
+   "title": "Adding Watermarks",
+   "local": "pagesaddwatermarks.htm"
+  },
+  {
+   "title": "Adding Page Numbers",
+   "local": "pagesaddnumbers.htm"
+  },
+  {
+   "title": "Bookmarks",
+   "local": "bookmarkschapter.htm"
+  },
+  {
+   "title": "Jumping to Bookmarks",
+   "local": "bookmarksgoto.htm"
+  },
+  {
+   "title": "Creating and Modifying Bookmarks",
+   "local": "bookmarksaddedit.htm"
+  },
+  {
+   "title": "Attachments and Portfolios",
+   "local": "attachmentschapter.htm"
+  },
+  {
+   "title": "Attachments",
+   "local": "attachments.htm"
+  },
+  {
+   "title": "Portfolios",
+   "local": "portfolios.htm"
+  },
+  {
+   "title": "Settings",
+   "local": "settings.htm"
+  },
+  {
+   "title": "Application",
+   "local": "optskin.htm"
+  },
+  {
+   "title": "Document Tabs",
+   "local": "optdocumenttabs.htm"
+  },
+  {
+   "title": "Toolbars",
+   "local": "opttoolbars.htm"
+  },
+  {
+   "title": "Sidebar",
+   "local": "optsidebar.htm"
+  },
+  {
+   "title": "Tool Switch",
+   "local": "opttoolswitch.htm"
+  },
+  {
+   "title": "Full Screen",
+   "local": "optfullscreen.htm"
+  },
+  {
+   "title": "Scrolling",
+   "local": "optscrolling.htm"
+  },
+  {
+   "title": "PDF Comments",
+   "local": "optannots.htm"
+  },
+  {
+   "title": "Cursor",
+   "local": "optcursor.htm"
+  },
+  {
+   "title": "Text",
+   "local": "opttext.htm"
+  },
+  {
+   "title": "Extract Text",
+   "local": "optextract.htm"
+  },
+  {
+   "title": "Measure",
+   "local": "optmeasure.htm"
+  },
+  {
+   "title": "Properties",
+   "local": "opttoolproperties.htm"
+  },
+  {
+   "title": "Gestures",
+   "local": "optgestures.htm"
+  },
+  {
+   "title": "Search",
+   "local": "optsearch.htm"
+  },
+  {
+   "title": "Performance",
+   "local": "optperformance.htm"
+  },
+  {
+   "title": "Backup",
+   "local": "optbackup.htm"
+  },
+  {
+   "title": "Recent Files",
+   "local": "optrecentfiles.htm"
+  },
+  {
+   "title": "Persistence",
+   "local": "optpersistmode.htm"
+  },
+  {
+   "title": "Quality",
+   "local": "optsavequality.htm"
+  },
+  {
+   "title": "Open with...",
+   "local": "optopenwith.htm"
+  },
+  {
+   "title": "Explorer",
+   "local": "optexplorer.htm"
+  },
+  {
+   "title": "Quick Start",
+   "local": "optquickstart.htm"
+  },
+  {
+   "title": "Units",
+   "local": "optmeasures.htm"
+  },
+  {
+   "title": "Shortcuts",
+   "local": "optshortcuts.htm"
+  },
+  {
+   "title": "Language",
+   "local": "optlanguage.htm"
+  },
+  {
+   "title": "Update Wizard",
+   "local": "updatewizard.htm"
+  },
+  {
+   "title": "Logging",
+   "local": "optlogging.htm"
+  },
+  {
+   "title": "Export/Import",
+   "local": "opteximport.htm"
+  },
+  {
+   "title": "Reset",
+   "local": "optreset.htm"
+  },
+  {
+   "title": "Shut Down",
+   "local": "optshutdown.htm"
+  },
+  {
+   "title": "Customizing PDF Annotator",
+   "local": "customize.htm"
+  },
+  {
+   "title": "Configuring Toolbars",
+   "local": "customizetoolbars.htm"
+  },
+  {
+   "title": "Keyboard Shortcuts",
+   "local": "keyboardshortcuts.htm"
+  },
+  {
+   "title": "Command Line Arguments",
+   "local": "cmdlineargs.htm"
+  },
+  {
+   "title": "System Requirements",
+   "local": "systemrequirements.htm"
+  },
+  {
+   "title": "Limitations",
+   "local": "limitationsknownproblems.htm"
+  },
+  {
+   "title": "BUY / ORDER",
+   "local": "regbuy.htm"
+  },
+  {
+   "title": "FAQ - Frequent Questions",
+   "local": "faq.htm"
+  },
+  {
+   "title": "More Resources...",
+   "local": "resources.htm"
+  },
+  {
+   "title": "Product Support",
+   "local": "infosupport.htm"
+  },
+  {
+   "title": "Terms of Use",
+   "local": "infodisclaimer.htm"
+  },
+  {
+   "title": "Contact",
+   "local": "infocontact.htm"
+  }
+ ],
+ "index_keywords": [
+  ".BAK backup",
+  ".ORG backup",
+  ".pdf association",
+  "Accent Color",
+  "Add Bookmark",
+  "Add Document",
+  "Add Margins",
+  "Add Page",
+  "Add Page Numbers",
+  "Address",
+  "Align",
+  "Anchors",
+  "Angle",
+  "Annotations (Sidebar)",
+  "Append Document",
+  "Append Page",
+  "Area",
+  "Arrow",
+  "Arrow Tail Style",
+  "Arrowhead Style",
+  "association (.pdf files)",
+  "Attachments",
+  "Author",
+  "Auto Fit",
+  "automatic backups",
+  "AutoRecover",
+  "Auto-Smooth",
+  "Auto-Snap",
+  "Auxiliary lines",
+  "Background templates",
+  "Backup",
+  "Backups",
+  "Black Out (images)",
+  "Black Screen",
+  "Bookmarks",
+  "Buy",
+  "Camera",
+  "Capture",
+  "Circle",
+  "Clipboard",
+  "Clone Page",
+  "Color",
+  "Color Mode",
+  "Colorblind",
+  "Combine",
+  "Command Line Arguments",
+  "Commands",
+  "Commenting",
+  "Compact View",
+  "Configure Toolbars",
+  "Contact",
+  "Context Menu",
+  "context menu (in Windows Explorer)",
+  "Continuous",
+  "Copy",
+  "Copy Pages",
+  "Copyright",
+  "Create Bookmark",
+  "Crop (images)",
+  "Crop Pages",
+  "Current Version Number",
+  "Cursor",
+  "Customize",
+  "Cut Pages",
+  "Dark Mode",
+  "default application",
+  "Delete",
+  "Delete Bookmark",
+  "Delete Page",
+  "Dialogs",
+  "Digital Copy",
+  "Dimension",
+  "Distance",
+  "Document Properties",
+  "Document Tabs",
+  "DPI",
+  "duplex print",
+  "Duplicate (annotations)",
+  "Duplicate (stamp)",
+  "Duplicate Page",
+  "Edit Images",
+  "Edit properties (annotations)",
+  "Edit style (annotations)",
+  "Editing",
+  "Ellipse",
+  "Erase",
+  "Eraser",
+  "Error Log",
+  "Explorer",
+  "Export (Annotations)",
+  "Export (Settings)",
+  "Export (Stamps)",
+  "Export (Tools)",
+  "external graphic tablets",
+  "Extract Page",
+  "Extract Text",
+  "Extract Text Commands",
+  "Factory Reset",
+  "FAQ",
+  "Favorites",
+  "File Properties",
+  "Files",
+  "Fill Color",
+  "Filter (Annotations)",
+  "find text",
+  "Fit to Content",
+  "Fit to Size",
+  "Fit to Width",
+  "flatten lines",
+  "Flip",
+  "Flip (images)",
+  "Font",
+  "Font Color",
+  "Font Size",
+  "Footers",
+  "form fields",
+  "Forms",
+  "Formula",
+  "Frame",
+  "Frequently Asked Questions",
+  "Full Screen",
+  "Full Screen (in Window) Mode",
+  "Full Screen Mode",
+  "Gestures",
+  "graphic tablets",
+  "Group (annotations)",
+  "Group (Tools)",
+  "hand tool",
+  "Headers",
+  "Hide Annotations",
+  "Highlight",
+  "Highlight All (search results)",
+  "Highlight text",
+  "Hotkeys",
+  "image (create stamp from)",
+  "Image (insert)",
+  "Image Editor",
+  "Image Quality",
+  "Images, convert",
+  "Images, open",
+  "Import (Annotations)",
+  "Import (Settings)",
+  "Import (Stamps)",
+  "Import (Tools)",
+  "Impressum",
+  "inch",
+  "Insert Document",
+  "Insert Image",
+  "Insert Page",
+  "Install Updates",
+  "Jump (to bookmark)",
+  "jump (to pages)",
+  "Keyboard Shortcuts",
+  "Keywords",
+  "Known Problems",
+  "Language",
+  "Laser pointer",
+  "Lasso",
+  "LaTeX",
+  "layer",
+  "Layout",
+  "Left handed",
+  "Limitations",
+  "Line",
+  "Line Style",
+  "Line Width",
+  "Lines (page style)",
+  "Links",
+  "List (Print annotations)",
+  "Lock (annotations)",
+  "Log Files",
+  "Logging",
+  "Margins",
+  "Marker",
+  "markup",
+  "Match Case",
+  "Math",
+  "Measure",
+  "Measures",
+  "melt annotations",
+  "Merge",
+  "merge annotations",
+  "Merge Documents",
+  "Mirror",
+  "mm",
+  "Move Bookmark",
+  "Move Pages",
+  "move selection",
+  "MRU",
+  "Muiltiple Documents",
+  "Navigation",
+  "New Document",
+  "Numbering",
+  "Obfuscate (images)",
+  "On Screen Keyboard",
+  "One Page",
+  "Open",
+  "Open with",
+  "Order",
+  "overwrite original document",
+  "Page History",
+  "Page Management",
+  "Page Navigation",
+  "Page Numbers",
+  "Page Preview",
+  "Pan",
+  "Pan Gesture",
+  "Parameters",
+  "Password",
+  "Paste",
+  "Paste Pages",
+  "Paste Without Formatting",
+  "Payment Methods",
+  "PDF",
+  "PDF Comments (3rd party)",
+  "PDF Files",
+  "PDF Portfolios",
+  "PDF Printer",
+  "PDF Properties",
+  "PDF Version",
+  "Pen",
+  "Pen Width",
+  "Performance",
+  "Perimeter",
+  "Persistence Mode",
+  "Photos",
+  "Pinch to Zoom Gesture",
+  "Pixelize (images)",
+  "Planned Features",
+  "Polygon",
+  "Portable Document Format (PDF)",
+  "Portfolios",
+  "Power Saving",
+  "Preferences",
+  "Present PDF",
+  "Press and Hold Gesture",
+  "pressure sensitivity",
+  "Preview Size",
+  "Price",
+  "Print",
+  "Print Annotation Lists",
+  "Print to PDF Annotator",
+  "printing problems",
+  "Product Support",
+  "Properties",
+  "Purchase",
+  "Quality",
+  "Quick Start",
+  "Recent Files",
+  "Rectangle",
+  "Register",
+  "Remove All Annotations",
+  "Rename Bookmark",
+  "Requirements",
+  "Reset",
+  "resize selection",
+  "resolution",
+  "Resolution (Snapshot)",
+  "Restrictions",
+  "Rotate",
+  "Rotate (images)",
+  "Rotate Pages",
+  "Save",
+  "Scale",
+  "Scratchout Gesture",
+  "Scroll bar",
+  "Scrolling",
+  "Search",
+  "Security",
+  "Select (annotations)",
+  "Select (pages)",
+  "Selections (save as stamp)",
+  "Send Mail",
+  "Separate Tool Properties",
+  "Settings",
+  "Shortcuts",
+  "Shut down",
+  "Sidebar",
+  "Sidebar (Annotations)",
+  "Smooth",
+  "Snap",
+  "Snapshot",
+  "Square",
+  "Squares (page style)",
+  "Stamps",
+  "Stamps (Export)",
+  "Stamps (Import)",
+  "Stationary",
+  "straight lines",
+  "Strikeout",
+  "Strikeout text",
+  "Style",
+  "Synchronous Tool Properties",
+  "System Requirements",
+  "Templates",
+  "Terms of Use",
+  "Text",
+  "Text Alignment",
+  "Text Annotations",
+  "Text Extraction",
+  "Text Styles",
+  "thumbnails",
+  "Tip",
+  "Tip Style",
+  "Title",
+  "Tool Properties, separate",
+  "Tool Properties, synchronous",
+  "Tool Switch",
+  "Toolbar (in Full Screen Mode)",
+  "Toolbars",
+  "Toolbox",
+  "Tools",
+  "Tools (Export)",
+  "Tools (Import)",
+  "Trademarks",
+  "Translate",
+  "Transparent Image",
+  "Two Pages",
+  "Underline",
+  "Underline text",
+  "Ungroup (annotations)",
+  "Units",
+  "Unlock (annotations)",
+  "Update Wizard",
+  "URL links",
+  "View",
+  "Virtual Printer",
+  "Watermarks",
+  "Webcam",
+  "Whole Page",
+  "Whole Strokes (delete)",
+  "Windows",
+  "Zoom"
+ ],
+ "topics": [
+  {
+   "file": "annexportimport.htm",
+   "title": "Exporting and Importing Annotations",
+   "h1": [
+    "Anmerkungen exportieren und importieren"
+   ],
+   "h2": [
+    "Exporting all Annotations",
+    "Exporting a Selection of Annotations",
+    "Importing Annotations"
+   ],
+   "h3": [],
+   "words": 132
+  },
+  {
+   "file": "annforms.htm",
+   "title": "Annotating PDF Forms",
+   "h1": [
+    "Annotating PDF Forms"
+   ],
+   "h2": [
+    "Remove form fields",
+    "Preserve form fields"
+   ],
+   "h3": [],
+   "words": 427
+  },
+  {
+   "file": "annhide.htm",
+   "title": "Hiding Annotations",
+   "h1": [
+    "Hiding Annotations"
+   ],
+   "h2": [
+    "Hiding Annotations"
+   ],
+   "h3": [],
+   "words": 65
+  },
+  {
+   "file": "annlistprint.htm",
+   "title": "Printing Lists of all Annotations",
+   "h1": [
+    "Printing Lists of all Annotations"
+   ],
+   "h2": [
+    "Printing Lists of all Annotations with Previews",
+    "Printing Lists of all Page Numbers of Pages with Annotations"
+   ],
+   "h3": [],
+   "words": 138
+  },
+  {
+   "file": "annmelt.htm",
+   "title": "Melting Annotations",
+   "h1": [
+    "Melting Annotations"
+   ],
+   "h2": [
+    "Melting Annotations",
+    "Persistence Mode"
+   ],
+   "h3": [],
+   "words": 233
+  },
+  {
+   "file": "annsidebar.htm",
+   "title": "Annotations Sidebar",
+   "h1": [
+    "Annotations Sidebar"
+   ],
+   "h2": [
+    "Opening the Annotations Sidebar",
+    "Selecting Annotations and Jumping to Annotations",
+    "Editing Annotations",
+    "Filter"
+   ],
+   "h3": [],
+   "words": 363
+  },
+  {
+   "file": "attachments.htm",
+   "title": "Attachments",
+   "h1": [
+    "Attachments"
+   ],
+   "h2": [
+    "Viewing Attachments",
+    "Opening Attachments",
+    "Saving Attachments",
+    "Deleting Attachments"
+   ],
+   "h3": [],
+   "words": 417
+  },
+  {
+   "file": "attachmentschapter.htm",
+   "title": "Attachments and Portfolios",
+   "h1": [
+    "Attachments and Portfolios"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 37
+  },
+  {
+   "file": "bookmarksaddedit.htm",
+   "title": "Creating and Modifying Bookmarks",
+   "h1": [
+    "Creating and Modifying Bookmarks"
+   ],
+   "h2": [
+    "Creating Bookmarks",
+    "Deleting Bookmarks",
+    "Renaming Bookmarks",
+    "Renaming Bookmarks"
+   ],
+   "h3": [],
+   "words": 211
+  },
+  {
+   "file": "bookmarkschapter.htm",
+   "title": "Bookmarks",
+   "h1": [
+    "Bookmarks"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 35
+  },
+  {
+   "file": "bookmarksgoto.htm",
+   "title": "Jumping to Bookmarks",
+   "h1": [
+    "Jumping to Bookmarks"
+   ],
+   "h2": [
+    "Viewing Bookmarks",
+    "Jumping to Bookmarks"
+   ],
+   "h3": [],
+   "words": 116
+  },
+  {
+   "file": "cmdlineargs.htm",
+   "title": "Command Line Arguments",
+   "h1": [
+    "Command Line Arguments"
+   ],
+   "h2": [
+    "Syntax",
+    "The argument: &lt;File&gt;",
+    "The argument: /print",
+    "The argument /new:&quot;&lt;format&gt;[ Landscape]&quot;"
+   ],
+   "h3": [],
+   "words": 181
+  },
+  {
+   "file": "customize.htm",
+   "title": "Customizing PDF Annotator",
+   "h1": [
+    "Customizing PDF Annotator"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 54
+  },
+  {
+   "file": "customizetoolbars.htm",
+   "title": "Configuring Toolbars",
+   "h1": [
+    "Configuring Toolbars"
+   ],
+   "h2": [
+    "Customizing the display of toolbars",
+    "(Un-)locking Toolbars",
+    "Resetting Toolbars",
+    "Customizing Toolbars"
+   ],
+   "h3": [],
+   "words": 225
+  },
+  {
+   "file": "docadddelete.htm",
+   "title": "Inserting Documents",
+   "h1": [
+    "Inserting Documents"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 193
+  },
+  {
+   "file": "faq.htm",
+   "title": "FAQ - Frequent Questions",
+   "h1": [
+    "FAQ - Frequently Asked Questions"
+   ],
+   "h2": [
+    "These are the current answers to some frequently asked questions"
+   ],
+   "h3": [],
+   "words": 42
+  },
+  {
+   "file": "filesbackup.htm",
+   "title": "Managing Backups",
+   "h1": [
+    "Backups"
+   ],
+   "h2": [
+    "Warning Message When Overwriting the Original Document",
+    "Automatic Backups",
+    "AutoRecover Backups"
+   ],
+   "h3": [],
+   "words": 427
+  },
+  {
+   "file": "fileschapter.htm",
+   "title": "Managing PDF Files",
+   "h1": [
+    "Managing PDF Files"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 98
+  },
+  {
+   "file": "filescombine.htm",
+   "title": "Combining Files",
+   "h1": [
+    "Combining Files"
+   ],
+   "h2": [
+    "Combining Files"
+   ],
+   "h3": [],
+   "words": 107
+  },
+  {
+   "file": "filesdefaultapp.htm",
+   "title": "PDF Annotator as Default PDF Application",
+   "h1": [
+    "PDF Annotator as the Default PDF Application"
+   ],
+   "h2": [
+    "Default PDF Application"
+   ],
+   "h3": [],
+   "words": 124
+  },
+  {
+   "file": "filesdigitalcopy.htm",
+   "title": "Creating Digital Copies",
+   "h1": [
+    "Creating Digital Copies"
+   ],
+   "h2": [
+    "What is a &quot;Digital Copy&quot; and what can I use this for?",
+    "How does a Digital Copy differ from the original?",
+    "Creating a Digital Copy of a PDF Document"
+   ],
+   "h3": [],
+   "words": 340
+  },
+  {
+   "file": "filesmultidoc.htm",
+   "title": "Working with Multiple Documents",
+   "h1": [
+    "Working with Multiple Documents"
+   ],
+   "h2": [
+    "Document Tabs",
+    "Display Options for Document Tabs",
+    "Reopening Document Tabs from Previous Session",
+    "Working with Multiple Documents Side by Side"
+   ],
+   "h3": [],
+   "words": 396
+  },
+  {
+   "file": "filesnew.htm",
+   "title": "Creating New Documents",
+   "h1": [
+    "Creating New Documents"
+   ],
+   "h2": [
+    "Creating New Documents"
+   ],
+   "h3": [],
+   "words": 221
+  },
+  {
+   "file": "filesopen.htm",
+   "title": "Opening Documents",
+   "h1": [
+    "Opening Documents"
+   ],
+   "h2": [
+    "Opening PDF Documents",
+    "Creating Digital Copies of Restricted Documents",
+    "Default PDF Application",
+    "Windows Explorer Context Menu"
+   ],
+   "h3": [],
+   "words": 436
+  },
+  {
+   "file": "filesopenimages.htm",
+   "title": "Opening Image Files and Convert to PDF",
+   "h1": [
+    "Opening Image Files and Convert to PDF"
+   ],
+   "h2": [
+    "Opening Image Files and Converting to PDF"
+   ],
+   "h3": [],
+   "words": 175
+  },
+  {
+   "file": "filesopenwith.htm",
+   "title": "Reading Annotated Documents in Other Applications",
+   "h1": [
+    "Reading Annotated Documents in Other Applications"
+   ],
+   "h2": [
+    "Opening Documents Edited with PDF Annotator in Other Applications",
+    "Hiding Annotations in Other PDF Applications",
+    "Sending PDF Documents by Email"
+   ],
+   "h3": [],
+   "words": 259
+  },
+  {
+   "file": "filespassword.htm",
+   "title": "Password Protecting PDF Documents",
+   "h1": [
+    "Password Protecting PDF Documents"
+   ],
+   "h2": [
+    "Accessing Security Settings",
+    "Setting a Password Required to Open a Document",
+    "Restrict Editing and Printing a Document",
+    "Choosing a Security Level",
+    "Removing Password and Restrictions from a Document"
+   ],
+   "h3": [],
+   "words": 777
+  },
+  {
+   "file": "filesprint.htm",
+   "title": "Printing",
+   "h1": [
+    "Printing"
+   ],
+   "h2": [
+    "Printing Entire Documents",
+    "Printing Page Ranges (from/to)",
+    "Printing Individual Pages",
+    "Printing the Current View"
+   ],
+   "h3": [],
+   "words": 526
+  },
+  {
+   "file": "filesproperties.htm",
+   "title": "Document Properties and Security Settings",
+   "h1": [
+    "Document Properties and Security Settings"
+   ],
+   "h2": [
+    "Accessing Document Properties",
+    "Accessing Security Settings"
+   ],
+   "h3": [],
+   "words": 224
+  },
+  {
+   "file": "filessave.htm",
+   "title": "Saving Documents",
+   "h1": [
+    "Saving Documents"
+   ],
+   "h2": [
+    "Saving Edited Documents"
+   ],
+   "h3": [],
+   "words": 190
+  },
+  {
+   "file": "filestemplates.htm",
+   "title": "Working with Templates",
+   "h1": [
+    "Working with Templates"
+   ],
+   "h2": [
+    "Creating Templates",
+    "Creating New Documents Based on Templates",
+    "Background Templates using Print to PDF Annotator",
+    "Adding Pages",
+    "Managing Templates"
+   ],
+   "h3": [],
+   "words": 292
+  },
+  {
+   "file": "index.htm",
+   "title": "PDF Annotator Manual",
+   "h1": [
+    "PDF Annotator Manual"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 60
+  },
+  {
+   "file": "infocontact.htm",
+   "title": "Contact",
+   "h1": [
+    "Contact"
+   ],
+   "h2": [
+    "Publisher"
+   ],
+   "h3": [],
+   "words": 69
+  },
+  {
+   "file": "infodisclaimer.htm",
+   "title": "Terms of Use",
+   "h1": [
+    "Terms of Use"
+   ],
+   "h2": [
+    "Copyright &copy; 2004-2026 by GRAHL software design",
+    "Use",
+    "Trademarks"
+   ],
+   "h3": [],
+   "words": 260
+  },
+  {
+   "file": "infosupport.htm",
+   "title": "Product Support",
+   "h1": [
+    "Product Support"
+   ],
+   "h2": [
+    "How to Obtain Product Support",
+    "You can find our PDF Annotator Support page at",
+    "How to Find the Current Version Number"
+   ],
+   "h3": [],
+   "words": 185
+  },
+  {
+   "file": "keyboardshortcuts.htm",
+   "title": "Keyboard Shortcuts",
+   "h1": [
+    "Keyboard Shortcuts"
+   ],
+   "h2": [
+    "File",
+    "Edit",
+    "Edit: Text",
+    "Tool",
+    "View",
+    "Extras",
+    "Help",
+    "Full Screen Mode"
+   ],
+   "h3": [],
+   "words": 367
+  },
+  {
+   "file": "limitationsknownproblems.htm",
+   "title": "Limitations",
+   "h1": [
+    "Limitations"
+   ],
+   "h2": [
+    "General Observations",
+    "Limitations",
+    "Known Problems",
+    "Planned Features"
+   ],
+   "h3": [],
+   "words": 284
+  },
+  {
+   "file": "navchapter.htm",
+   "title": "Navigating in Documents",
+   "h1": [
+    "Navigating in Documents"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 42
+  },
+  {
+   "file": "navhand.htm",
+   "title": "Pan Tool",
+   "h1": [
+    "Pan Tool"
+   ],
+   "h2": [
+    "Moving the Visible Area"
+   ],
+   "h3": [],
+   "words": 129
+  },
+  {
+   "file": "navpages.htm",
+   "title": "Page Navigation",
+   "h1": [
+    "Page Navigation"
+   ],
+   "h2": [
+    "Jumping to a Specific Page",
+    "Jumping to Pages with Annotations",
+    "Page History",
+    "Links and Anchors in PDF Documents",
+    "Bookmarks"
+   ],
+   "h3": [],
+   "words": 367
+  },
+  {
+   "file": "navsearch.htm",
+   "title": "Text Search",
+   "h1": [
+    "Text Search"
+   ],
+   "h2": [
+    "Finding Text",
+    "Highlight Search Results",
+    "Underline or Strike Out Search Results",
+    "Disabling Automatic Search Start"
+   ],
+   "h3": [],
+   "words": 375
+  },
+  {
+   "file": "optannots.htm",
+   "title": "Settings: Display, PDF Comments",
+   "h1": [
+    "PDF Comments"
+   ],
+   "h2": [
+    "Show or Hide PDF Comments"
+   ],
+   "h3": [],
+   "words": 91
+  },
+  {
+   "file": "optbackup.htm",
+   "title": "Settings: Save, Backup",
+   "h1": [
+    "Backups"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 32
+  },
+  {
+   "file": "optcursor.htm",
+   "title": "Settings: Tools, Cursor",
+   "h1": [
+    "Cursor"
+   ],
+   "h2": [
+    "Using the Mouse Pointer Instead of the Pen or Marker Tip"
+   ],
+   "h3": [],
+   "words": 96
+  },
+  {
+   "file": "optdocumenttabs.htm",
+   "title": "Settings: Display, Document Tabs",
+   "h1": [
+    "Document Tabs"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 42
+  },
+  {
+   "file": "opteximport.htm",
+   "title": "Settings: Maintenance, Export/Import",
+   "h1": [
+    "Export/Import"
+   ],
+   "h2": [
+    "Exporting Your Settings",
+    "Importing Your Settings",
+    "Sending Your Settings to Support"
+   ],
+   "h3": [],
+   "words": 208
+  },
+  {
+   "file": "optexplorer.htm",
+   "title": "Settings: Integration, Explorer",
+   "h1": [
+    "Explorer"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 41
+  },
+  {
+   "file": "optextract.htm",
+   "title": "Settings: Tools, Extract Text",
+   "h1": [
+    "Extract Text"
+   ],
+   "h2": [
+    "Extract Text Commands",
+    "Managing Commands",
+    "Examples and Syntax",
+    "Show commands menu immediately"
+   ],
+   "h3": [],
+   "words": 379
+  },
+  {
+   "file": "optfullscreen.htm",
+   "title": "Settings: Display, Full Screen",
+   "h1": [
+    "Full Screen"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 37
+  },
+  {
+   "file": "optgestures.htm",
+   "title": "Settings: Tools, Gestures",
+   "h1": [
+    "Gestures"
+   ],
+   "h2": [
+    "Disable the Pan Gesture",
+    "Disable the Pinch To Zoom Gesture",
+    "Disable the Press and Hold Gesture",
+    "Disable the Scratchout Gesture"
+   ],
+   "h3": [],
+   "words": 169
+  },
+  {
+   "file": "optlanguage.htm",
+   "title": "Settings: Preferences, Language",
+   "h1": [
+    "Language"
+   ],
+   "h2": [
+    "User Interface Language"
+   ],
+   "h3": [],
+   "words": 63
+  },
+  {
+   "file": "optlogging.htm",
+   "title": "Settings: Maintenance, Logging",
+   "h1": [
+    "Logging"
+   ],
+   "h2": [
+    "Help Tracking Down Software Problems",
+    "Sending Log Files"
+   ],
+   "h3": [],
+   "words": 168
+  },
+  {
+   "file": "optmeasure.htm",
+   "title": "Settings: Tools, Measure",
+   "h1": [
+    "Measure"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 31
+  },
+  {
+   "file": "optmeasures.htm",
+   "title": "Settings: Preferences, Units",
+   "h1": [
+    "Units"
+   ],
+   "h2": [
+    "Units of measurement"
+   ],
+   "h3": [],
+   "words": 91
+  },
+  {
+   "file": "optopenwith.htm",
+   "title": "Settings: Integration, Open with...",
+   "h1": [
+    "Open with..."
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 41
+  },
+  {
+   "file": "optperformance.htm",
+   "title": "Settings: Tools, Performance",
+   "h1": [
+    "Performance"
+   ],
+   "h2": [
+    "This will let you consume less power as you write"
+   ],
+   "h3": [],
+   "words": 110
+  },
+  {
+   "file": "optpersistmode.htm",
+   "title": "Settings: Save, Persistence",
+   "h1": [
+    "Persistence Mode"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 33
+  },
+  {
+   "file": "optquickstart.htm",
+   "title": "Settings: Preferences, Quick Start",
+   "h1": [
+    "Quick Start"
+   ],
+   "h2": [
+    "Quick Start"
+   ],
+   "h3": [],
+   "words": 207
+  },
+  {
+   "file": "optrecentfiles.htm",
+   "title": "Settings: Save, Recent Files",
+   "h1": [
+    "Recent Files"
+   ],
+   "h2": [
+    "Recently Opened Files",
+    "File History"
+   ],
+   "h3": [],
+   "words": 187
+  },
+  {
+   "file": "optreset.htm",
+   "title": "Settings: Maintenance, Reset",
+   "h1": [
+    "Reset"
+   ],
+   "h2": [
+    "Factory Reset",
+    "Reset dialog selections"
+   ],
+   "h3": [],
+   "words": 151
+  },
+  {
+   "file": "optsavequality.htm",
+   "title": "Settings: Save, Quality",
+   "h1": [
+    "Image Quality"
+   ],
+   "h2": [
+    "Changing Image Quality"
+   ],
+   "h3": [],
+   "words": 109
+  },
+  {
+   "file": "optscrolling.htm",
+   "title": "Settings: Display, Scrolling",
+   "h1": [
+    "Scrolling"
+   ],
+   "h2": [
+    "Disable Kinetic Scrolling",
+    "Maintain Page Section when Navigating Pages",
+    "Hide Scroll Bars"
+   ],
+   "h3": [],
+   "words": 202
+  },
+  {
+   "file": "optsearch.htm",
+   "title": "Settings: Tools, Search",
+   "h1": [
+    "Search"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 32
+  },
+  {
+   "file": "optshortcuts.htm",
+   "title": "Settings: Preferences, Shortcuts",
+   "h1": [
+    "Shortcuts"
+   ],
+   "h2": [
+    "Finding Commands and Existing Shortcuts",
+    "Editing a Shortcut",
+    "Restoring Default Shortcuts"
+   ],
+   "h3": [],
+   "words": 277
+  },
+  {
+   "file": "optshutdown.htm",
+   "title": "Settings: Maintenance, Shut Down",
+   "h1": [
+    "Shut Down"
+   ],
+   "h2": [
+    "Shut down PDF Annotator"
+   ],
+   "h3": [],
+   "words": 76
+  },
+  {
+   "file": "optsidebar.htm",
+   "title": "Settings: Display, Sidebar",
+   "h1": [
+    "Sidebar"
+   ],
+   "h2": [
+    "Hide Sidebar in Portrait Mode",
+    "Move Sidebar to the Right"
+   ],
+   "h3": [],
+   "words": 135
+  },
+  {
+   "file": "optskin.htm",
+   "title": "Settings: Display, Application",
+   "h1": [
+    "Application"
+   ],
+   "h2": [
+    "Select Color Mode",
+    "Select Accent Color"
+   ],
+   "h3": [],
+   "words": 152
+  },
+  {
+   "file": "opttext.htm",
+   "title": "Settings: Tools, Text",
+   "h1": [
+    "Text"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 34
+  },
+  {
+   "file": "opttoolbars.htm",
+   "title": "Settings: Display, Toolbars",
+   "h1": [
+    "Toolbars"
+   ],
+   "h2": [
+    "Menu and Main Toolbar in one or two rows",
+    "Hide Main Toolbar",
+    "Collapse Menu into Button",
+    "Limit Tools and Tool Properties Toolbars",
+    "Alternative Colors",
+    "Hide Status Bar"
+   ],
+   "h3": [],
+   "words": 346
+  },
+  {
+   "file": "opttoolproperties.htm",
+   "title": "Settings: Tools, Properties",
+   "h1": [
+    "Tool Properties"
+   ],
+   "h2": [
+    "Separate Properties for Each Tool",
+    "Synchronizing Tool Properties"
+   ],
+   "h3": [],
+   "words": 273
+  },
+  {
+   "file": "opttoolswitch.htm",
+   "title": "Settings: Display, Tool Switch",
+   "h1": [
+    "Tool Switch"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 37
+  },
+  {
+   "file": "pagesadddelete.htm",
+   "title": "Adding and Deleting Pages",
+   "h1": [
+    "Adding and Deleting Pages"
+   ],
+   "h2": [
+    "Adding Pages",
+    "Deleting Pages",
+    "Cloning Pages"
+   ],
+   "h3": [],
+   "words": 288
+  },
+  {
+   "file": "pagesaddheaders.htm",
+   "title": "Adding Page Headers &amp; Footers",
+   "h1": [
+    "Adding Page Headers &amp; Footers"
+   ],
+   "h2": [
+    "Adding Page Headers/Footers",
+    "Formatting Page Headers/Footers",
+    "Working with Page Ranges",
+    "Multiple Headers/Footers",
+    "Removing Headers/Footers",
+    "See also"
+   ],
+   "h3": [],
+   "words": 555
+  },
+  {
+   "file": "pagesaddmargins.htm",
+   "title": "Adding Page Margins",
+   "h1": [
+    "Adding Page Margins"
+   ],
+   "h2": [
+    "Adding Margins"
+   ],
+   "h3": [],
+   "words": 114
+  },
+  {
+   "file": "pagesaddnumbers.htm",
+   "title": "Adding Page Numbers",
+   "h1": [
+    "Adding Page Numbers"
+   ],
+   "h2": [
+    "Adding Page Numbers",
+    "Formatting Page Numbers",
+    "Working with Page Ranges",
+    "Removing Page Numbers",
+    "See also"
+   ],
+   "h3": [],
+   "words": 535
+  },
+  {
+   "file": "pagesaddwatermarks.htm",
+   "title": "Adding Watermarks",
+   "h1": [
+    "Adding Watermarks"
+   ],
+   "h2": [
+    "Adding Watermarks",
+    "Formatting Watermarks",
+    "Working with Page Ranges",
+    "Multiple Watermarks",
+    "Removing Watermarks",
+    "See also"
+   ],
+   "h3": [],
+   "words": 418
+  },
+  {
+   "file": "pageschapter.htm",
+   "title": "Page Management",
+   "h1": [
+    "Page Management"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 77
+  },
+  {
+   "file": "pagescopypaste.htm",
+   "title": "Copy and Paste Pages",
+   "h1": [
+    "Copy and Paste Pages"
+   ],
+   "h2": [
+    "Copying Pages"
+   ],
+   "h3": [],
+   "words": 187
+  },
+  {
+   "file": "pagescrop.htm",
+   "title": "Cropping Pages",
+   "h1": [
+    "Cropping Pages"
+   ],
+   "h2": [
+    "Cropping Pages",
+    "Freehand Cropping",
+    "See also"
+   ],
+   "h3": [],
+   "words": 154
+  },
+  {
+   "file": "pagesextract.htm",
+   "title": "Extracting Pages",
+   "h1": [
+    "Extracting Pages"
+   ],
+   "h2": [
+    "Extracting Pages"
+   ],
+   "h3": [],
+   "words": 107
+  },
+  {
+   "file": "pagesmove.htm",
+   "title": "Moving Pages",
+   "h1": [
+    "Moving Pages"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 118
+  },
+  {
+   "file": "pagesrotate.htm",
+   "title": "Rotating Pages",
+   "h1": [
+    "Rotating Pages"
+   ],
+   "h2": [
+    "Rotating Individual Pages",
+    "Rotating the Entire Document"
+   ],
+   "h3": [],
+   "words": 91
+  },
+  {
+   "file": "pagesselect.htm",
+   "title": "Selecting Pages",
+   "h1": [
+    "Selecting Pages"
+   ],
+   "h2": [
+    "Selecting Individual Pages",
+    "Selecting All Pages",
+    "Selecting All Pages With/Without Annotations"
+   ],
+   "h3": [],
+   "words": 260
+  },
+  {
+   "file": "pagesthumbs.htm",
+   "title": "The Page Preview",
+   "h1": [
+    "The Page Preview"
+   ],
+   "h2": [
+    "Using the Page Preview",
+    "Customizing the Page Preview"
+   ],
+   "h3": [],
+   "words": 128
+  },
+  {
+   "file": "pdfprinter.htm",
+   "title": "Creating PDF Documents from Other Applications",
+   "h1": [
+    "Creating PDF Documents from Other Applications"
+   ],
+   "h2": [
+    "Print to PDF Annotator",
+    "Using Background Templates and Inserting into Open Documents"
+   ],
+   "h3": [],
+   "words": 293
+  },
+  {
+   "file": "portfolios.htm",
+   "title": "Portfolios",
+   "h1": [
+    "Portfolios"
+   ],
+   "h2": [
+    "Opening PDF Portfolios"
+   ],
+   "h3": [],
+   "words": 142
+  },
+  {
+   "file": "presentations.htm",
+   "title": "Presenting PDF",
+   "h1": [
+    "Presenting PDF"
+   ],
+   "h2": [
+    "Presenting PDF Documents with PDF Annotator",
+    "Using the Laser Pointer",
+    "Using the Pointer",
+    "Blacking out"
+   ],
+   "h3": [],
+   "words": 353
+  },
+  {
+   "file": "regbuy.htm",
+   "title": "BUY / ORDER",
+   "h1": [
+    "BUY / ORDER"
+   ],
+   "h2": [
+    "Order Online",
+    "Visit our Online Sales Center, where you will find our current price list:"
+   ],
+   "h3": [],
+   "words": 166
+  },
+  {
+   "file": "resources.htm",
+   "title": "More Resources...",
+   "h1": [
+    "More Resources..."
+   ],
+   "h2": [
+    "More online resources"
+   ],
+   "h3": [],
+   "words": 57
+  },
+  {
+   "file": "settings.htm",
+   "title": "Settings",
+   "h1": [
+    "Settings"
+   ],
+   "h2": [
+    "Display",
+    "Tools",
+    "Save",
+    "Integration",
+    "Preferences",
+    "Maintenance"
+   ],
+   "h3": [],
+   "words": 76
+  },
+  {
+   "file": "systemrequirements.htm",
+   "title": "System Requirements",
+   "h1": [
+    "System Requirements"
+   ],
+   "h2": [
+    "Minimum Requirements",
+    "Optionally supported hardware"
+   ],
+   "h3": [],
+   "words": 50
+  },
+  {
+   "file": "toolscapturecamera.htm",
+   "title": "Capturing Photos from a Camera",
+   "h1": [
+    "Capturing Photos from a Camera"
+   ],
+   "h2": [
+    "Capturing Photos"
+   ],
+   "h3": [],
+   "words": 206
+  },
+  {
+   "file": "toolschapter.htm",
+   "title": "Editing and Commenting Documents",
+   "h1": [
+    "Editing and Commenting Documents"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 112
+  },
+  {
+   "file": "toolserasedelete.htm",
+   "title": "Erasing and Deleting",
+   "h1": [
+    "Erasing and Deleting"
+   ],
+   "h2": [
+    "Erasing",
+    "Erasing Like with a Real Eraser",
+    "Selecting and Deleting",
+    "Removing All Annotations"
+   ],
+   "h3": [],
+   "words": 295
+  },
+  {
+   "file": "toolsextracttext.htm",
+   "title": "Working with Selected Text",
+   "h1": [
+    "Working with Selected Text"
+   ],
+   "h2": [
+    "Extracting Text",
+    "Copying Extracted Text to the Clipboard",
+    "Highlighting Selected Text",
+    "Underline or Strike Out Selected Text",
+    "Creating Bookmarks",
+    "Searching for Selected Text on the Internet",
+    "Translating Selected Text",
+    "Editing Selected Text in Notepad"
+   ],
+   "h3": [],
+   "words": 634
+  },
+  {
+   "file": "toolsformula.htm",
+   "title": "Inserting Formulas",
+   "h1": [
+    "Inserting Formulas"
+   ],
+   "h2": [
+    "Creating Formulas with the Formula Editor",
+    "Copy and Paste in the Formula Editor",
+    "Entering or Editing Formulas using LaTeX",
+    "Colors and Font Sizes",
+    "See also"
+   ],
+   "h3": [],
+   "words": 501
+  },
+  {
+   "file": "toolsgrouplock.htm",
+   "title": "Group and Lock Annotations",
+   "h1": [
+    "Group and Lock Annotations"
+   ],
+   "h2": [
+    "Grouping and Ungrouping Annotations",
+    "Locking and Unlocking Annotations"
+   ],
+   "h3": [],
+   "words": 176
+  },
+  {
+   "file": "toolsimageeditor.htm",
+   "title": "Editing Images",
+   "h1": [
+    "Editing Images"
+   ],
+   "h2": [
+    "Loading and Saving Images",
+    "Undo",
+    "Cropping Images",
+    "Making Parts of an Image Transparent",
+    "Obfuscating Parts of an Image",
+    "Rotating Images",
+    "Flipping Images"
+   ],
+   "h3": [],
+   "words": 535
+  },
+  {
+   "file": "toolsinsertimage.htm",
+   "title": "Inserting Images",
+   "h1": [
+    "Inserting Images"
+   ],
+   "h2": [
+    "Inserting Images"
+   ],
+   "h3": [],
+   "words": 146
+  },
+  {
+   "file": "toolslinearrow.htm",
+   "title": "Lines and Arrows",
+   "h1": [
+    "Lines and Arrows"
+   ],
+   "h2": [
+    "Using Line/Arrow",
+    "Color and Line Width",
+    "Line Style",
+    "Arrow Tail and Arrowhead Style",
+    "Automatically Connect Lines",
+    "Snap to 15&deg;"
+   ],
+   "h3": [],
+   "words": 371
+  },
+  {
+   "file": "toolslinks.htm",
+   "title": "Links",
+   "h1": [
+    "Links"
+   ],
+   "h2": [
+    "Creating Links",
+    "Editing Links",
+    "Deleting Links"
+   ],
+   "h3": [],
+   "words": 340
+  },
+  {
+   "file": "toolsmeasure.htm",
+   "title": "Measuring and Dimensioning",
+   "h1": [
+    "Measuring and Dimensioning"
+   ],
+   "h2": [
+    "Measuring or Dimensioning?",
+    "Dimensioning Distances",
+    "Dimensioning Areas",
+    "Measuring Distances",
+    "Measuring Perimeters",
+    "Measuring Areas",
+    "Measuring Angles",
+    "Snap to 15&deg;",
+    "Selecting a Scale or Defining a Custom Scale",
+    "Measuring a Custom Scale",
+    "Managing Scales"
+   ],
+   "h3": [],
+   "words": 1245
+  },
+  {
+   "file": "toolspenmarker.htm",
+   "title": "Pen and Marker",
+   "h1": [
+    "Pen and Marker"
+   ],
+   "h2": [
+    "Using Pen/Marker",
+    "Color, Pen Width and Tip",
+    "Pressure Sensitivity",
+    "Auto-Smooth",
+    "Auto-Snap"
+   ],
+   "h3": [],
+   "words": 503
+  },
+  {
+   "file": "toolspolygon.htm",
+   "title": "Polygons",
+   "h1": [
+    "Polygons"
+   ],
+   "h2": [
+    "Drawing Open or Closed Polygons",
+    "Color and Line Width",
+    "Line Style",
+    "Background Color",
+    "Automatically Connect Lines",
+    "Snap to 15&deg;"
+   ],
+   "h3": [],
+   "words": 287
+  },
+  {
+   "file": "toolsrectangleellipse.htm",
+   "title": "Rectangles and Ellipses",
+   "h1": [
+    "Rectangles and Ellipses"
+   ],
+   "h2": [
+    "Drawing Rectangles/Ellipses",
+    "Color and Line Width",
+    "Line Style",
+    "Background Color",
+    "Square/Rectangle and Circle/Ellipse"
+   ],
+   "h3": [],
+   "words": 323
+  },
+  {
+   "file": "toolsselectedit.htm",
+   "title": "Selecting and Editing Annotations",
+   "h1": [
+    "Selecting and Editing Annotations"
+   ],
+   "h2": [
+    "Selecting Annotations",
+    "Moving and Resizing Annotations",
+    "Aligning Annotations",
+    "Edit Style Properties of Annotations",
+    "Copying and Pasting",
+    "Rotating Annotations",
+    "Flipping Annotations",
+    "Duplicating Annotations"
+   ],
+   "h3": [],
+   "words": 615
+  },
+  {
+   "file": "toolssnapshot.htm",
+   "title": "Taking Snapshots",
+   "h1": [
+    "Taking Snapshots"
+   ],
+   "h2": [
+    "Taking a Snapshot",
+    "Copying a Snapshot to the Clipboard",
+    "Saving a Snapshot to an Image File",
+    "Saving a Snapshot as a Stamp",
+    "Selecting a Snapshot Resolution"
+   ],
+   "h3": [],
+   "words": 235
+  },
+  {
+   "file": "toolsstamps.htm",
+   "title": "Stamps",
+   "h1": [
+    "Stamps"
+   ],
+   "h2": [
+    "Using Stamps",
+    "Saving Selections as Stamps",
+    "Creating Stamps from Image Files",
+    "Stamping all Pages"
+   ],
+   "h3": [],
+   "words": 310
+  },
+  {
+   "file": "toolstext.htm",
+   "title": "Text Annotations",
+   "h1": [
+    "Text Annotations"
+   ],
+   "h2": [
+    "Using the Text Tool",
+    "Editing Text",
+    "Font, Font Size and Color",
+    "Text Alignment",
+    "Fill Color and Frame",
+    "Fit Text Box to Content",
+    "Text Editor Size",
+    "On Screen Keyboard",
+    "Pasting Formatted or Unformatted Text from the Clipboard",
+    "&quot;Text Style Panel&quot; in Full Screen Mode",
+    "See also"
+   ],
+   "h3": [],
+   "words": 825
+  },
+  {
+   "file": "toolstoolbox.htm",
+   "title": "Toolbox and Favorites",
+   "h1": [
+    "Toolbox and Favorites"
+   ],
+   "h2": [
+    "Displaying the Toolbox",
+    "Tools and Favorites",
+    "Using Tools from the Toolbox",
+    "Creating New Tools",
+    "Arranging Tools",
+    "Adding Tools to Favorites"
+   ],
+   "h3": [],
+   "words": 636
+  },
+  {
+   "file": "toolswitch.htm",
+   "title": "The Tool Switch",
+   "h1": [
+    "The Tool Switch"
+   ],
+   "h2": [
+    "Switching to Pan Mode",
+    "Switching Back to Previous Tools",
+    "Most Recently Used Tools",
+    "Moving the Tool Switch",
+    "Hiding the Tool Switch"
+   ],
+   "h3": [],
+   "words": 432
+  },
+  {
+   "file": "updatewizard.htm",
+   "title": "Settings: Maintenance, Update Wizard",
+   "h1": [
+    "Update Wizard"
+   ],
+   "h2": [
+    "Keep your software current with the Update Wizard.",
+    "Regular Maintenance",
+    "Manual Checking",
+    "Installing Updates Without the Wizard."
+   ],
+   "h3": [],
+   "words": 186
+  },
+  {
+   "file": "viewauxlines.htm",
+   "title": "Show Auxiliary Lines",
+   "h1": [
+    "Show Auxiliary Lines"
+   ],
+   "h2": [
+    "Show Auxiliary Lines"
+   ],
+   "h3": [],
+   "words": 142
+  },
+  {
+   "file": "viewchapter.htm",
+   "title": "Viewing Documents",
+   "h1": [
+    "Viewing Documents"
+   ],
+   "h2": [],
+   "h3": [],
+   "words": 46
+  },
+  {
+   "file": "viewfullscreen.htm",
+   "title": "Full Screen Mode",
+   "h1": [
+    "Full Screen Mode"
+   ],
+   "h2": [
+    "Entering and Exiting Full Screen Mode",
+    "Full Screen Mode in a Window - For large Screens or Video Calls",
+    "The Full Screen Mode Toolbar",
+    "Customize Toolbar Appearance",
+    "The Full Screen Menu",
+    "Tool Buttons",
+    "Action Buttons",
+    "Page Previews and Bookmarks",
+    "Save, Load or Reset the Toolbar Configuration"
+   ],
+   "h3": [],
+   "words": 1409
+  },
+  {
+   "file": "viewmodes.htm",
+   "title": "Page Layout",
+   "h1": [
+    "Page Layout"
+   ],
+   "h2": [
+    "One Page or Two Pages",
+    "Whole Page or Continuous",
+    "Page Layouts"
+   ],
+   "h3": [],
+   "words": 190
+  },
+  {
+   "file": "viewzoom.htm",
+   "title": "Zoom",
+   "h1": [
+    "Zoom"
+   ],
+   "h2": [
+    "Fit to Size",
+    "Fit to Width",
+    "Zoom",
+    "Zooming In/Out",
+    "Zoom History"
+   ],
+   "h3": [],
+   "words": 193
+  },
+  {
+   "file": "welcome.htm",
+   "title": "Welcome!",
+   "h1": [
+    "Welcome to PDF Annotator!"
+   ],
+   "h2": [
+    "PDF Annotator&reg;: Annotate, Edit and Comment PDF Files",
+    "Getting Started with the Manual",
+    "Order and Support"
+   ],
+   "h3": [],
+   "words": 191
+  },
+  {
+   "file": "windowsidebar.htm",
+   "title": "The Sidebar",
+   "h1": [
+    "The Sidebar"
+   ],
+   "h2": [
+    "Showing and Hiding the Sidebar"
+   ],
+   "h3": [],
+   "words": 132
+  }
+ ],
+ "topic_count": 119
+}

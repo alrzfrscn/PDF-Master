@@ -1,0 +1,112 @@
+﻿[
+ {
+  "name": "PDFAnnotator.exe",
+  "bytes": 19420160,
+  "machine": "0x8664",
+  "pe32plus": true,
+  "image_base": "0x400000",
+  "subsystem": 2,
+  "coff_timestamp": 1776675702,
+  "sections": [
+   {
+    "name": ".MPRESS1",
+    "vaddr": 4096,
+    "vsize": 85942272,
+    "raw_size": 18974208,
+    "raw_ptr": 512,
+    "entropy": 8.0,
+    "md5ish": "8db356b183d3"
+   },
+   {
+    "name": ".MPRESS2",
+    "vaddr": 85946368,
+    "vsize": 6968,
+    "raw_size": 7168,
+    "raw_ptr": 18974720,
+    "entropy": 4.76,
+    "md5ish": "d3fd5f85fd5a"
+   },
+   {
+    "name": ".rsrc",
+    "vaddr": 85954560,
+    "vsize": 437944,
+    "raw_size": 438272,
+    "raw_ptr": 18981888,
+    "entropy": 3.78,
+    "md5ish": "ad8dbe377d10"
+   }
+  ],
+  "imports": {
+   "KERNEL32": 2,
+   "shlwapi.dll": 1,
+   "ws2_32.dll": 1,
+   "version.dll": 1,
+   "user32.dll": 1,
+   "oledlg.dll": 1,
+   "oleaut32.dll": 1,
+   "advapi32.dll": 1,
+   "msvcrt.dll": 1,
+   "avifil32.dll": 1,
+   "wintrust.dll": 1,
+   "MsVfW32.dll": 1,
+   "wsock32.dll": 1,
+   "Crypt32.dll": 1,
+   "gdiplus.dll": 1,
+   "gdi32.dll": 1,
+   "usp10.dll": 1,
+   "winmm.dll": 1,
+   "FontSub.dll": 1,
+   "wininet.dll": 1,
+   "winspool.drv": 1,
+   "comdlg32.dll": 1,
+   "comctl32.dll": 1,
+   "shell32.dll": 1,
+   "URLMON.DLL": 1,
+   "PDFXEditSimple.x64.dll": 1,
+   "IMAGEHLP.DLL": 1,
+   "ole32.dll": 1,
+   "ntdll.dll": 1
+  },
+  "import_details": {
+   "shlwapi.dll": [
+    "PathCanonicalizeW"
+   ],
+   "user32.dll": [
+    "GetDC"
+   ],
+   "gdi32.dll": [
+    "Pie"
+   ],
+   "winspool.drv": [
+    "SetJobA"
+   ],
+   "ole32.dll": [
+    "OleDraw"
+   ]
+  },
+  "resource_types": {
+   "1": 288,
+   "10": 690,
+   "12": 122,
+   "14": 1,
+   "16": 1,
+   "2": 198,
+   "24": 1,
+   "3": 13,
+   "5": 5,
+   "6": 505,
+   "AVI": 1,
+   "DXNAVBARSKINS": 5,
+   "DXSKINS": 9,
+   "MAD": 2,
+   "PNG": 45,
+   "SVG": 107
+  },
+  "resource_warnings": [],
+  "signature_hits": {},
+  "versioninfo_keywords": [],
+  "dvf": [],
+  "dfm_forms": [],
+  "dfm_form_count": 0
+ }
+]

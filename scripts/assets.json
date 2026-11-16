@@ -1,0 +1,1235 @@
+{
+ "tool_data": {
+  "file": "C:\\Program Files\\PDF Annotator\\PADefaultToolData.pat",
+  "bytes": 8670888,
+  "encoding": "UTF-8 BOM",
+  "format": "XML",
+  "root": "Tools",
+  "groups": [
+   {
+    "id": "{CFE54438-F562-4A85-9E05-254F67C291FF}",
+    "category": "0",
+    "position": "0",
+    "tool_version": null,
+    "captions": {
+     "ENU": "Standard"
+    }
+   },
+   {
+    "id": "{34FF1412-10AC-41E9-8E22-9974F0A3BF39}",
+    "category": "1",
+    "position": "0",
+    "tool_version": null,
+    "captions": {
+     "ENU": "Standard"
+    }
+   },
+   {
+    "id": "{B48365A5-F5AC-4DCD-BB5F-3FD29048D69E}",
+    "category": "1",
+    "position": "1",
+    "tool_version": "3",
+    "captions": {
+     "DEU": "Technische Stifte",
+     "ENU": "Technical Pens"
+    }
+   },
+   {
+    "id": "{1B0526A4-B05B-4D85-8021-9199A02FFDB9}",
+    "category": "2",
+    "position": "0",
+    "tool_version": null,
+    "captions": {
+     "ENU": "Standard"
+    }
+   },
+   {
+    "id": "{F308B6D4-D976-4B26-BF16-29D21018120C}",
+    "category": "3",
+    "position": "0",
+    "tool_version": "2",
+    "captions": {
+     "ENU": "Small Icons",
+     "DEU": "Kleine Symbole"
+    }
+   },
+   {
+    "id": "{FC19328F-92DE-4AEB-87CF-220A5A10C4BB}",
+    "category": "3",
+    "position": "1",
+    "tool_version": "2",
+    "captions": {
+     "ENU": "Small Arrows",
+     "DEU": "Kleine Pfeile"
+    }
+   },
+   {
+    "id": "{2FFC8BE7-210D-445A-90E7-F08070C052BD}",
+    "category": "3",
+    "position": "2",
+    "tool_version": "3",
+    "captions": {
+     "ENU": "Small Black Icons",
+     "DEU": "Kleine schwarze Symbole"
+    }
+   },
+   {
+    "id": "{54785EF1-6D34-464A-96BF-8E827A642238}",
+    "category": "3",
+    "position": "3",
+    "tool_version": "3",
+    "captions": {
+     "ENU": "Small Black Arrows",
+     "DEU": "Kleine schwarze Pfeile"
+    }
+   },
+   {
+    "id": "{B01DFBE0-6941-4080-BFB4-CF4E2868A6B8}",
+    "category": "3",
+    "position": "4",
+    "tool_version": "2",
+    "captions": {
+     "ENU": "Large Icons",
+     "DEU": "Große Symbole"
+    }
+   },
+   {
+    "id": "{DEEAFD5D-0CE1-4B61-8B1E-0FBE6307BBCE}",
+    "category": "3",
+    "position": "5",
+    "tool_version": "2",
+    "captions": {
+     "ENU": "Large Arrows",
+     "DEU": "Große Pfeile"
+    }
+   },
+   {
+    "id": "{902A1FAA-20DC-4B25-A9C2-6E32C72110FD}",
+    "category": "3",
+    "position": "6",
+    "tool_version": "3",
+    "captions": {
+     "ENU": "Large Black Icons",
+     "DEU": "Große schwarze Symbole"
+    }
+   },
+   {
+    "id": "{E1AC1BBC-563F-4017-9B16-092E04371333}",
+    "category": "3",
+    "position": "7",
+    "tool_version": "3",
+    "captions": {
+     "ENU": "Large Black Arrows",
+     "DEU": "Große schwarze Pfeile"
+    }
+   },
+   {
+    "id": "{BB6CFA7D-5186-47F6-8C73-E393F3022D6B}",
+    "category": "3",
+    "position": "8",
+    "tool_version": "1",
+    "captions": {
+     "DEU": "Stempel",
+     "ENU": "Stamps"
+    }
+   },
+   {
+    "id": "{DA8D9D95-52AA-4C6E-B354-A8E4B2A9EC12}",
+    "category": "3",
+    "position": "9",
+    "tool_version": "1",
+    "captions": {
+     "DEU": "Zeit & Datum",
+     "ENU": "Time & Date"
+    }
+   },
+   {
+    "id": "{135798D1-39E8-47CB-8D8C-1A8590235DA4}",
+    "category": "3",
+    "position": "10",
+    "tool_version": "1",
+    "captions": {
+     "DEU": "Korrekturzeichen",
+     "ENU": "Proofreading"
+    }
+   },
+   {
+    "id": "{5BEA8869-3C62-4368-808D-C97D0AC14910}",
+    "category": "3",
+    "position": "11",
+    "tool_version": "3",
+    "captions": {
+     "DEU": "Korrekturzeichen klein",
+     "ENU": "Proofreading Small"
+    }
+   },
+   {
+    "id": "{B5ADCDD3-F9F4-4501-8124-A6088830EAFC}",
+    "category": "4",
+    "position": "0",
+    "tool_version": null,
+    "captions": {
+     "ENU": "Standard"
+    }
+   },
+   {
+    "id": "{E29256BC-31C0-404B-BBE8-AD8F267B1022}",
+    "category": "5",
+    "position": "0",
+    "tool_version": null,
+    "captions": {
+     "ENU": "Standard"
+    }
+   },
+   {
+    "id": "{1C9E3D5B-B43F-488B-B42B-F1BDB1EF2F3A}",
+    "category": "5",
+    "position": "1",
+    "tool_version": "1",
+    "captions": {
+     "DEU": "Halbtransparente Rechtecke",
+     "ENU": "Semitransparent Rectangles"
+    }
+   },
+   {
+    "id": "{CF1D533F-C681-4490-A1FF-9F3CF23BF9FC}",
+    "category": "5",
+    "position": "2",
+    "tool_version": "5",
+    "captions": {
+     "DEU": "Bemaßung",
+     "ENU": "Dimension"
+    }
+   },
+   {
+    "id": "{633D9D56-9811-4BDC-834B-9404B3CE7CF5}",
+    "category": "6",
+    "position": "0",
+    "tool_version": "3",
+    "captions": {
+     "DEU": "Vollbild",
+     "ENU": "Full Screen"
+    }
+   }
+  ],
+  "groups_by_category": {
+   "0": 1,
+   "1": 2,
+   "2": 1,
+   "3": 12,
+   "4": 1,
+   "5": 3,
+   "6": 1
+  },
+  "group_caption_languages": [
+   "DEU",
+   "ENU"
+  ],
+  "sections": {
+   "InkTools": 75,
+   "TextTools": 30,
+   "StampTools": 464,
+   "GOTools": 48
+  },
+  "ink_tool_types": {
+   "Pen": 49,
+   "Marker": 26
+  },
+  "profiles": {
+   "Pen": {
+    "count": 49,
+    "attributes": {
+     "Category": 49,
+     "GroupID": 49,
+     "Position": 49,
+     "Color": 49,
+     "Thickness": 49,
+     "Sensitivity": 49,
+     "Snapping": 49,
+     "DPI": 49,
+     "ToolVersion": 11,
+     "InkOnText": 2,
+     "InkOnTextLineMode": 2
+    },
+    "value_domains": {
+     "Category": {
+      "1": 39,
+      "0": 8,
+      "6": 2
+     },
+     "Position": {
+      "0": 4,
+      "1": 4,
+      "2": 3,
+      "3": 3,
+      "4": 3,
+      "5": 3,
+      "6": 3,
+      "7": 3,
+      "8": 2,
+      "9": 1,
+      "10": 1,
+      "11": 1
+     },
+     "Color": {
+      "0": 18,
+      "255": 9,
+      "16711680": 8,
+      "32768": 8,
+      "8421504": 6
+     },
+     "Thickness": {
+      "100": 9,
+      "200": 9,
+      "400": 5,
+      "600": 5,
+      "800": 5,
+      "1600": 5,
+      "68": 2,
+      "74": 1,
+      "102": 1,
+      "142": 1,
+      "198": 1,
+      "283": 1
+     },
+     "Sensitivity": {
+      "True": 40,
+      "False": 9
+     },
+     "Snapping": {
+      "False": 49
+     },
+     "DPI": {
+      "144": 47,
+      "96": 2
+     },
+     "ToolVersion": {
+      "3": 11
+     },
+     "InkOnText": {
+      "False": 2
+     },
+     "InkOnTextLineMode": {
+      "0": 2
+     }
+    }
+   },
+   "Marker": {
+    "count": 26,
+    "attributes": {
+     "Category": 26,
+     "GroupID": 26,
+     "Position": 26,
+     "Color": 26,
+     "Thickness": 26,
+     "Sensitivity": 26,
+     "Snapping": 26,
+     "DPI": 26,
+     "InkOnText": 2,
+     "ToolVersion": 2
+    },
+    "value_domains": {
+     "Category": {
+      "2": 20,
+      "0": 4,
+      "6": 2
+     },
+     "Position": {
+      "8": 2,
+      "9": 2,
+      "10": 2,
+      "11": 2,
+      "2": 2,
+      "3": 2,
+      "0": 1,
+      "1": 1,
+      "4": 1,
+      "5": 1,
+      "6": 1,
+      "7": 1
+     },
+     "Color": {
+      "65535": 6,
+      "16711935": 6,
+      "65280": 5,
+      "16776960": 5,
+      "255": 4
+     },
+     "Thickness": {
+      "1600": 11,
+      "800": 5,
+      "1200": 5,
+      "2400": 5
+     },
+     "Sensitivity": {
+      "True": 26
+     },
+     "Snapping": {
+      "False": 26
+     },
+     "DPI": {
+      "144": 24,
+      "96": 2
+     },
+     "InkOnText": {
+      "False": 2
+     },
+     "ToolVersion": {
+      "3": 2
+     }
+    }
+   },
+   "Text": {
+    "count": 30,
+    "attributes": {
+     "Category": 30,
+     "GroupID": 30,
+     "Position": 30,
+     "TextboxColor": 30,
+     "TextboxFrametype": 30,
+     "Fontname": 30,
+     "Fontsize": 30,
+     "Fontcolor": 30,
+     "StyleBold": 30,
+     "StyleItalic": 30,
+     "StyleUnderline": 30,
+     "StyleStrikeOut": 30,
+     "ToolVersion": 3,
+     "TextboxFrameColor": 2
+    },
+    "value_domains": {
+     "Category": {
+      "4": 25,
+      "0": 3,
+      "6": 2
+     },
+     "Position": {
+      "12": 2,
+      "13": 2,
+      "14": 2,
+      "4": 2,
+      "5": 2,
+      "0": 1,
+      "1": 1,
+      "2": 1,
+      "3": 1,
+      "6": 1,
+      "7": 1,
+      "8": 1
+     },
+     "TextboxColor": {
+      "536870911": 7,
+      "16777215": 6,
+      "12648447": 6,
+      "16744703": 5,
+      "8454016": 5,
+      "10092543": 1
+     },
+     "TextboxFrametype": {
+      "1": 12,
+      "0": 8,
+      "3": 5,
+      "2": 5
+     },
+     "Fontname": {
+      "Arial": 30
+     },
+     "Fontsize": {
+      "10": 10,
+      "8": 5,
+      "12": 5,
+      "14": 5,
+      "16": 5
+     },
+     "Fontcolor": {
+      "0": 30
+     },
+     "StyleBold": {
+      "False": 30
+     },
+     "StyleItalic": {
+      "False": 30
+     },
+     "StyleUnderline": {
+      "False": 30
+     },
+     "StyleStrikeOut": {
+      "False": 30
+     },
+     "ToolVersion": {
+      "3": 3
+     },
+     "TextboxFrameColor": {
+      "0": 1,
+      "536870911": 1
+     }
+    }
+   },
+   "GraphicalTool": {
+    "count": 48,
+    "attributes": {
+     "TypeCode": 48,
+     "Category": 48,
+     "GroupID": 48,
+     "Position": 48,
+     "Color": 48,
+     "LineWidth": 48,
+     "Snapping": 48,
+     "DPI": 48,
+     "BackColor": 46,
+     "LineStyle": 46,
+     "ArrowHead": 46,
+     "ArrowTail": 46,
+     "InkTransparency": 46,
+     "ToolVersion": 7,
+     "CalibratedUnit": 2,
+     "CalibratedDistance": 2,
+     "MeasuredUnit": 2,
+     "MeasuredDistance": 2
+    },
+    "value_domains": {
+     "TypeCode": {
+      "1": 18,
+      "2": 13,
+      "3": 8,
+      "0": 7,
+      "6": 2
+     },
+     "Category": {
+      "5": 44,
+      "0": 4
+     },
+     "Position": {
+      "0": 3,
+      "1": 3,
+      "20": 2,
+      "21": 2,
+      "22": 2,
+      "23": 2,
+      "2": 2,
+      "3": 2,
+      "4": 2,
+      "5": 1,
+      "6": 1,
+      "7": 1
+     },
+     "Color": {
+      "0": 20,
+      "255": 12,
+      "16711680": 10,
+      "32768": 5,
+      "2900689": 1
+     },
+     "BackColor": {
+      "0": 25,
+      "536870911": 12,
+      "255": 3,
+      "16711680": 2,
+      "65535": 1,
+      "16711935": 1,
+      "65280": 1,
+      "16776960": 1
+     },
+     "LineStyle": {
+      "0": 30,
+      "1": 7,
+      "5": 5,
+      "3": 3,
+      "2": 1
+     },
+     "LineWidth": {
+      "100": 30,
+      "200": 11,
+      "98": 5,
+      "0": 2
+     },
+     "ArrowHead": {
+      "0": 28,
+      "10": 8,
+      "3": 6,
+      "5": 4
+     },
+     "ArrowTail": {
+      "0": 38,
+      "7": 4,
+      "3": 2,
+      "6": 2
+     },
+     "Snapping": {
+      "False": 46,
+      "True": 2
+     },
+     "InkTransparency": {
+      "0": 41,
+      "50": 5
+     },
+     "DPI": {
+      "144": 46,
+      "96": 2
+     },
+     "ToolVersion": {
+      "1": 5,
+      "5": 2
+     },
+     "CalibratedUnit": {
+      "0": 2
+     },
+     "CalibratedDistance": {
+      "1": 2
+     },
+     "MeasuredUnit": {
+      "0": 2
+     },
+     "MeasuredDistance": {
+      "1": 2
+     }
+    }
+   },
+   "Stamp": {
+    "count": 464,
+    "payload_kinds": {
+     "gif": 464
+    },
+    "ink_bytes_min": 935,
+    "ink_bytes_median": 9456,
+    "ink_bytes_max": 27872,
+    "grouped_values": {
+     "True": 377,
+     "": 87
+    },
+    "unique_descriptions_en": 146,
+    "description_sample": [
+     {
+      "ENU": "Check",
+      "DEU": "Erledigt"
+     },
+     {
+      "ENU": "Cross",
+      "DEU": "Kreuz"
+     },
+     {
+      "ENU": "Question",
+      "DEU": "Frage"
+     },
+     {
+      "ENU": "Warning",
+      "DEU": "Warnung"
+     },
+     {
+      "ENU": "Star",
+      "DEU": "Stern"
+     },
+     {
+      "ENU": "GENEHMIGT"
+     },
+     {
+      "ENU": "ENDGÜLTIGE VERSION"
+     },
+     {
+      "ENU": "ABGESCHLOSSEN"
+     },
+     {
+      "ENU": "NICHT GENEHMIGT"
+     },
+     {
+      "ENU": "UNGÜLTIG"
+     },
+     {
+      "ENU": "VERTRAULICH"
+     },
+     {
+      "ENU": "ÜBERARBEITET"
+     },
+     {
+      "ENU": "ÜBERPRÜFT"
+     },
+     {
+      "ENU": "ERHALTEN"
+     }
+    ]
+   }
+  },
+  "stamp_samples": [
+   {
+    "position": "0",
+    "category": "3",
+    "group": "{5BEA8869-3C62-4368-808D-C97D0AC14910}",
+    "grouped": "True",
+    "payload_kind": "gif",
+    "ink_bytes": 935,
+    "ink_chars": 1870,
+    "descriptions": {
+     "ENU": "Falsches Zeichen I"
+    },
+    "ink_head": "47494638396102000C00F700000000000000330000660000990000CC0000FF002B00002B33002B66002B99002BCC002BFF0055000055330055660055990055CC0055FF0080000080330080660080990080CC0080FF00AA0000AA3300AA6600AA9900AACC00AAFF00D50000D53300"
+   },
+   {
+    "position": "0",
+    "category": "3",
+    "group": "{135798D1-39E8-47CB-8D8C-1A8590235DA4}",
+    "grouped": "",
+    "payload_kind": "gif",
+    "ink_bytes": 942,
+    "ink_chars": 1884,
+    "descriptions": {
+     "ENU": "Falsches Zeichen I"
+    },
+    "ink_head": "47494638396103001800F700000000000000330000660000990000CC0000FF002B00002B33002B66002B99002BCC002BFF0055000055330055660055990055CC0055FF0080000080330080660080990080CC0080FF00AA0000AA3300AA6600AA9900AACC00AAFF00D50000D53300"
+   }
+  ],
+  "graphical_typecodes": {
+   "1": 18,
+   "0": 7,
+   "2": 13,
+   "3": 8,
+   "6": 2
+  }
+ },
+ "templates": {
+  "file": "C:\\Program Files\\PDF Annotator\\PADefaultTemplates.pap",
+  "bytes": 1035841,
+  "format": "ZIP archive (PK\\x03\\x04, deflate)",
+  "entries": 2,
+  "extensions": {
+   ".pdf": 2
+  },
+  "top_level": {
+   "Notes_IMPERIAL.pdf": 1,
+   "Notes_METRIC.pdf": 1
+  },
+  "directories": {},
+  "pdf_signatures": {
+   "%PDF-": 2
+  },
+  "listing": [
+   {
+    "name": "Notes_IMPERIAL.pdf",
+    "size": 549229,
+    "packed": 515251,
+    "method": 8
+   },
+   {
+    "name": "Notes_METRIC.pdf",
+    "size": 554585,
+    "packed": 520348,
+    "method": 8
+   }
+  ]
+ },
+ "style_templates": {
+  "file": "C:\\Program Files\\PDF Annotator\\PAStyleTemplates.xml",
+  "bytes": 37691,
+  "root": "Templates",
+  "templates": 129,
+  "styles": {
+   "": 1,
+   "karo": 54,
+   "line": 48,
+   "mm": 8,
+   "grid": 18
+  },
+  "page_sizes": {
+   "A4": 60,
+   "Letter": 69
+  },
+  "with_bounds": 55,
+  "is_metric": {
+   "None": 9,
+   "true": 51,
+   "false": 69
+  },
+  "line_grids": [
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "5.0",
+    "dy": "5.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "7.0",
+    "dy": "7.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "10.0",
+    "dy": "10.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "5.0",
+    "dy": "5.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "7.0",
+    "dy": "7.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "10.0",
+    "dy": "10.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "5.0",
+    "dy": "5.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "7.0",
+    "dy": "7.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "10.0",
+    "dy": "10.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "7.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "9.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "10.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "12.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "7.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "9.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "10.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "12.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "7.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "9.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "10.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "12.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "1.5875",
+    "dy": "1.5875",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "2.54",
+    "dy": "2.54",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "3.175",
+    "dy": "3.175",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "5.08",
+    "dy": "5.08",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "6.35",
+    "dy": "6.35",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "25.4",
+    "dy": "25.4",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "1.5875",
+    "dy": "1.5875",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "2.54",
+    "dy": "2.54",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "3.175",
+    "dy": "3.175",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "5.08",
+    "dy": "5.08",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "6.35",
+    "dy": "6.35",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "25.4",
+    "dy": "25.4",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "1.5875",
+    "dy": "1.5875",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "2.54",
+    "dy": "2.54",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "3.175",
+    "dy": "3.175",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "5.08",
+    "dy": "5.08",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "6.35",
+    "dy": "6.35",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "25.4",
+    "dy": "25.4",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "6.4",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "7.6",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "10.16",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": null,
+    "dy": "12.7",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "6.4",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "7.6",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "10.16",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": null,
+    "dy": "12.7",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "6.4",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "7.6",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "10.16",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": null,
+    "dy": "12.7",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$aaaaaa",
+    "dx": "1.0",
+    "dy": "1.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$007FFF",
+    "dx": "1.0",
+    "dy": "1.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$0000FF",
+    "dx": "1.0",
+    "dy": "1.0",
+    "templates": 2
+   },
+   {
+    "width": "0.1",
+    "color": "$EEC494",
+    "dx": "1.0",
+    "dy": "1.0",
+    "templates": 2
+   }
+  ],
+  "template_attributes": [
+   "Description",
+   "IsMetric",
+   "Style"
+  ]
+ },
+ "pad_file": {
+  "file": "C:\\Program Files\\PDF Annotator\\pad_file.xml",
+  "root": "XML_DIZ_INFO",
+  "sections": [
+   "MASTER_PAD_VERSION_INFO",
+   "Company_Info",
+   "Program_Info",
+   "Program_Descriptions",
+   "Web_Info",
+   "Permissions",
+   "DeuPAD",
+   "ASP",
+   "UpdateWizard",
+   "NewsFeed",
+   "Press_Release"
+  ],
+  "leaf_tags": {
+   "Keywords": 4,
+   "Char_Desc_45": 3,
+   "Char_Desc_80": 3,
+   "Char_Desc_250": 3,
+   "Char_Desc_450": 3,
+   "Char_Desc_2000": 3,
+   "ASP_Member": 2,
+   "ASP_Member_Number": 2,
+   "MASTER_PAD_INFO": 1,
+   "MASTER_PAD_EDITOR": 1,
+   "MASTER_PAD_VERSION": 1,
+   "Company_Name": 1,
+   "Address_1": 1,
+   "Address_2": 1,
+   "Zip_Postal_Code": 1,
+   "City_Town": 1,
+   "Country": 1,
+   "State_Province": 1,
+   "Company_WebSite_URL": 1,
+   "ESC_Member": 1,
+   "Author_First_Name": 1,
+   "Author_Last_Name": 1,
+   "Author_Email": 1,
+   "Contact_First_Name": 1,
+   "Contact_Last_Name": 1,
+   "Contact_Email": 1,
+   "General_Email": 1,
+   "Support_Email": 1,
+   "Sales_Email": 1,
+   "General_Phone": 1,
+   "Support_Phone": 1,
+   "Sales_Phone": 1,
+   "Fax_Phone": 1,
+   "CompanyStorePage": 1,
+   "FacebookCompanyPage": 1,
+   "TwitterCompanyPage": 1,
+   "LinkedinPage": 1,
+   "GooglePlusPage": 1,
+   "PublisherID": 1,
+   "Program_Name": 1
+  },
+  "version_like": {
+   "Application_XML_File_URL": "http://www.ograhl.com/pdfannotator/std/en/pad_file.xml",
+   "Author_First_Name": "Oliver",
+   "Author_Last_Name": "Grahl",
+   "Company_Name": "GRAHL software design",
+   "Company_Unique_ID": "{97D8B65F-063F-40DB-BEC3-A9C802592E3D}",
+   "Company_WebSite_URL": "https://www.GRAHL-software.com",
+   "Contact_First_Name": "Oliver",
+   "Contact_Last_Name": "Grahl",
+   "DeuPAD_Extension_Version": "2.00",
+   "FacebookProductPage": "https://facebook.com/PDFAnnotator",
+   "File_Size_Bytes": "144896840",
+   "File_Size_K": "141500",
+   "File_Size_MB": "138",
+   "Filename_Generic": "PA.exe",
+   "Filename_Long": "PDFAnnotator.exe",
+   "Filename_Previous": "PA010000.exe",
+   "Filename_Versioned": "PA010001.exe",
+   "MASTER_PAD_VERSION": "4.0",
+   "Program_Categories": "PDF Tools",
+   "Program_Category_Class": "Business::Other",
+   "Program_Change_Info": "Various new features and improvements!",
+   "Program_Cost_Dollars": "79.95",
+   "Program_Cost_EUR": "79.95",
+   "Program_Cost_Other": "79.95",
+   "Program_Cost_Other_Code": "EUR",
+   "Program_Install_Support": "Install and Uninstall",
+   "Program_Language": "German,English,French",
+   "Program_Name": "PDF Annotator",
+   "Program_OS_Support": "Windows 10,Windows 11",
+   "Program_Release_Day": "20",
+   "Program_Release_Month": "04",
+   "Program_Release_Status": "Major Update",
+   "Program_Release_Year": "2026",
+   "Program_Specific_Category": "Business",
+   "Program_System_Requirements": "Windows 11, Windows 10",
+   "Program_Type": "Shareware",
+   "Program_Unique_ID": "{8124F07A-04EF-40B4-B62E-CFF33FDD0096}",
+   "Program_Version": "10.0.0.1011",
+   "UpdateWizard_DownloadUrl": "http://www.ograhl.com/pdfannotator/std/en/refupd/PDFAnnotatorSetup.exe",
+   "UpdateWizard_FORM": "Y"
+  }
+ }
+}

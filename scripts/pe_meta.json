@@ -1,0 +1,352 @@
+﻿[
+ {
+  "file": "PDFAnnotator.exe",
+  "bytes": 19420160,
+  "sections": [
+   ".MPRESS1",
+   ".MPRESS2",
+   ".rsrc"
+  ],
+  "entropies": [
+   8.0,
+   4.76,
+   3.78
+  ],
+  "imports": [
+   "Crypt32.dll",
+   "FontSub.dll",
+   "IMAGEHLP.DLL",
+   "KERNEL32",
+   "MsVfW32.dll",
+   "PDFXEditSimple.x64.dll",
+   "URLMON.DLL",
+   "advapi32.dll",
+   "avifil32.dll",
+   "comctl32.dll",
+   "comdlg32.dll",
+   "gdi32.dll",
+   "gdiplus.dll",
+   "msvcrt.dll",
+   "ntdll.dll",
+   "ole32.dll",
+   "oleaut32.dll",
+   "oledlg.dll",
+   "shell32.dll",
+   "shlwapi.dll",
+   "user32.dll",
+   "usp10.dll",
+   "version.dll",
+   "wininet.dll",
+   "winmm.dll",
+   "winspool.drv",
+   "wintrust.dll",
+   "ws2_32.dll",
+   "wsock32.dll"
+  ],
+  "version": {
+   "InternalName": "PDFAnnotator",
+   "OriginalFilename": "PDFAnnotator.exe",
+   "ProductVersion": "10.0.0.1011",
+   "LegalCopyright": "Copyright ⌐ 2004-2026 by GRAHL software design"
+  },
+  "exports_count": 0,
+  "exports_sample": []
+ },
+ {
+  "file": "PDFXEditSimple.x64.dll",
+  "bytes": 41453016,
+  "sections": [
+   ".text",
+   ".rdata",
+   ".data",
+   ".pdata",
+   ".fptable",
+   ".rsrc",
+   ".reloc"
+  ],
+  "entropies": [
+   6.58,
+   6.57,
+   4.81,
+   6.95,
+   -0.0,
+   4.1,
+   5.5
+  ],
+  "imports": [
+   "ADVAPI32.dll",
+   "COMDLG32.dll",
+   "CRYPT32.dll",
+   "GDI32.dll",
+   "KERNEL32.dll",
+   "MSIMG32.dll",
+   "OLEAUT32.dll",
+   "RPCRT4.dll",
+   "SHELL32.dll",
+   "SHLWAPI.dll",
+   "USER32.dll",
+   "USP10.dll",
+   "VERSION.dll",
+   "WININET.dll",
+   "WINMM.dll",
+   "WINSPOOL.DRV",
+   "WS2_32.dll",
+   "ktmw32.dll",
+   "mscms.dll",
+   "ntdll.dll",
+   "ole32.dll"
+  ],
+  "version": {
+   "InternalName": "SimpleViewDLL",
+   "OriginalFilename": "pxcview.dll",
+   "ProductVersion": "10.8.4.409",
+   "LegalCopyright": "Copyright (C) 2001-26 by PDF-XChange Co Ltd.",
+   "Comments": "pxcview"
+  },
+  "exports_count": 1,
+  "exports_sample": [
+   "┤$░"
+  ]
+ },
+ {
+  "file": "ielib64.dll",
+  "bytes": 3268056,
+  "sections": [
+   ".text",
+   ".rdata",
+   ".data",
+   ".pdata",
+   "_RDATA",
+   ".rsrc",
+   ".reloc"
+  ],
+  "entropies": [
+   6.55,
+   5.42,
+   0.91,
+   6.29,
+   5.68,
+   3.68,
+   5.45
+  ],
+  "imports": [
+   "KERNEL32.dll",
+   "OLEAUT32.dll",
+   "WS2_32.dll"
+  ],
+  "version": {
+   "InternalName": "ielib.dll",
+   "OriginalFilename": "ielib.dll",
+   "ProductVersion": "8.1.5.0",
+   "LegalCopyright": "Copyright (C) 2011-2024 by imageen.com"
+  },
+  "exports_count": 0,
+  "exports_sample": []
+ },
+ {
+  "file": "paHelper.exe",
+  "bytes": 6285784,
+  "sections": [
+   ".text",
+   ".data",
+   ".bss",
+   ".idata",
+   ".didata",
+   ".edata",
+   ".tls",
+   ".rdata",
+   ".reloc",
+   ".pdata",
+   ".rsrc"
+  ],
+  "entropies": [
+   5.85,
+   5.14,
+   0.0,
+   4.25,
+   3.28,
+   1.89,
+   0.0,
+   1.39,
+   6.47,
+   6.41,
+   5.49
+  ],
+  "imports": [
+   "advapi32.dll",
+   "comctl32.dll",
+   "comdlg32.dll",
+   "gdi32.dll",
+   "kernel32.dll",
+   "msvcrt.dll",
+   "ole32.dll",
+   "oleaut32.dll",
+   "shell32.dll",
+   "user32.dll",
+   "version.dll",
+   "winspool.drv",
+   "ws2_32.dll",
+   "wtsapi32.dll"
+  ],
+  "version": {},
+  "exports_count": 0,
+  "exports_sample": []
+ },
+ {
+  "file": "paHelper32.exe",
+  "bytes": 4125144,
+  "sections": [
+   ".text",
+   ".itext",
+   ".data",
+   ".bss",
+   ".idata",
+   ".didata",
+   ".edata",
+   ".tls",
+   ".rdata",
+   ".reloc",
+   ".rsrc"
+  ],
+  "entropies": [
+   6.49,
+   6.43,
+   5.65,
+   0.0,
+   5.13,
+   4.19,
+   1.89,
+   0.0,
+   1.39,
+   6.71,
+   5.48
+  ],
+  "imports": [
+   "advapi32.dll",
+   "comctl32.dll",
+   "gdi32.dll",
+   "kernel32.dll",
+   "msvcrt.dll",
+   "ole32.dll",
+   "oleaut32.dll",
+   "shell32.dll",
+   "user32.dll",
+   "version.dll",
+   "winspool.drv",
+   "ws2_32.dll",
+   "wtsapi32.dll"
+  ],
+  "version": {},
+  "exports_count": 0,
+  "exports_sample": []
+ },
+ {
+  "file": "goa.exe",
+  "bytes": 1090008,
+  "sections": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ".rsrc",
+   ".data",
+   ".adata"
+  ],
+  "entropies": [
+   8.0,
+   7.95,
+   7.98,
+   0.0,
+   7.99,
+   7.86,
+   1.83,
+   0.0,
+   1.37,
+   0.0,
+   5.67,
+   7.93,
+   0.0
+  ],
+  "imports": [
+   "advapi32.dll",
+   "comctl32.dll",
+   "gdi32.dll",
+   "kernel32.dll",
+   "ntdll.dll",
+   "ole32.dll",
+   "oleaut32.dll",
+   "shell32.dll",
+   "user32.dll",
+   "version.dll",
+   "winspool.drv"
+  ],
+  "version": {
+   "InternalName": "goa",
+   "OriginalFilename": "goa.exe",
+   "ProductVersion": "10.0.0.1011",
+   "LegalCopyright": "Copyright ⌐ 2004-2026 by GRAHL software design"
+  },
+  "exports_count": 0,
+  "exports_sample": []
+ },
+ {
+  "file": "unins000.exe",
+  "bytes": 3788248,
+  "sections": [
+   ".text",
+   ".itext",
+   ".data",
+   ".bss",
+   ".idata",
+   ".didata",
+   ".edata",
+   ".tls",
+   ".rdata",
+   ".reloc",
+   ".rsrc"
+  ],
+  "entropies": [
+   6.44,
+   6.1,
+   6.28,
+   0.0,
+   5.21,
+   4.39,
+   1.3,
+   0.0,
+   1.37,
+   6.73,
+   4.16
+  ],
+  "imports": [
+   "WTSAPI32.DLL",
+   "advapi32.dll",
+   "comctl32.dll",
+   "comdlg32.dll",
+   "gdi32.dll",
+   "kernel32.dll",
+   "mpr.dll",
+   "msvcrt.dll",
+   "ntdll.dll",
+   "ole32.dll",
+   "oleaut32.dll",
+   "shell32.dll",
+   "user32.dll",
+   "version.dll",
+   "winhttp.dll"
+  ],
+  "version": {
+   "ProductVersion": "10.0.0.1011                                       ",
+   "LegalCopyright": "Copyright ⌐ 2004-2026 by GRAHL software design                                                      ",
+   "Comments": "This installation was built with Inno Setup."
+  },
+  "exports_count": 0,
+  "exports_sample": []
+ }
+]
