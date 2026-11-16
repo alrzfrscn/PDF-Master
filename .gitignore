@@ -1,2 +1,7 @@
 /.agents
 /.claude
+/dist
+/node_modules
+*.tsbuildinfo
+/scripts/convert/reverse/payloads
+/scripts/convert/reverse/__pycache__

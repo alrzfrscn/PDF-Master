@@ -1,0 +1,4174 @@
+{
+ "count": 129,
+ "pageSizesMm": {
+  "A4": [
+   210.0,
+   297.0
+  ],
+  "Letter": [
+   215.9,
+   279.4
+  ]
+ },
+ "styles": {
+  "blank": 1,
+  "karo": 54,
+  "line": 48,
+  "mm": 8,
+  "grid": 18
+ },
+ "templates": [
+  {
+   "id": "paper-000",
+   "index": 0,
+   "style": "blank",
+   "styleLabel": "Blank",
+   "group": "blank",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": null,
+   "name": "A4 Blank",
+   "detail": "no margin"
+  },
+  {
+   "id": "paper-001",
+   "index": 1,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 5.0,
+    "deltaYMm": 5.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 5 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-002",
+   "index": 2,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 7.0,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 7 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-003",
+   "index": 3,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 10.0,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 10 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-004",
+   "index": 4,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 5.0,
+    "deltaYMm": 5.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 5 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-005",
+   "index": 5,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 7.0,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 7 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-006",
+   "index": 6,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 10.0,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 10 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-007",
+   "index": 7,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 5.0,
+    "deltaYMm": 5.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 5 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-008",
+   "index": 8,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 7.0,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 7 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-009",
+   "index": 9,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 10.0,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 10 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-010",
+   "index": 10,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 5.0,
+    "deltaYMm": 5.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 5 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-011",
+   "index": 11,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 7.0,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 7 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-012",
+   "index": 12,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 10.0,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 10 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-013",
+   "index": 13,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 5.0,
+    "deltaYMm": 5.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 5 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-014",
+   "index": 14,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 7.0,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 7 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-015",
+   "index": 15,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 10.0,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 10 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-016",
+   "index": 16,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 5.0,
+    "deltaYMm": 5.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 5 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-017",
+   "index": 17,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 7.0,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 7 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-018",
+   "index": 18,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 10.0,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Squared 10 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-019",
+   "index": 19,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 7 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-020",
+   "index": 20,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 9.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 9 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-021",
+   "index": 21,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 10 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-022",
+   "index": 22,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 12.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 12 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-023",
+   "index": 23,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 7 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-024",
+   "index": 24,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 9.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 9 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-025",
+   "index": 25,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 10 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-026",
+   "index": 26,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 12.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 12 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-027",
+   "index": 27,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 7 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-028",
+   "index": 28,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 9.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 9 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-029",
+   "index": 29,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 10 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-030",
+   "index": 30,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 12.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 12 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-031",
+   "index": 31,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 7 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-032",
+   "index": 32,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 9.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 9 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-033",
+   "index": 33,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 10 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-034",
+   "index": 34,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 12.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 12 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-035",
+   "index": 35,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 7 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-036",
+   "index": 36,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 9.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 9 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-037",
+   "index": 37,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 10 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-038",
+   "index": 38,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 12.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 12 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-039",
+   "index": 39,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 7.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 7 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-040",
+   "index": 40,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 9.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 9 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-041",
+   "index": 41,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 10.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 10 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-042",
+   "index": 42,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 12.0,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Ruled 12 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-043",
+   "index": 43,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/16″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 1.5875,
+    "deltaYMm": 1.5875,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 1.5875 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-044",
+   "index": 44,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 2.54,
+    "deltaYMm": 2.54,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 2.54 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-045",
+   "index": 45,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/8″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 3.175,
+    "deltaYMm": 3.175,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 3.175 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-046",
+   "index": 46,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/5″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 5.08,
+    "deltaYMm": 5.08,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 5.08 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-047",
+   "index": 47,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 6.35,
+    "deltaYMm": 6.35,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 6.35 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-048",
+   "index": 48,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 25.4,
+    "deltaYMm": 25.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 25.4 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-049",
+   "index": 49,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/16″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 1.5875,
+    "deltaYMm": 1.5875,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 1.5875 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-050",
+   "index": 50,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 2.54,
+    "deltaYMm": 2.54,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 2.54 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-051",
+   "index": 51,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/8″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 3.175,
+    "deltaYMm": 3.175,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 3.175 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-052",
+   "index": 52,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/5″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 5.08,
+    "deltaYMm": 5.08,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 5.08 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-053",
+   "index": 53,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 6.35,
+    "deltaYMm": 6.35,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 6.35 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-054",
+   "index": 54,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 5.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 25.4,
+    "deltaYMm": 25.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 25.4 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-055",
+   "index": 55,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/16″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 1.5875,
+    "deltaYMm": 1.5875,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 1.5875 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-056",
+   "index": 56,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 2.54,
+    "deltaYMm": 2.54,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 2.54 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-057",
+   "index": 57,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/8″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 3.175,
+    "deltaYMm": 3.175,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 3.175 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-058",
+   "index": 58,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/5″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 5.08,
+    "deltaYMm": 5.08,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 5.08 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-059",
+   "index": 59,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 6.35,
+    "deltaYMm": 6.35,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 6.35 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-060",
+   "index": 60,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 25.4,
+    "deltaYMm": 25.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 25.4 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-061",
+   "index": 61,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/16″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 1.5875,
+    "deltaYMm": 1.5875,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 1.5875 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-062",
+   "index": 62,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 2.54,
+    "deltaYMm": 2.54,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 2.54 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-063",
+   "index": 63,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/8″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 3.175,
+    "deltaYMm": 3.175,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 3.175 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-064",
+   "index": 64,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/5″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 5.08,
+    "deltaYMm": 5.08,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 5.08 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-065",
+   "index": 65,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 6.35,
+    "deltaYMm": 6.35,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 6.35 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-066",
+   "index": 66,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 5.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 25.4,
+    "deltaYMm": 25.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 25.4 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-067",
+   "index": 67,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/16″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 1.5875,
+    "deltaYMm": 1.5875,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 1.5875 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-068",
+   "index": 68,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 2.54,
+    "deltaYMm": 2.54,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 2.54 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-069",
+   "index": 69,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/8″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 3.175,
+    "deltaYMm": 3.175,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 3.175 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-070",
+   "index": 70,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/5″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 5.08,
+    "deltaYMm": 5.08,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 5.08 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-071",
+   "index": 71,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 6.35,
+    "deltaYMm": 6.35,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 6.35 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-072",
+   "index": 72,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 25.4,
+    "deltaYMm": 25.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 25.4 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-073",
+   "index": 73,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/16″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 1.5875,
+    "deltaYMm": 1.5875,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 1.5875 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-074",
+   "index": 74,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 2.54,
+    "deltaYMm": 2.54,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 2.54 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-075",
+   "index": 75,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/8″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 3.175,
+    "deltaYMm": 3.175,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 3.175 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-076",
+   "index": 76,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/5″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 5.08,
+    "deltaYMm": 5.08,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 5.08 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-077",
+   "index": 77,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 6.35,
+    "deltaYMm": 6.35,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 6.35 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-078",
+   "index": 78,
+   "style": "karo",
+   "styleLabel": "Squared",
+   "group": "squared",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 5.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 25.4,
+    "deltaYMm": 25.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Squared 25.4 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-079",
+   "index": 79,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 6.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 6.4 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-080",
+   "index": 80,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/3″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 7.6,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 7.6 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-081",
+   "index": 81,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 10.16,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 10.16 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-082",
+   "index": 82,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 12.7,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 12.7 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-083",
+   "index": 83,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 6.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 6.4 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-084",
+   "index": 84,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/3″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 7.6,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 7.6 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-085",
+   "index": 85,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 10.16,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 10.16 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-086",
+   "index": 86,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": 12.7,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 12.7 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-087",
+   "index": 87,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 6.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 6.4 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-088",
+   "index": 88,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/3″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 7.6,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 7.6 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-089",
+   "index": 89,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 10.16,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 10.16 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-090",
+   "index": 90,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 12.7,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 12.7 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-091",
+   "index": 91,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 6.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 6.4 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-092",
+   "index": 92,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/3″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 7.6,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 7.6 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-093",
+   "index": 93,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 10.16,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 10.16 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-094",
+   "index": 94,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": 12.7,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 12.7 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-095",
+   "index": 95,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 6.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 6.4 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-096",
+   "index": 96,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/3″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 7.6,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 7.6 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-097",
+   "index": 97,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 10.16,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 10.16 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-098",
+   "index": 98,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 12.7,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 12.7 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-099",
+   "index": 99,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 6.4,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 6.4 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-100",
+   "index": 100,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/3″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 7.6,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 7.6 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-101",
+   "index": 101,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 10.16,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 10.16 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-102",
+   "index": 102,
+   "style": "line",
+   "styleLabel": "Ruled",
+   "group": "ruled",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": {
+    "left": 19.5,
+    "top": 11.0,
+    "right": 10.1,
+    "bottom": 11.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": 12.7,
+    "deltaMm": null,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Ruled 12.7 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-103",
+   "index": 103,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 21.5,
+    "top": 9.0,
+    "right": 8.0,
+    "bottom": 6.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "Grey · margin"
+  },
+  {
+   "id": "paper-104",
+   "index": 104,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#aaaaaa",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-105",
+   "index": 105,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 21.5,
+    "top": 9.0,
+    "right": 8.0,
+    "bottom": 6.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#007fff",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "#007fff · margin"
+  },
+  {
+   "id": "paper-106",
+   "index": 106,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#007fff",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "#007fff · no margin"
+  },
+  {
+   "id": "paper-107",
+   "index": 107,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 21.5,
+    "top": 9.0,
+    "right": 8.0,
+    "bottom": 6.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "Blue · margin"
+  },
+  {
+   "id": "paper-108",
+   "index": 108,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#0000ff",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-109",
+   "index": 109,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": {
+    "left": 21.5,
+    "top": 9.0,
+    "right": 8.0,
+    "bottom": 6.0
+   },
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "Tan · margin"
+  },
+  {
+   "id": "paper-110",
+   "index": 110,
+   "style": "mm",
+   "styleLabel": "Millimeter",
+   "group": "millimeter",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "line",
+    "widthMm": 0.1,
+    "color": "#eec494",
+    "deltaXMm": 1.0,
+    "deltaYMm": 1.0,
+    "deltaMm": null,
+    "highlightMinor": 5,
+    "highlightMajor": 10
+   },
+   "name": "A4 Millimeter 1 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-111",
+   "index": 111,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 5.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 5 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-112",
+   "index": 112,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 7.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 7 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-113",
+   "index": 113,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 10.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 10 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-114",
+   "index": 114,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 5.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 5 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-115",
+   "index": 115,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 7.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 7 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-116",
+   "index": 116,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 10.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 10 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-117",
+   "index": 117,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 5.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 5 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-118",
+   "index": 118,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 7.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 7 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-119",
+   "index": 119,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": true,
+   "units": "metric",
+   "description": "",
+   "page": {
+    "size": "A4",
+    "landscape": false,
+    "widthMm": 210.0,
+    "heightMm": 297.0,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 10.0,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "A4 Grid 10 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-120",
+   "index": 120,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 2.54,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 2.54 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-121",
+   "index": 121,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 6.35,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 6.35 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-122",
+   "index": 122,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#aaaaaa",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 12.7,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 12.7 mm",
+   "detail": "Grey · no margin"
+  },
+  {
+   "id": "paper-123",
+   "index": 123,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 2.54,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 2.54 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-124",
+   "index": 124,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 6.35,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 6.35 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-125",
+   "index": 125,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#0000ff",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 12.7,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 12.7 mm",
+   "detail": "Blue · no margin"
+  },
+  {
+   "id": "paper-126",
+   "index": 126,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/10″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 2.54,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 2.54 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-127",
+   "index": 127,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/4″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 6.35,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 6.35 mm",
+   "detail": "Tan · no margin"
+  },
+  {
+   "id": "paper-128",
+   "index": 128,
+   "style": "grid",
+   "styleLabel": "Grid",
+   "group": "grid",
+   "isMetric": false,
+   "units": "imperial",
+   "description": "1/2″",
+   "page": {
+    "size": "Letter",
+    "landscape": false,
+    "widthMm": 215.9,
+    "heightMm": 279.4,
+    "count": 1
+   },
+   "bounds": null,
+   "grid": {
+    "kind": "grid",
+    "widthMm": 0.25,
+    "color": "#eec494",
+    "deltaXMm": null,
+    "deltaYMm": null,
+    "deltaMm": 12.7,
+    "highlightMinor": null,
+    "highlightMajor": null
+   },
+   "name": "Letter Grid 12.7 mm",
+   "detail": "Tan · no margin"
+  }
+ ],
+ "pdfTemplates": [
+  {
+   "name": "Notes_IMPERIAL.pdf",
+   "bytes": 549229,
+   "sha256": "e03d499577ed1f1c4f646d98304a0f90bd6b470e3d301fa84246d9a9c7c46ec9",
+   "url": "/assets/templates/Notes_IMPERIAL.pdf",
+   "sourcePackedBytes": 515251
+  },
+  {
+   "name": "Notes_METRIC.pdf",
+   "bytes": 554585,
+   "sha256": "dd8fbc40f97b975b96ce6f293a02316ef1038741e302717ac1f4617b687a04f5",
+   "url": "/assets/templates/Notes_METRIC.pdf",
+   "sourcePackedBytes": 520348
+  }
+ ]
+}

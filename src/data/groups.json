@@ -1,0 +1,404 @@
+{
+ "count": 21,
+ "groups": [
+  {
+   "id": "{CFE54438-F562-4A85-9E05-254F67C291FF}",
+   "category": 0,
+   "position": 0,
+   "captions": {
+    "en": "Standard",
+    "de": "Standard"
+   },
+   "schemaVersion": 0,
+   "slug": "g0-0",
+   "toolCount": 24,
+   "families": {
+    "pen": 8,
+    "marker": 4,
+    "text": 3,
+    "stamp": 5,
+    "graphical": 4
+   }
+  },
+  {
+   "id": "{34FF1412-10AC-41E9-8E22-9974F0A3BF39}",
+   "category": 1,
+   "position": 0,
+   "captions": {
+    "en": "Standard",
+    "de": "Standard"
+   },
+   "schemaVersion": 0,
+   "slug": "g1-0",
+   "toolCount": 30,
+   "families": {
+    "pen": 30,
+    "marker": 0,
+    "text": 0,
+    "stamp": 0,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{B48365A5-F5AC-4DCD-BB5F-3FD29048D69E}",
+   "category": 1,
+   "position": 1,
+   "captions": {
+    "en": "Technical Pens",
+    "de": "Technische Stifte"
+   },
+   "schemaVersion": 3,
+   "slug": "g1-1",
+   "toolCount": 9,
+   "families": {
+    "pen": 9,
+    "marker": 0,
+    "text": 0,
+    "stamp": 0,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{1B0526A4-B05B-4D85-8021-9199A02FFDB9}",
+   "category": 2,
+   "position": 0,
+   "captions": {
+    "en": "Standard",
+    "de": "Standard"
+   },
+   "schemaVersion": 0,
+   "slug": "g2-0",
+   "toolCount": 20,
+   "families": {
+    "pen": 0,
+    "marker": 20,
+    "text": 0,
+    "stamp": 0,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{F308B6D4-D976-4B26-BF16-29D21018120C}",
+   "category": 3,
+   "position": 0,
+   "captions": {
+    "en": "Small Icons",
+    "de": "Kleine Symbole"
+   },
+   "schemaVersion": 2,
+   "slug": "g3-0",
+   "toolCount": 50,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 50,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{FC19328F-92DE-4AEB-87CF-220A5A10C4BB}",
+   "category": 3,
+   "position": 1,
+   "captions": {
+    "en": "Small Arrows",
+    "de": "Kleine Pfeile"
+   },
+   "schemaVersion": 2,
+   "slug": "g3-1",
+   "toolCount": 42,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 42,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{2FFC8BE7-210D-445A-90E7-F08070C052BD}",
+   "category": 3,
+   "position": 2,
+   "captions": {
+    "en": "Small Black Icons",
+    "de": "Kleine schwarze Symbole"
+   },
+   "schemaVersion": 3,
+   "slug": "g3-2",
+   "toolCount": 46,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 46,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{54785EF1-6D34-464A-96BF-8E827A642238}",
+   "category": 3,
+   "position": 3,
+   "captions": {
+    "en": "Small Black Arrows",
+    "de": "Kleine schwarze Pfeile"
+   },
+   "schemaVersion": 3,
+   "slug": "g3-3",
+   "toolCount": 25,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 25,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{B01DFBE0-6941-4080-BFB4-CF4E2868A6B8}",
+   "category": 3,
+   "position": 4,
+   "captions": {
+    "en": "Large Icons",
+    "de": "Große Symbole"
+   },
+   "schemaVersion": 2,
+   "slug": "g3-4",
+   "toolCount": 50,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 50,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{DEEAFD5D-0CE1-4B61-8B1E-0FBE6307BBCE}",
+   "category": 3,
+   "position": 5,
+   "captions": {
+    "en": "Large Arrows",
+    "de": "Große Pfeile"
+   },
+   "schemaVersion": 2,
+   "slug": "g3-5",
+   "toolCount": 42,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 42,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{902A1FAA-20DC-4B25-A9C2-6E32C72110FD}",
+   "category": 3,
+   "position": 6,
+   "captions": {
+    "en": "Large Black Icons",
+    "de": "Große schwarze Symbole"
+   },
+   "schemaVersion": 3,
+   "slug": "g3-6",
+   "toolCount": 46,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 46,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{E1AC1BBC-563F-4017-9B16-092E04371333}",
+   "category": 3,
+   "position": 7,
+   "captions": {
+    "en": "Large Black Arrows",
+    "de": "Große schwarze Pfeile"
+   },
+   "schemaVersion": 3,
+   "slug": "g3-7",
+   "toolCount": 25,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 25,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{BB6CFA7D-5186-47F6-8C73-E393F3022D6B}",
+   "category": 3,
+   "position": 8,
+   "captions": {
+    "en": "Stamps",
+    "de": "Stempel"
+   },
+   "schemaVersion": 1,
+   "slug": "g3-8",
+   "toolCount": 36,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 36,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{DA8D9D95-52AA-4C6E-B354-A8E4B2A9EC12}",
+   "category": 3,
+   "position": 9,
+   "captions": {
+    "en": "Time & Date",
+    "de": "Zeit & Datum"
+   },
+   "schemaVersion": 1,
+   "slug": "g3-9",
+   "toolCount": 9,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 9,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{135798D1-39E8-47CB-8D8C-1A8590235DA4}",
+   "category": 3,
+   "position": 10,
+   "captions": {
+    "en": "Proofreading",
+    "de": "Korrekturzeichen"
+   },
+   "schemaVersion": 1,
+   "slug": "g3-10",
+   "toolCount": 43,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 43,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{5BEA8869-3C62-4368-808D-C97D0AC14910}",
+   "category": 3,
+   "position": 11,
+   "captions": {
+    "en": "Proofreading Small",
+    "de": "Korrekturzeichen klein"
+   },
+   "schemaVersion": 3,
+   "slug": "g3-11",
+   "toolCount": 43,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 43,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{B5ADCDD3-F9F4-4501-8124-A6088830EAFC}",
+   "category": 4,
+   "position": 0,
+   "captions": {
+    "en": "Standard",
+    "de": "Standard"
+   },
+   "schemaVersion": 0,
+   "slug": "g4-0",
+   "toolCount": 25,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 25,
+    "stamp": 0,
+    "graphical": 0
+   }
+  },
+  {
+   "id": "{E29256BC-31C0-404B-BBE8-AD8F267B1022}",
+   "category": 5,
+   "position": 0,
+   "captions": {
+    "en": "Standard",
+    "de": "Standard"
+   },
+   "schemaVersion": 0,
+   "slug": "g5-0",
+   "toolCount": 37,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 0,
+    "graphical": 37
+   }
+  },
+  {
+   "id": "{1C9E3D5B-B43F-488B-B42B-F1BDB1EF2F3A}",
+   "category": 5,
+   "position": 1,
+   "captions": {
+    "en": "Semitransparent Rectangles",
+    "de": "Halbtransparente Rechtecke"
+   },
+   "schemaVersion": 1,
+   "slug": "g5-1",
+   "toolCount": 5,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 0,
+    "graphical": 5
+   }
+  },
+  {
+   "id": "{CF1D533F-C681-4490-A1FF-9F3CF23BF9FC}",
+   "category": 5,
+   "position": 2,
+   "captions": {
+    "en": "Dimension",
+    "de": "Bemaßung"
+   },
+   "schemaVersion": 5,
+   "slug": "g5-2",
+   "toolCount": 2,
+   "families": {
+    "pen": 0,
+    "marker": 0,
+    "text": 0,
+    "stamp": 0,
+    "graphical": 2
+   }
+  },
+  {
+   "id": "{633D9D56-9811-4BDC-834B-9404B3CE7CF5}",
+   "category": 6,
+   "position": 0,
+   "captions": {
+    "en": "Full Screen",
+    "de": "Vollbild"
+   },
+   "schemaVersion": 3,
+   "slug": "g6-0",
+   "toolCount": 8,
+   "families": {
+    "pen": 2,
+    "marker": 2,
+    "text": 2,
+    "stamp": 2,
+    "graphical": 0
+   }
+  }
+ ]
+}

@@ -1,0 +1,191 @@
+{
+ "generatedAt": "2026-11-16T20:09:20+00:00",
+ "source": {
+  "install": "C:\\Program Files\\PDF Annotator",
+  "files": [
+   {
+    "name": "PADefaultToolData.pat",
+    "bytes": 8670888,
+    "sha256": "3b881b94de8e226e5450511d3d5dc2121dd1ba4080e40d92aff962c5e4c8855a"
+   },
+   {
+    "name": "PADefaultTemplates.pap",
+    "bytes": 1035841,
+    "sha256": "b8087e779372fc0d7dbc493abb4bb2374e97e7d4420d203c322fd59c6e84577b"
+   },
+   {
+    "name": "PAStyleTemplates.xml",
+    "bytes": 37691,
+    "sha256": "261b7b43323e06c818f4e673fb3ae019985b1bee5bb9e94ffa30088910fd3c94"
+   },
+   {
+    "name": "user/paStampTools.xml",
+    "bytes": 83864,
+    "sha256": "aadd41746ecdc75efc4ed1667db85036f85ddb7cee1634e17432be5abf2f3f54"
+   }
+  ]
+ },
+ "counts": {
+  "groups": 21,
+  "presets": 617,
+  "presetsByFamily": {
+   "pen": 49,
+   "marker": 26,
+   "text": 30,
+   "stamp": 464,
+   "graphical": 48
+  },
+  "stamps": 464,
+  "stampArt": {
+   "app-thumbnail": 377,
+   "generated-text": 18,
+   "gif-raster": 66,
+   "missing": 3
+  },
+  "paperTemplates": 129,
+  "userStamps": 396,
+  "pdfTemplates": 2
+ },
+ "outputs": {
+  "groups": "src/data/groups.json",
+  "presets": "src/data/presets.json",
+  "stamps": "src/data/stamps.json",
+  "paperTemplates": "src/data/paper_templates.json",
+  "userStamps": "src/data/user_stamps.json",
+  "stampAssets": 461,
+  "userStampAssets": 396,
+  "pdfAssets": [
+   "Notes_IMPERIAL.pdf",
+   "Notes_METRIC.pdf"
+  ]
+ },
+ "assertions": [
+  {
+   "gate": "groups",
+   "expected": 21,
+   "actual": 21,
+   "pass": true
+  },
+  {
+   "gate": "presets",
+   "expected": 617,
+   "actual": 617,
+   "pass": true
+  },
+  {
+   "gate": "presets by family",
+   "expected": {
+    "pen": 49,
+    "marker": 26,
+    "text": 30,
+    "stamp": 464,
+    "graphical": 48
+   },
+   "actual": {
+    "pen": 49,
+    "marker": 26,
+    "text": 30,
+    "stamp": 464,
+    "graphical": 48
+   },
+   "pass": true
+  },
+  {
+   "gate": "preset ids unique",
+   "expected": 617,
+   "actual": 617,
+   "pass": true
+  },
+  {
+   "gate": "stamps",
+   "expected": 464,
+   "actual": 464,
+   "pass": true
+  },
+  {
+   "gate": "stamp titles localized (en+de)",
+   "expected": 464,
+   "actual": 464,
+   "pass": true
+  },
+  {
+   "gate": "paper recipes",
+   "expected": 129,
+   "actual": 129,
+   "pass": true
+  },
+  {
+   "gate": "paper styles",
+   "expected": {
+    "blank": 1,
+    "line": 48,
+    "karo": 54,
+    "mm": 8,
+    "grid": 18
+   },
+   "actual": {
+    "blank": 1,
+    "karo": 54,
+    "line": 48,
+    "mm": 8,
+    "grid": 18
+   },
+   "pass": true
+  },
+  {
+   "gate": "paper page sizes",
+   "expected": [
+    "A4",
+    "Letter"
+   ],
+   "actual": [
+    "A4",
+    "Letter"
+   ],
+   "pass": true
+  },
+  {
+   "gate": "stamp PNG files",
+   "expected": 461,
+   "actual": 461,
+   "pass": true
+  },
+  {
+   "gate": "stamp PNG integrity",
+   "expected": [],
+   "actual": [],
+   "pass": true
+  },
+  {
+   "gate": "user stamp PNG files",
+   "expected": 396,
+   "actual": 396,
+   "pass": true
+  },
+  {
+   "gate": "note template PDFs",
+   "expected": 2,
+   "actual": 2,
+   "pass": true
+  },
+  {
+   "gate": "note PDFs are PDFs",
+   "expected": [],
+   "actual": [],
+   "pass": true
+  },
+  {
+   "gate": "preset round-trip sample (20)",
+   "expected": [],
+   "actual": [],
+   "pass": true
+  }
+ ],
+ "allPassed": true,
+ "warnings": [
+  "3 factory stamps carry no raster art and no matching thumbnail; their serialised vector ink is preserved in metadata for a later decoder.",
+  "377 stamps use the app's own 48 px rendered thumbnail because the factory GIF is a blank stub around serialised vector annotations.",
+  "18 German text stamps were re-rendered typographically from their English twin's ink colour and size.",
+  "Pen/Marker/Text/Graphical presets carry no name in the source; titles come from attributes."
+ ]
+}

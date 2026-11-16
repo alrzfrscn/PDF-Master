@@ -7,7 +7,7 @@ derived from their normalised attributes. Stamps keep their EN/DE descriptions.
 from __future__ import annotations
 
 import sys
-from common import (DATA, FAMILY_COUNTS, LINE_STYLES, TOOL_FAMILIES, TYPE_CODES, dump_json,
+from common import (DATA, FAMILY_COUNTS, LINE_STYLES, TOOL_FAMILIES, TYPE_CODES, as_bool, dump_json,
                     load_groups, load_pat, normalize_props)
 
 
@@ -43,7 +43,10 @@ def main() -> int:
             description = {}
             if family == "stamp":
                 for d in el.findall("Description"):
-                    description[d.get("Language", "ENU").lower()] = (d.text or "").strip()
+                    lang = {"ENU": "en", "DEU": "de", "FRA": "fr"}.get(d.get("Language", "ENU"), "en")
+                    description[lang] = (d.text or "").strip()
+                # Grouped is a child element, not an attribute (377 True / 87 unset in the source).
+                props["grouped"] = as_bool(el.findtext("Grouped") or "False")
             title = description.get("en") or preset_title(family, props, type_code)
             ordinal_key = (family, group["slug"])
             ordinal = ordinals.get(ordinal_key, 0)
