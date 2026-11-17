@@ -170,7 +170,8 @@ export type ToolId =
   | "measure"
   | "formula"
   | "crop"
-  | "snapshot";
+  | "snapshot"
+  | "image";
 
 export type ShapeTool = "line" | "arrow" | "rectangle" | "ellipse" | "polygon" | "dimension";
 
@@ -200,6 +201,8 @@ export interface DocumentPage {
   rotation: 0 | 90 | 180 | 270;
   annotations: Annotation[];
   pdf?: PdfPageSource;
+  /** Visible page box in page-local millimetres; absent means the full page. */
+  cropBox?: { xMm: number; yMm: number; widthMm: number; heightMm: number };
 }
 
 export interface PdfBookmark {

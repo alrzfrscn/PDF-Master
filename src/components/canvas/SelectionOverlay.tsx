@@ -7,6 +7,7 @@ import {
   Lock,
   RotateCw,
   SendToBack,
+  Stamp,
   Trash2,
   Ungroup,
   Unlock,
@@ -46,6 +47,7 @@ export type SelectionAction =
   | "lock"
   | "front"
   | "back"
+  | "save-stamp"
   | "delete";
 
 const BUTTONS: { action: SelectionAction; label: string; Icon: typeof Copy }[] = [
@@ -58,6 +60,7 @@ const BUTTONS: { action: SelectionAction; label: string; Icon: typeof Copy }[] =
   { action: "lock", label: "Lock / unlock", Icon: Lock },
   { action: "front", label: "Bring to front", Icon: BringToFront },
   { action: "back", label: "Send to back", Icon: SendToBack },
+  { action: "save-stamp", label: "Save as stamp", Icon: Stamp },
   { action: "delete", label: "Delete", Icon: Trash2 },
 ];
 

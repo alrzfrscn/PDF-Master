@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
 import { decodeSidecar, encodeSidecar, exportPdf, loadSidecar, type PdfExportInput } from "./pdfEngine";
-import type { ShapeAnnotation, StampAnnotation } from "./annotationTypes";
+import type { FormulaAnnotation, ShapeAnnotation, StampAnnotation, TextAnnotation } from "./annotationTypes";
 
 const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -37,6 +37,49 @@ const stamp: StampAnnotation = {
   rotation: 0,
   flipH: false,
   flipV: false,
+  opacity: 1,
+};
+
+const text: TextAnnotation = {
+  id: "text-1",
+  type: "text",
+  xMm: 20,
+  yMm: 30,
+  widthMm: 60,
+  heightMm: 16,
+  text: "Round trip",
+  fontFamily: "Helvetica",
+  fontSizePt: 12,
+  textColor: "#101114",
+  bold: true,
+  italic: false,
+  underline: true,
+  strikeOut: false,
+  align: "left",
+  script: "normal",
+  boxFillColor: "#ffffff",
+  boxFillTransparent: true,
+  frameType: 1,
+  frameColor: "#0a84ff",
+  lineWidthMm: 0.4,
+  autoFit: false,
+  rotation: 0,
+  opacity: 1,
+};
+
+const formula: FormulaAnnotation = {
+  id: "formula-1",
+  type: "formula",
+  latex: "E = mc^2",
+  xMm: 100,
+  yMm: 40,
+  widthMm: 40,
+  heightMm: 20,
+  color: "#0a84ff",
+  fontSizePt: 14,
+  fillColor: "#ffffff",
+  fillTransparent: true,
+  rotation: 0,
   opacity: 1,
 };
 
@@ -140,5 +183,59 @@ describe("PDF engine", () => {
     expect(pdf.getPageCount()).toBe(1);
     const sidecar = await loadSidecar(bytes);
     expect(sidecar?.pages[0].pdfPageIndex).toBe(1);
+  });
+
+  it("exports text and formula annotations and keeps both in the sidecar", async () => {
+    const bytes = await exportPdf({
+      title: "Typography",
+      mode: "editable",
+      pages: [
+        {
+          templateId: "paper-000",
+          landscape: false,
+          rotation: 0,
+          widthMm: 210,
+          heightMm: 297,
+          annotations: [text, formula],
+        },
+      ],
+    });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBe(1);
+    const sidecar = await loadSidecar(bytes);
+    expect(sidecar?.pages[0].annotations.map((annotation) => annotation.id)).toEqual(["text-1", "formula-1"]);
+    expect(sidecar?.pages[0].annotations[0]).toMatchObject({ type: "text", text: "Round trip" });
+    expect(sidecar?.pages[0].annotations[1]).toMatchObject({ type: "formula", latex: "E = mc^2" });
+  });
+
+  it("rebuilds the page tree in tab order, count and size", async () => {
+    const pt = 72 / 25.4;
+    const base = await exportPdf({
+      title: "Source",
+      mode: "flattened",
+      pages: [
+        { templateId: "paper-000", landscape: true, rotation: 0, widthMm: 297, heightMm: 210, annotations: [] },
+        { templateId: "paper-000", landscape: false, rotation: 0, widthMm: 210, heightMm: 297, annotations: [] },
+      ],
+    });
+    const bytes = await exportPdf({
+      title: "Rebuilt",
+      mode: "editable",
+      sourceBytes: base,
+      pages: [
+        { templateId: "paper-000", landscape: false, rotation: 0, widthMm: 148, heightMm: 210, annotations: [rectangle] },
+        { templateId: "paper-000", landscape: false, rotation: 0, widthMm: 210, heightMm: 297, pdfPageIndex: 2, annotations: [] },
+        { templateId: "paper-000", landscape: false, rotation: 0, widthMm: 210, heightMm: 297, pdfPageIndex: 2, annotations: [] },
+      ],
+    });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBe(3);
+    expect(pdf.getPage(0).getWidth()).toBeCloseTo(148 * pt, 1);
+    expect(pdf.getPage(1).getWidth()).toBeCloseTo(210 * pt, 1);
+    expect(pdf.getPage(2).getWidth()).toBeCloseTo(210 * pt, 1);
+    expect(pdf.getPage(0).getHeight()).toBeCloseTo(210 * pt, 1);
+    const sidecar = await loadSidecar(bytes);
+    expect(sidecar?.pages.map((page) => page.pdfPageIndex)).toEqual([undefined, 2, 3]);
+    expect(sidecar?.pages[0].annotations[0].id).toBe("shape-1");
   });
 });

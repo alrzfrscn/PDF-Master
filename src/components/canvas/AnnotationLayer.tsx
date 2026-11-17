@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   Annotation,
   BBox,
+  FormulaAnnotation,
   InkPoint,
   MarkerAnnotation,
   MarkerTip,
@@ -10,7 +12,9 @@ import type {
   ShapeAnnotation,
   ShapeType,
   StampAnnotation,
+  TextAnnotation,
 } from "../../lib/annotationTypes";
+import type { AnnotationPatch } from "../../lib/annotationTypes";
 import {
   annotationBounds,
   detectScratchOut,
@@ -22,15 +26,27 @@ import {
   selectionBounds,
   translateAnnotation,
 } from "../../lib/annotationGeometry";
+import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
 import { inkPath, polylinePath, pressureFromVelocity } from "../../lib/ink";
 import { PX_PER_MM } from "../../lib/paper";
 import { stampById, userStamps } from "../../lib/data";
+import { useCustomStampStore } from "../../lib/customStamps";
+import { captureRegion, readImageFile, type RasterImage } from "../../lib/raster";
+import { addImageStamp } from "../../lib/images";
+import { usePrefsStore } from "../../lib/prefs";
+import { fitTextBox } from "../../lib/textLayout";
 import { makeId, useDocStore } from "../../stores/useDocStore";
 import { applySelectionTransform, useAnnotationStore } from "../../stores/useAnnotationStore";
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore } from "../../stores/useUIStore";
 import type { DocumentPage, DocumentTab } from "../../lib/types";
 import { SelectionOverlay, handlePoints, type HandleId, type SelectionAction } from "./SelectionOverlay";
+import { TextView } from "./TextView";
+import { FormulaView } from "./FormulaView";
+import { TextEditor } from "./TextEditor";
+import { FormulaEditor, type FormulaDraft } from "./FormulaEditor";
+import { MeasureOverlay, measureSummary, type MeasureState } from "./MeasureOverlay";
+import { SnapshotBar } from "./SnapshotBar";
 
 interface Props {
   tab: DocumentTab;
@@ -48,6 +64,8 @@ type Draft =
   | { kind: "lasso"; points: Pt[] }
   | { kind: "stamp"; start: Pt; end: Pt; widthMm: number; heightMm: number }
   | { kind: "polygon"; points: Pt[] }
+  | { kind: "text"; start: Pt; end: Pt }
+  | { kind: "snapshot"; start: Pt; end: Pt }
   | null;
 
 type Interaction =
@@ -60,7 +78,21 @@ type Interaction =
   | { kind: "rotate"; center: Pt; startAngle: number; initial: Annotation[] }
   | { kind: "stamp"; start: Pt }
   | { kind: "erase"; last: Pt; split: boolean }
+  | { kind: "text"; start: Pt }
+  | { kind: "snapshot"; start: Pt }
+  | { kind: "measure"; start: Pt }
   | null;
+
+interface TextEditState {
+  draft: TextAnnotation;
+  isNew: boolean;
+}
+
+interface SnapshotState {
+  region: BBox;
+  image: RasterImage | null;
+  status: string | null;
+}
 
 const EPSILON = 0.001;
 const ERASER_MM = 2.6;
@@ -123,7 +155,16 @@ function stampArt(stampId: string) {
   if (factory) return { imageUrl: factory.imageUrl, width: factory.width, height: factory.height, name: factory.title.en };
   const user = userStamps.find((stamp) => stamp.id === stampId);
   if (user) return { imageUrl: user.imageUrl, width: user.inkWidth, height: user.inkHeight, name: user.name };
+  const custom = useCustomStampStore.getState().stamps.find((stamp) => stamp.id === stampId);
+  if (custom) return { imageUrl: custom.imageUrl, width: custom.width, height: custom.height, name: custom.name };
   return null;
+}
+
+function normalizeFont(name: string | undefined): string {
+  const value = (name ?? "").toLowerCase();
+  if (value.includes("courier") || value.includes("mono")) return "Courier";
+  if (value.includes("times") || value.includes("serif")) return "TimesRoman";
+  return "Helvetica";
 }
 
 function DimensionView({ shape }: { shape: ShapeAnnotation }) {
@@ -198,9 +239,9 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
       />
     );
   }
-  if (annotation.type === "stamp") {
-    return <StampView stamp={annotation} />;
-  }
+  if (annotation.type === "stamp") return <StampView stamp={annotation} />;
+  if (annotation.type === "text") return <TextView annotation={annotation} />;
+  if (annotation.type === "formula") return <FormulaView annotation={annotation} />;
   const shape = annotation;
   const fill = shape.fillColor && !shape.fillTransparent ? shape.fillColor : "none";
   const dash = DASH[shape.lineStyle];
@@ -223,12 +264,7 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
   }
   if (shape.shapeType === "polygon") {
     if (shape.points.length === 0) return null;
-    return (
-      <path
-        d={polylinePath(shape.points, shape.points.length >= 3)}
-        {...common}
-      />
-    );
+    return <path d={polylinePath(shape.points, shape.points.length >= 3)} {...common} />;
   }
   const arrow = shape.shapeType === "arrow";
   return (
@@ -266,12 +302,28 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   const svgRef = useRef<SVGSVGElement>(null);
   const interaction = useRef<Interaction>(null);
   const [draft, setDraft] = useState<Draft>(null);
+  const [measure, setMeasure] = useState<MeasureState>({ points: [], cursor: null, finished: false });
+  const [textEdit, setTextEdit] = useState<TextEditState | null>(null);
+  const [formulaEdit, setFormulaEdit] = useState<{ annotation: FormulaAnnotation; anchor: { x: number; y: number } } | null>(null);
+  const [snap, setSnap] = useState<SnapshotState | null>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
+  const imagePoint = useRef<Pt | null>(null);
 
   const activeTool = useToolStore((state) => state.activeTool);
   const props = useToolStore((state) => state.props);
   const selectedStampId = useToolStore((state) => state.selectedStampId);
   const selection = useAnnotationStore((state) => state.selection);
   const eraserSplit = useUIStore((state) => state.eraserSplit);
+  const measureMode = useUIStore((state) => state.measureMode);
+  const scaleId = useScaleStore((state) => state.activeId);
+  const customScales = useScaleStore((state) => state.custom);
+  const measureUnit = usePrefsStore((state) => state.measureUnit);
+  const snapshotDpi = usePrefsStore((state) => state.snapshotDpi);
+
+  const scale = useMemo(() => {
+    const all = [...PRESET_SCALES, ...customScales];
+    return all.find((item) => item.id === scaleId) ?? PRESET_SCALES[0];
+  }, [customScales, scaleId]);
 
   const chosen = useMemo(
     () => page.annotations.filter((annotation) => selection.includes(annotation.id)),
@@ -310,10 +362,46 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     dimensionScale: 1,
   });
 
+  const defaultText = (start: Pt, end: Pt): TextAnnotation => {
+    const dragged = Math.abs(end[0] - start[0]) > 4 && Math.abs(end[1] - start[1]) > 3;
+    return {
+      id: makeId("a"),
+      type: "text",
+      xMm: dragged ? Math.min(start[0], end[0]) : start[0],
+      yMm: dragged ? Math.min(start[1], end[1]) : start[1],
+      widthMm: dragged ? Math.abs(end[0] - start[0]) : 64,
+      heightMm: dragged ? Math.abs(end[1] - start[1]) : 16,
+      text: "",
+      fontFamily: normalizeFont(toolProps.fontName),
+      fontSizePt: Math.max(6, toolProps.fontSize || 12),
+      textColor: toolProps.color,
+      bold: toolProps.bold,
+      italic: toolProps.italic,
+      underline: toolProps.underline,
+      strikeOut: false,
+      align: "left",
+      script: "normal",
+      boxFillColor: toolProps.fill ?? "#ffffff",
+      boxFillTransparent: toolProps.fill === null,
+      frameType: 0,
+      frameColor: toolProps.color,
+      lineWidthMm: 0.4,
+      autoFit: false,
+      rotation: 0,
+      opacity: toolProps.opacity,
+    };
+  };
+
   useEffect(() => {
     interaction.current = null;
     setDraft(null);
+    setMeasure({ points: [], cursor: null, finished: false });
+    setSnap(null);
   }, [activeTool]);
+
+  useEffect(() => {
+    setMeasure({ points: [], cursor: null, finished: false });
+  }, [measureMode]);
 
   const commitInk = (points: InkPoint[], tool: "pen" | "marker", shift: boolean) => {
     if (points.length < 2) return;
@@ -324,7 +412,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       const snapped = snapAngle([first[0], first[1]], [last[0], last[1]]);
       final = [first, [snapped[0], snapped[1], last[2]]];
     }
-    if (tool === "pen" && detectScratchOut(final)) {
+    if (tool === "pen" && usePrefsStore.getState().scratchOut && detectScratchOut(final)) {
       const xs = points.map(([x]) => x);
       const ys = points.map(([, y]) => y);
       useAnnotationStore.getState().scratchOut({
@@ -397,6 +485,17 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (activeTool === "measure") {
+        if (event.key === "Escape") {
+          setMeasure({ points: [], cursor: null, finished: false });
+          return;
+        }
+        if (event.key === "Enter" && (measureMode === "perimeter" || measureMode === "area") && measure.points.length >= 2) {
+          event.preventDefault();
+          setMeasure((current) => ({ ...current, cursor: null, finished: true }));
+          return;
+        }
+      }
       if (activeTool !== "polygon") return;
       if (event.key === "Escape") {
         interaction.current = null;
@@ -413,7 +512,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeTool, draft]);
+  }, [activeTool, draft, measure, measureMode]);
 
   const selectAt = (point: Pt, additive: boolean): Annotation | null => {
     const list = page.annotations;
@@ -546,6 +645,60 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         setDraft({ kind: "lasso", points: [point] });
         return;
       }
+      case "text": {
+        begin({ kind: "text", start: point });
+        setDraft({ kind: "text", start: point, end: point });
+        return;
+      }
+      case "formula": {
+        const annotation: FormulaAnnotation = {
+          id: makeId("a"),
+          type: "formula",
+          latex: "E = mc^2",
+          xMm: point[0],
+          yMm: point[1],
+          widthMm: 60,
+          heightMm: 24,
+          color: toolProps.color,
+          fontSizePt: Math.max(10, toolProps.fontSize || 14),
+          fillColor: toolProps.fill ?? "#ffffff",
+          fillTransparent: toolProps.fill === null,
+          rotation: 0,
+          opacity: toolProps.opacity,
+        };
+        setFormulaEdit({ annotation, anchor: { x: event.clientX, y: event.clientY } });
+        return;
+      }
+      case "measure": {
+        if (measure.finished) {
+          setMeasure({ points: [point], cursor: measureMode === "distance" ? point : null, finished: false });
+          if (measureMode === "distance") begin({ kind: "measure", start: point });
+          return;
+        }
+        if (measureMode === "distance") {
+          begin({ kind: "measure", start: point });
+          setMeasure({ points: [point], cursor: point, finished: false });
+          return;
+        }
+        if (measureMode === "angle") {
+          const points = [...measure.points, point].slice(0, 3);
+          setMeasure({ points, cursor: null, finished: points.length === 3 });
+          return;
+        }
+        setMeasure({ points: [...measure.points, point], cursor: null, finished: false });
+        return;
+      }
+      case "snapshot": {
+        begin({ kind: "snapshot", start: point });
+        setSnap(null);
+        setDraft({ kind: "snapshot", start: point, end: point });
+        return;
+      }
+      case "image": {
+        imagePoint.current = point;
+        imageInput.current?.click();
+        return;
+      }
       default:
         return;
     }
@@ -553,6 +706,12 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
 
   const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
     const current = interaction.current;
+    if (activeTool === "measure" && !measure.finished) {
+      const point = toMm(event.clientX, event.clientY);
+      if (current?.kind === "measure" || measure.points.length > 0) {
+        setMeasure((state) => (state.finished ? state : { ...state, cursor: point }));
+      }
+    }
     if (!current) return;
     const point = toMm(event.clientX, event.clientY);
 
@@ -584,9 +743,15 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       return;
     }
     if (current.kind === "stamp") {
-      setDraft((previous) =>
-        previous?.kind === "stamp" ? { ...previous, end: point } : previous,
-      );
+      setDraft((previous) => (previous?.kind === "stamp" ? { ...previous, end: point } : previous));
+      return;
+    }
+    if (current.kind === "text") {
+      setDraft({ kind: "text", start: current.start, end: point });
+      return;
+    }
+    if (current.kind === "snapshot") {
+      setDraft({ kind: "snapshot", start: current.start, end: point });
       return;
     }
     if (current.kind === "erase") {
@@ -668,6 +833,13 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     }
   };
 
+  const capture = async (region: BBox, status: string | null = null) => {
+    const pageElement = svgRef.current?.parentElement ?? null;
+    const image = await captureRegion(pageElement, region, snapshotDpi);
+    setSnap({ region, image, status });
+    return image;
+  };
+
   const onPointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
     const current = interaction.current;
     interaction.current = null;
@@ -684,6 +856,21 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       commitShape(current.tool, current.start, end);
     }
     if (current.kind === "stamp") commitStamp(current.start, point);
+    if (current.kind === "text") {
+      setTextEdit({ draft: defaultText(current.start, point), isNew: true });
+    }
+    if (current.kind === "measure") {
+      setMeasure({ points: [current.start, point], cursor: null, finished: true });
+    }
+    if (current.kind === "snapshot") {
+      const region: BBox = {
+        x: Math.max(0, Math.min(current.start[0], point[0])),
+        y: Math.max(0, Math.min(current.start[1], point[1])),
+        width: Math.min(widthMm, Math.abs(point[0] - current.start[0])),
+        height: Math.min(heightMm, Math.abs(point[1] - current.start[1])),
+      };
+      if (region.width > 2 && region.height > 2) void capture(region);
+    }
     if (current.kind === "marquee") {
       const box: BBox = {
         x: Math.min(current.start[0], point[0]),
@@ -713,6 +900,18 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     }
   };
 
+  const saveStampFrom = async (region: BBox, label: string) => {
+    const image = await capture(region);
+    if (!image) return;
+    useCustomStampStore.getState().add({
+      name: label,
+      imageUrl: image.dataUrl,
+      width: image.width,
+      height: image.height,
+    });
+    setSnap({ region, image, status: "Saved to stamps" });
+  };
+
   const onAction = (action: SelectionAction) => {
     const store = useAnnotationStore.getState();
     const center: Pt = bounds ? [bounds.x + bounds.width / 2, bounds.y + bounds.height / 2] : [0, 0];
@@ -731,6 +930,129 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       useDocStore.getState().pushHistory(tab.id);
       applySelectionTransform("flip", { origin: center, axis: action === "flip-h" ? "h" : "v" });
     }
+    if (action === "save-stamp" && bounds) {
+      void saveStampFrom(bounds, `Selection ${new Date().toLocaleTimeString()}`);
+    }
+  };
+
+  const commitMeasure = () => {
+    const points = measure.points;
+    const store = useAnnotationStore.getState();
+    if (measureMode === "distance" && points.length >= 2) {
+      const shape = shapeProps("dimension", points[0], points[1]);
+      shape.strokeColor = "#0a84ff";
+      shape.fillColor = null;
+      shape.fillTransparent = true;
+      shape.lineWidthMm = 0.35;
+      shape.dimensionUnit = measureUnit;
+      shape.dimensionScale = scale.denominator;
+      store.add(shape);
+    } else if ((measureMode === "area" || measureMode === "perimeter") && points.length >= 3) {
+      const shape = shapeProps("polygon", points[0], points[points.length - 1]);
+      shape.points = points;
+      shape.strokeColor = "#0a84ff";
+      shape.lineWidthMm = 0.35;
+      shape.fillColor = measureMode === "area" ? "#9fd0ff" : null;
+      shape.fillTransparent = measureMode !== "area";
+      shape.opacity = measureMode === "area" ? 0.75 : 1;
+      store.add(shape);
+    } else if (measureMode === "angle" && points.length >= 3) {
+      const degrees = angleAt(points[1], points[0], points[2]);
+      const text: TextAnnotation = {
+        id: makeId("a"),
+        type: "text",
+        xMm: points[0][0] + 3,
+        yMm: points[0][1] + 3,
+        widthMm: 20,
+        heightMm: 7,
+        text: `${degrees.toFixed(1)}°`,
+        fontFamily: "Helvetica",
+        fontSizePt: 9,
+        textColor: "#0a84ff",
+        bold: true,
+        italic: false,
+        underline: false,
+        strikeOut: false,
+        align: "left",
+        script: "normal",
+        boxFillColor: "#ffffff",
+        boxFillTransparent: true,
+        frameType: 0,
+        frameColor: "#0a84ff",
+        lineWidthMm: 0.3,
+        autoFit: false,
+        rotation: 0,
+        opacity: 1,
+      };
+      store.add(text);
+    }
+    setMeasure({ points: [], cursor: null, finished: false });
+  };
+
+  const commitText = (text: string) => {
+    const edit = textEdit;
+    if (!edit) return;
+    setTextEdit(null);
+    const draftValue = { ...edit.draft, text };
+    if (!text.trim()) {
+      if (!edit.isNew) useAnnotationStore.getState().update([draftValue.id], { text: "" });
+      return;
+    }
+    if (edit.isNew) {
+      useAnnotationStore.getState().add(draftValue);
+      return;
+    }
+    useAnnotationStore.getState().update([draftValue.id], {
+      text,
+      widthMm: draftValue.widthMm,
+      heightMm: draftValue.heightMm,
+      fontFamily: draftValue.fontFamily,
+      fontSizePt: draftValue.fontSizePt,
+      textColor: draftValue.textColor,
+      bold: draftValue.bold,
+      italic: draftValue.italic,
+      underline: draftValue.underline,
+      strikeOut: draftValue.strikeOut,
+      align: draftValue.align,
+      script: draftValue.script,
+      boxFillColor: draftValue.boxFillColor,
+      boxFillTransparent: draftValue.boxFillTransparent,
+      frameType: draftValue.frameType,
+      frameColor: draftValue.frameColor,
+      lineWidthMm: draftValue.lineWidthMm,
+      autoFit: draftValue.autoFit,
+      rotation: draftValue.rotation,
+      opacity: draftValue.opacity,
+    });
+  };
+
+  const saveFormula = (draftValue: FormulaDraft) => {
+    const current = formulaEdit;
+    if (!current) return;
+    setFormulaEdit(null);
+    const base: FormulaAnnotation = {
+      ...current.annotation,
+      latex: draftValue.latex,
+      color: draftValue.color,
+      fontSizePt: draftValue.fontSizePt,
+      fillColor: draftValue.fillColor,
+      fillTransparent: draftValue.fillTransparent,
+      opacity: draftValue.opacity,
+    };
+    const exists = page.annotations.some((annotation) => annotation.id === base.id);
+    const store = useAnnotationStore.getState();
+    if (exists) {
+      store.update([base.id], {
+        latex: base.latex,
+        color: base.color,
+        fontSizePt: base.fontSizePt,
+        fillColor: base.fillColor,
+        fillTransparent: base.fillTransparent,
+        opacity: base.opacity,
+      });
+    } else {
+      store.add(base);
+    }
   };
 
   const cursor = panMode
@@ -739,12 +1061,51 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       ? "default"
       : activeTool === "eraser"
         ? "cell"
-        : ["pen", "marker", "line", "arrow", "rectangle", "ellipse", "polygon", "dimension", "stamp", "lasso"].includes(activeTool)
+        : [
+            "pen",
+            "marker",
+            "line",
+            "arrow",
+            "rectangle",
+            "ellipse",
+            "polygon",
+            "dimension",
+            "stamp",
+            "lasso",
+            "text",
+            "formula",
+            "measure",
+            "snapshot",
+            "image",
+            "crop",
+          ].includes(activeTool)
           ? "crosshair"
           : "default";
 
+  const measureText = activeTool === "measure" ? measureSummary(measureMode, measure, scale.denominator, measureUnit) : null;
+  const canCommitMeasure =
+    (measureMode === "distance" && measure.points.length >= 2) ||
+    ((measureMode === "area" || measureMode === "perimeter") && measure.points.length >= 3) ||
+    (measureMode === "angle" && measure.points.length >= 3);
+  const editingId = textEdit && !textEdit.isNew ? textEdit.draft.id : null;
+
   return (
     <div className="absolute inset-0" style={{ cursor }}>
+      <input
+        ref={imageInput}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        className="hidden"
+        aria-label="Insert image"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          void readImageFile(file)
+            .then((image) => addImageStamp(image, imagePoint.current ?? undefined))
+            .catch(() => undefined);
+        }}
+      />
       <svg
         ref={svgRef}
         data-annotation-layer
@@ -765,7 +1126,15 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
             commitShape("polygon", points[0], points[points.length - 1], points);
             interaction.current = null;
             setDraft(null);
+            return;
           }
+          const point = toMm(event.clientX, event.clientY);
+          const hit = [...page.annotations]
+            .reverse()
+            .find((annotation) => !annotation.hidden && (annotation.type === "text" || annotation.type === "formula") && hitTest(annotation, point));
+          if (!hit) return;
+          if (hit.type === "text") setTextEdit({ draft: hit, isNew: false });
+          else if (hit.type === "formula") setFormulaEdit({ annotation: hit, anchor: { x: event.clientX, y: event.clientY } });
         }}
       >
         <defs>
@@ -783,9 +1152,11 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
           </marker>
         </defs>
 
-        {page.annotations.map((annotation) => (
-          <AnnotationView key={annotation.id} annotation={annotation} />
-        ))}
+        {page.annotations
+          .filter((annotation) => annotation.id !== editingId)
+          .map((annotation) => (
+            <AnnotationView key={annotation.id} annotation={annotation} />
+          ))}
 
         {draft?.kind === "ink" &&
           (draft.tool === "pen" ? (
@@ -838,6 +1209,30 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
             strokeDasharray="1.6 1"
           />
         )}
+        {draft?.kind === "text" && (
+          <rect
+            x={Math.min(draft.start[0], draft.end[0])}
+            y={Math.min(draft.start[1], draft.end[1])}
+            width={Math.max(2, Math.abs(draft.end[0] - draft.start[0]))}
+            height={Math.max(2, Math.abs(draft.end[1] - draft.start[1]))}
+            fill="var(--accent-soft)"
+            stroke="var(--accent)"
+            strokeWidth={0.3}
+            strokeDasharray="1.6 1"
+          />
+        )}
+        {draft?.kind === "snapshot" && (
+          <rect
+            x={Math.min(draft.start[0], draft.end[0])}
+            y={Math.min(draft.start[1], draft.end[1])}
+            width={Math.abs(draft.end[0] - draft.start[0])}
+            height={Math.abs(draft.end[1] - draft.start[1])}
+            fill="var(--accent-soft)"
+            stroke="var(--accent)"
+            strokeWidth={0.3}
+            strokeDasharray="1.6 1"
+          />
+        )}
         {draft?.kind === "stamp" &&
           (() => {
             const art = selectedStampId ? stampArt(selectedStampId) : null;
@@ -857,7 +1252,97 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
               </g>
             );
           })()}
+        {activeTool === "measure" && <MeasureOverlay mode={measureMode} state={measure} />}
       </svg>
+
+      {activeTool === "measure" && measureText && (
+        <div
+          className="pointer-events-none absolute bottom-3 left-1/2 z-20"
+          style={{ transform: `translateX(-50%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
+        >
+          <div className="glass-strong pointer-events-auto flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] shadow-lg">
+            <span className="whitespace-nowrap font-medium tabular-nums">{measureText}</span>
+            <button type="button" className="chip h-6 px-2" disabled={!canCommitMeasure} onClick={commitMeasure}>
+              Commit
+            </button>
+            <button
+              type="button"
+              className="chip h-6 px-2"
+              onClick={() => setMeasure({ points: [], cursor: null, finished: false })}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {snap && (
+        <SnapshotBar
+          region={snap.region}
+          imageUrl={snap.image?.dataUrl ?? null}
+          zoom={zoom}
+          status={snap.status}
+          onCopy={() => {
+            if (!snap.image) return;
+            void (async () => {
+              try {
+                const blob = await (await fetch(snap.image!.dataUrl)).blob();
+                await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+                setSnap((state) => (state ? { ...state, status: "Copied" } : state));
+              } catch {
+                setSnap((state) => (state ? { ...state, status: "Copy blocked" } : state));
+              }
+            })();
+          }}
+          onDownload={() => {
+            if (!snap.image) return;
+            const anchor = document.createElement("a");
+            anchor.href = snap.image.dataUrl;
+            anchor.download = `snapshot-${Date.now()}.png`;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            setSnap((state) => (state ? { ...state, status: "Downloaded" } : state));
+          }}
+          onSaveStamp={() => void saveStampFrom(snap.region, `Snapshot ${new Date().toLocaleTimeString()}`)}
+          onClose={() => setSnap(null)}
+        />
+      )}
+
+      {textEdit && (
+        <TextEditor
+          draft={textEdit.draft}
+          onPatch={(patch: AnnotationPatch) =>
+            setTextEdit((state) => (state ? { ...state, draft: { ...state.draft, ...patch } } : state))
+          }
+          onFit={(text) =>
+            setTextEdit((state) =>
+              state ? { ...state, draft: { ...state.draft, ...fitTextBox({ ...state.draft, text }) } } : state,
+            )
+          }
+          onCommit={commitText}
+          onCancel={() => setTextEdit(null)}
+        />
+      )}
+
+      {formulaEdit &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <FormulaEditor
+            initial={{
+              latex: formulaEdit.annotation.latex,
+              color: formulaEdit.annotation.color,
+              fontSizePt: formulaEdit.annotation.fontSizePt,
+              fillColor: formulaEdit.annotation.fillColor,
+              fillTransparent: formulaEdit.annotation.fillTransparent,
+              opacity: formulaEdit.annotation.opacity,
+            }}
+            anchor={formulaEdit.anchor}
+            onSave={saveFormula}
+            onClose={() => setFormulaEdit(null)}
+          />,
+          document.body,
+        )}
 
       <SelectionOverlay
         bounds={bounds}

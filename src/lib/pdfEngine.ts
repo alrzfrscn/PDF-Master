@@ -1,8 +1,10 @@
 import { PDFDocument, PDFName, PDFString, StandardFonts, degrees, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import type { PaperTemplate, DocumentTab } from "./types";
-import type { Annotation, Pt } from "./annotationTypes";
+import type { Annotation, FormulaAnnotation, Pt, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, formatDimension } from "./annotationGeometry";
 import { inkPath, polylinePath } from "./ink";
+import { layoutText, measureTextWidthMm, TEXT_PADDING_MM, PT_TO_MM } from "./textLayout";
+import { latexToPng } from "./formula";
 import { paperById } from "./data";
 import { paperGeometry } from "./paper";
 import type { LineStyleName } from "./types";
@@ -135,6 +137,7 @@ export interface PdfExportPage {
   heightMm: number;
   /** 1-based page in the source PDF, when this page came from one. */
   pdfPageIndex?: number;
+  cropBox?: { xMm: number; yMm: number; widthMm: number; heightMm: number };
   annotations: Annotation[];
 }
 
@@ -152,6 +155,7 @@ export interface SerializedPage {
   widthMm: number;
   heightMm: number;
   pdfPageIndex?: number;
+  cropBox?: { xMm: number; yMm: number; widthMm: number; heightMm: number };
   annotations: Annotation[];
 }
 
@@ -242,21 +246,93 @@ function arrowHeadPath(tip: Pt, from: Pt, kind: number, size: number): { path: s
 }
 
 interface DrawContext {
+  pdf: PDFDocument;
   page: PDFPage;
+  widthMm: number;
   heightMm: number;
-  font: PDFFont;
+  fonts: Map<StandardFonts, Promise<PDFFont>>;
   images: Map<string, Promise<PDFImage | null>>;
+  formulas: Map<string, Promise<PDFImage | null>>;
+}
+
+function fontFor(context: DrawContext, name: StandardFonts): Promise<PDFFont> {
+  let font = context.fonts.get(name);
+  if (!font) {
+    font = context.pdf.embedFont(name);
+    context.fonts.set(name, font);
+  }
+  return font;
+}
+
+function standardFontFor(annotation: TextAnnotation): StandardFonts {
+  if (annotation.fontFamily === "Courier") {
+    if (annotation.bold && annotation.italic) return StandardFonts.CourierBoldOblique;
+    if (annotation.bold) return StandardFonts.CourierBold;
+    if (annotation.italic) return StandardFonts.CourierOblique;
+    return StandardFonts.Courier;
+  }
+  if (annotation.fontFamily === "TimesRoman") {
+    if (annotation.bold && annotation.italic) return StandardFonts.TimesRomanBoldItalic;
+    if (annotation.bold) return StandardFonts.TimesRomanBold;
+    if (annotation.italic) return StandardFonts.TimesRomanItalic;
+    return StandardFonts.TimesRoman;
+  }
+  if (annotation.bold && annotation.italic) return StandardFonts.HelveticaBoldOblique;
+  if (annotation.bold) return StandardFonts.HelveticaBold;
+  if (annotation.italic) return StandardFonts.HelveticaOblique;
+  return StandardFonts.Helvetica;
+}
+
+/** CSS-style clockwise rotation around a centre, in screen (y-down) millimetres. */
+function rotateMm(point: Pt, center: Pt, rotation: number): Pt {
+  const angle = (rotation * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const dx = point[0] - center[0];
+  const dy = point[1] - center[1];
+  return [center[0] + dx * cos - dy * sin, center[1] + dx * sin + dy * cos];
+}
+
+function toPdfPoint(point: Pt, heightMm: number): { x: number; y: number } {
+  return { x: point[0] * PT_PER_MM, y: (heightMm - point[1]) * PT_PER_MM };
+}
+
+/** Lower-left corner of a box after rotating it around its own centre. */
+function rotatedLowerLeft(
+  box: { xMm: number; yMm: number; widthMm: number; heightMm: number },
+  rotation: number,
+  heightMm: number,
+): { x: number; y: number } {
+  const center: Pt = [box.xMm + box.widthMm / 2, box.yMm + box.heightMm / 2];
+  return toPdfPoint(rotateMm([box.xMm, box.yMm + box.heightMm], center, rotation), heightMm);
 }
 
 async function embedStampImage(pdf: PDFDocument, imageUrl: string): Promise<PDFImage | null> {
+  const embed = async (bytes: Uint8Array): Promise<PDFImage | null> => {
+    const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+    return isJpeg ? pdf.embedJpg(bytes) : pdf.embedPng(bytes);
+  };
   try {
-    if (imageUrl.startsWith("data:")) return await pdf.embedPng(imageUrl);
+    if (imageUrl.startsWith("data:")) {
+      const comma = imageUrl.indexOf(",");
+      const meta = imageUrl.slice(0, comma);
+      const payload = imageUrl.slice(comma + 1);
+      if (meta.includes("svg")) return null;
+      return await embed(base64ToBytes(payload));
+    }
     const response = await fetch(imageUrl);
     if (!response.ok) return null;
-    return await pdf.embedPng(new Uint8Array(await response.arrayBuffer()));
+    return await embed(new Uint8Array(await response.arrayBuffer()));
   } catch {
     return null;
   }
+}
+
+function base64ToBytes(payload: string): Uint8Array {
+  const binary = atob(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
 }
 
 async function drawAnnotation(context: DrawContext, annotation: Annotation): Promise<void> {
@@ -316,6 +392,239 @@ async function drawAnnotation(context: DrawContext, annotation: Annotation): Pro
       });
       return;
     }
+    case "text": {
+      await drawTextBox(context, annotation);
+      return;
+    }
+    case "formula": {
+      await drawFormula(context, annotation);
+      return;
+    }
+  }
+}
+
+interface BoxFrame {
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+  rotation: number;
+}
+
+function drawBoxFill(
+  context: DrawContext,
+  box: BoxFrame,
+  options: { fillColor?: string; fillTransparent?: boolean; borderColor: string; borderWidth: number; rounded?: boolean; opacity?: number },
+): void {
+  const { page, heightMm } = context;
+  const opacity = options.opacity ?? 1;
+  const corner = rotatedLowerLeft(box, box.rotation, heightMm);
+  const color = options.fillTransparent ? undefined : options.fillColor ? hexToRgb(options.fillColor) : undefined;
+  if (options.rounded && box.rotation === 0) {
+    const radius = Math.min(3, box.widthMm / 4, box.heightMm / 4);
+    const x = box.xMm;
+    const y = box.yMm;
+    const w = box.widthMm;
+    const h = box.heightMm;
+    const path =
+      `M ${x + radius} ${y} H ${x + w - radius} Q ${x + w} ${y} ${x + w} ${y + radius} ` +
+      `V ${y + h - radius} Q ${x + w} ${y + h} ${x + w - radius} ${y + h} ` +
+      `H ${x + radius} Q ${x} ${y + h} ${x} ${y + h - radius} ` +
+      `V ${y + radius} Q ${x} ${y} ${x + radius} ${y} Z`;
+    page.drawSvgPath(path, {
+      x: 0,
+      y: heightMm * PT_PER_MM,
+      scale: PT_PER_MM,
+      color,
+      opacity: color ? opacity : undefined,
+      borderColor: options.borderWidth > 0 ? hexToRgb(options.borderColor) : undefined,
+      borderWidth: options.borderWidth > 0 ? options.borderWidth : undefined,
+      borderOpacity: opacity,
+    });
+    return;
+  }
+  page.drawRectangle({
+    x: corner.x,
+    y: corner.y,
+    width: box.widthMm * PT_PER_MM,
+    height: box.heightMm * PT_PER_MM,
+    rotate: degrees(-box.rotation),
+    color,
+    opacity: color ? opacity : undefined,
+    borderColor: options.borderWidth > 0 ? hexToRgb(options.borderColor) : undefined,
+    borderWidth: options.borderWidth > 0 ? options.borderWidth : undefined,
+    borderOpacity: opacity,
+  });
+}
+
+async function drawTextBox(context: DrawContext, annotation: TextAnnotation): Promise<void> {
+  const { page, heightMm } = context;
+  const box: BoxFrame = {
+    xMm: annotation.xMm,
+    yMm: annotation.yMm,
+    widthMm: annotation.widthMm,
+    heightMm: annotation.heightMm,
+    rotation: annotation.rotation,
+  };
+  const opacity = annotation.opacity;
+  const center: Pt = [annotation.xMm + annotation.widthMm / 2, annotation.yMm + annotation.heightMm / 2];
+
+  if (annotation.frameType === 3) {
+    drawBoxFill(
+      context,
+      { ...box, xMm: box.xMm + 1.3, yMm: box.yMm + 1.3 },
+      {
+        fillColor: "#14161b",
+        fillTransparent: false,
+        borderColor: annotation.frameColor,
+        borderWidth: 0,
+        opacity: annotation.opacity,
+      },
+    );
+  }
+  drawBoxFill(context, box, {
+    fillColor: annotation.boxFillColor,
+    fillTransparent: annotation.boxFillTransparent,
+    borderColor: annotation.frameColor,
+    borderWidth: annotation.frameType === 0 ? 0 : annotation.lineWidthMm,
+    rounded: annotation.frameType === 2,
+    opacity: annotation.opacity,
+  });
+
+  if (!annotation.text) return;
+  const layout = layoutText(annotation);
+  const font = await fontFor(context, standardFontFor(annotation));
+  const padding = TEXT_PADDING_MM;
+  const fontSizeMm = layout.fontSizePt * PT_TO_MM;
+
+  for (const line of layout.lines) {
+    if (!line.text) continue;
+    const widthMm = measureTextWidthMm(line.text, annotation.fontFamily, annotation.bold, layout.fontSizePt);
+    let xMm = annotation.xMm + padding;
+    if (annotation.align === "center") xMm = annotation.xMm + (annotation.widthMm - widthMm) / 2;
+    if (annotation.align === "right") xMm = annotation.xMm + annotation.widthMm - padding - widthMm;
+    const scriptShiftMm =
+      annotation.script === "sub" ? fontSizeMm * 0.22 : annotation.script === "super" ? -fontSizeMm * 0.3 : 0;
+    const baselineMm =
+      annotation.yMm + padding + line.topMm + fontSizeMm * 0.82 + scriptShiftMm;
+    const start = toPdfPoint(rotateMm([xMm, baselineMm], center, annotation.rotation), heightMm);
+    const size = annotation.script === "normal" ? layout.fontSizePt : layout.fontSizePt * 0.72;
+    page.drawText(line.text, {
+      x: start.x,
+      y: start.y,
+      size,
+      font,
+      color: hexToRgb(annotation.textColor),
+      opacity,
+      rotate: degrees(-annotation.rotation),
+    });
+    const under = (offsetMm: number, thickness: number) => {
+      const yMm = baselineMm + offsetMm;
+      const a = rotateMm([xMm, yMm], center, annotation.rotation);
+      const b = rotateMm([xMm + widthMm, yMm], center, annotation.rotation);
+      page.drawLine({
+        start: toPdfPoint(a, heightMm),
+        end: toPdfPoint(b, heightMm),
+        thickness,
+        color: hexToRgb(annotation.textColor),
+        opacity,
+      });
+    };
+    if (annotation.underline) under(0.55, Math.max(0.35, fontSizeMm * 0.07));
+    if (annotation.strikeOut) under(-fontSizeMm * 0.28, Math.max(0.3, fontSizeMm * 0.06));
+  }
+}
+
+async function formulaImage(context: DrawContext, annotation: FormulaAnnotation): Promise<PDFImage | null> {
+  const key = `${annotation.latex}::${annotation.fontSizePt}`;
+  let pending = context.formulas.get(key);
+  if (!pending) {
+    const widthPx = Math.max(48, Math.ceil(annotation.widthMm * 8));
+    const heightPx = Math.max(24, Math.ceil(annotation.heightMm * 8));
+    const fontSizePx = Math.max(8, annotation.fontSizePt * 2);
+    pending = latexToPng(annotation.latex, fontSizePx, widthPx, heightPx, annotation.color).then((raster) =>
+      raster ? context.pdf.embedPng(raster.dataUrl) : null,
+    );
+    pending = pending.catch(() => null);
+    context.formulas.set(key, pending);
+  }
+  return pending;
+}
+
+async function drawFormula(context: DrawContext, annotation: FormulaAnnotation): Promise<void> {
+  const { page, heightMm } = context;
+  if (!annotation.fillTransparent) {
+    drawBoxFill(
+      context,
+      {
+        xMm: annotation.xMm,
+        yMm: annotation.yMm,
+        widthMm: annotation.widthMm,
+        heightMm: annotation.heightMm,
+        rotation: annotation.rotation,
+      },
+      { fillColor: annotation.fillColor, borderColor: annotation.fillColor, borderWidth: 0, opacity: annotation.opacity },
+    );
+  }
+  const image = await formulaImage(context, annotation);
+  const corner = rotatedLowerLeft(
+    {
+      xMm: annotation.xMm,
+      yMm: annotation.yMm,
+      widthMm: annotation.widthMm,
+      heightMm: annotation.heightMm,
+    },
+    annotation.rotation,
+    heightMm,
+  );
+  if (image) {
+    page.drawImage(image, {
+      x: corner.x,
+      y: corner.y,
+      width: annotation.widthMm * PT_PER_MM,
+      height: annotation.heightMm * PT_PER_MM,
+      opacity: annotation.opacity,
+      rotate: degrees(-annotation.rotation),
+    });
+    return;
+  }
+  // A headless run has no canvas for KaTeX: lay the source out as plain text.
+  const fallback: TextAnnotation = {
+    ...annotation,
+    type: "text",
+    text: annotation.latex,
+    fontFamily: "Helvetica",
+    bold: false,
+    italic: false,
+    textColor: annotation.color,
+    underline: false,
+    strikeOut: false,
+    align: "center",
+    script: "normal",
+    boxFillColor: annotation.fillColor,
+    boxFillTransparent: true,
+    frameType: 0,
+    frameColor: annotation.fillColor,
+    lineWidthMm: 0,
+    autoFit: false,
+  };
+  const layout = layoutText(fallback);
+  const font = await fontFor(context, StandardFonts.Helvetica);
+  const center: Pt = [annotation.xMm + annotation.widthMm / 2, annotation.yMm + annotation.heightMm / 2];
+  for (const line of layout.lines) {
+    const widthMm = measureTextWidthMm(line.text, "Helvetica", false, layout.fontSizePt);
+    const xMm = annotation.xMm + (annotation.widthMm - widthMm) / 2;
+    const baselineMm = annotation.yMm + annotation.heightMm / 2 + line.topMm - (layout.lines.length * layout.lineHeightMm) / 2 + layout.lineHeightMm * 0.75;
+    const start = toPdfPoint(rotateMm([xMm, baselineMm], center, annotation.rotation), heightMm);
+    page.drawText(line.text, {
+      x: start.x,
+      y: start.y,
+      size: layout.fontSizePt,
+      font,
+      color: hexToRgb(annotation.color),
+      opacity: annotation.opacity,
+      rotate: degrees(-annotation.rotation),
+    });
   }
 }
 
@@ -324,7 +633,7 @@ async function drawShape(
   annotation: Extract<Annotation, { type: "shape" }>,
   svgOptions: { x: number; y: number; scale: number },
 ): Promise<void> {
-  const { page, heightMm, font } = context;
+  const { page, heightMm } = context;
   const stroke = hexToRgb(annotation.strokeColor);
   const fill = annotation.fillColor && !annotation.fillTransparent ? hexToRgb(annotation.fillColor) : null;
   const dash = DASH[annotation.lineStyle](annotation.lineWidthMm);
@@ -392,7 +701,7 @@ async function drawShape(
       x: (midpoint[0] - textWidth / 2) * PT_PER_MM,
       y: (heightMm - midpoint[1] - 1.4) * PT_PER_MM,
       size: 7,
-      font,
+      font: await fontFor(context, StandardFonts.Helvetica),
       color: stroke,
       opacity: annotation.opacity,
     });
@@ -451,31 +760,47 @@ function drawPaperBackground(page: PDFPage, template: PaperTemplate, landscape: 
   }
 }
 
-function serializedFromInput(input: PdfExportInput): SerializedDocument {
+function serializedFromInput(
+  input: PdfExportInput,
+  copied: boolean[],
+): SerializedDocument {
   return {
     version: 1,
     title: input.title,
     savedAt: new Date().toISOString(),
-    pages: input.pages.map((page) => ({
+    pages: input.pages.map((page, index) => ({
       templateId: page.templateId,
       landscape: page.landscape,
       rotation: page.rotation,
       widthMm: page.widthMm,
       heightMm: page.heightMm,
-      ...(page.pdfPageIndex !== undefined ? { pdfPageIndex: page.pdfPageIndex } : {}),
+      // In the rebuilt file every page sits at its new 1-based position.
+      ...(copied[index] ? { pdfPageIndex: index + 1 } : {}),
+      ...(page.cropBox ? { cropBox: page.cropBox } : {}),
       annotations: JSON.parse(JSON.stringify(page.annotations)) as Annotation[],
     })),
   };
 }
 
-/** Pure client-side vector export. Returns the finished PDF bytes. */
+/**
+ * Rebuilds the page tree from scratch: source pages are copied one by one in
+ * tab order, paper pages are drawn fresh, then annotations, rotation and crop
+ * are applied. Reordering, duplicating or deleting pages therefore survives an
+ * export instead of silently keeping the source document's page order.
+ */
 export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
-  const pdf = input.sourceBytes
-    ? await PDFDocument.load(input.sourceBytes, { updateMetadata: false })
-    : await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const pdf = await PDFDocument.create();
   pdf.setTitle(input.title);
   pdf.setProducer("PDF Master");
+
+  let source: PDFDocument | null = null;
+  if (input.sourceBytes) {
+    try {
+      source = await PDFDocument.load(input.sourceBytes, { updateMetadata: false });
+    } catch {
+      source = null;
+    }
+  }
 
   const images = new Map<string, Promise<PDFImage | null>>();
   for (const pageInput of input.pages) {
@@ -486,33 +811,49 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
     }
   }
 
-  const pages: PDFPage[] = [];
+  const fonts = new Map<StandardFonts, Promise<PDFFont>>();
+  const formulas = new Map<string, Promise<PDFImage | null>>();
+  const copied: boolean[] = [];
+
   for (const pageInput of input.pages) {
+    const sourceIndex = pageInput.pdfPageIndex;
     let page: PDFPage;
-    if (input.sourceBytes && pageInput.pdfPageIndex !== undefined) {
-      const existing = pdf.getPages()[pageInput.pdfPageIndex - 1];
-      page = existing ?? pdf.addPage([pageInput.widthMm * PT_PER_MM, pageInput.heightMm * PT_PER_MM]);
+    let fromPdf = false;
+    if (source && sourceIndex !== undefined && sourceIndex >= 1 && sourceIndex <= source.getPageCount()) {
+      const [copy] = await pdf.copyPages(source, [sourceIndex - 1]);
+      page = pdf.addPage(copy);
       if (pageInput.rotation) {
-        page.setRotation(degrees(page.getRotation().angle + pageInput.rotation));
+        page.setRotation(degrees((page.getRotation().angle + pageInput.rotation) % 360));
       }
+      fromPdf = true;
     } else {
       page = pdf.addPage([pageInput.widthMm * PT_PER_MM, pageInput.heightMm * PT_PER_MM]);
       if (pageInput.rotation) page.setRotation(degrees(pageInput.rotation));
+      const template = paperById.get(pageInput.templateId);
+      if (template) drawPaperBackground(page, template, pageInput.landscape, pageInput.widthMm, pageInput.heightMm);
     }
-    pages.push(page);
+    copied.push(fromPdf);
 
-    const template = paperById.get(pageInput.templateId);
-    if (!pageInput.pdfPageIndex && template) {
-      drawPaperBackground(page, template, pageInput.landscape, pageInput.widthMm, pageInput.heightMm);
+    if (pageInput.cropBox) {
+      const crop = pageInput.cropBox;
+      page.setCropBox(
+        crop.xMm * PT_PER_MM,
+        (pageInput.heightMm - crop.yMm - crop.heightMm) * PT_PER_MM,
+        crop.widthMm * PT_PER_MM,
+        crop.heightMm * PT_PER_MM,
+      );
     }
 
     for (const annotation of pageInput.annotations) {
-      await drawAnnotation({ page, heightMm: pageInput.heightMm, font, images }, annotation);
+      await drawAnnotation(
+        { pdf, page, widthMm: pageInput.widthMm, heightMm: pageInput.heightMm, fonts, images, formulas },
+        annotation,
+      );
     }
   }
 
   if (input.mode === "editable") {
-    pdf.catalog.set(PDFName.of(SIDECAR_KEY), PDFString.of(encodeSidecar(serializedFromInput(input))));
+    pdf.catalog.set(PDFName.of(SIDECAR_KEY), PDFString.of(encodeSidecar(serializedFromInput(input, copied))));
   }
 
   return pdf.save();
@@ -534,6 +875,7 @@ export function exportInputFromTab(tab: DocumentTab, mode: PersistenceMode): Pdf
         widthMm: pdf?.widthMm ?? template?.page.widthMm ?? 210,
         heightMm: pdf?.heightMm ?? template?.page.heightMm ?? 297,
         pdfPageIndex: pdf?.pageNumber,
+        ...(page.cropBox ? { cropBox: page.cropBox } : {}),
         annotations: page.annotations,
       };
     }),

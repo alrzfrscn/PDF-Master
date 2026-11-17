@@ -43,7 +43,7 @@ export interface MarkerAnnotation extends AnnotationBase {
 }
 
 export type ShapeType = "line" | "arrow" | "rectangle" | "ellipse" | "polygon" | "dimension";
-export type DimensionUnit = "mm" | "cm" | "in";
+export type DimensionUnit = "mm" | "cm" | "m" | "in" | "ft";
 
 export interface ShapeAnnotation extends AnnotationBase {
   type: "shape";
@@ -79,8 +79,90 @@ export interface StampAnnotation extends AnnotationBase {
   opacity: number;
 }
 
-export type Annotation = PenAnnotation | MarkerAnnotation | ShapeAnnotation | StampAnnotation;
+export type TextAlign = "left" | "center" | "right";
+export type TextScript = "normal" | "sub" | "super";
+
+/** A framed text box; geometry is the unrotated box, rotation pivots on its centre. */
+export interface TextAnnotation extends AnnotationBase {
+  type: "text";
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+  text: string;
+  /** PDF standard family: Helvetica, TimesRoman or Courier. */
+  fontFamily: string;
+  fontSizePt: number;
+  textColor: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strikeOut: boolean;
+  align: TextAlign;
+  script: TextScript;
+  boxFillColor: string;
+  boxFillTransparent: boolean;
+  /** 0 none, 1 rectangle border, 2 rounded border, 3 drop-shadow callout. */
+  frameType: 0 | 1 | 2 | 3;
+  frameColor: string;
+  lineWidthMm: number;
+  /** Shrink the type to stay inside the box instead of overflowing. */
+  autoFit: boolean;
+  rotation: number;
+  opacity: number;
+}
+
+/** A LaTeX formula rendered with KaTeX on screen and rasterised into exports. */
+export interface FormulaAnnotation extends AnnotationBase {
+  type: "formula";
+  latex: string;
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+  color: string;
+  fontSizePt: number;
+  fillColor: string;
+  fillTransparent: boolean;
+  rotation: number;
+  opacity: number;
+}
+
+export type Annotation =
+  | PenAnnotation
+  | MarkerAnnotation
+  | ShapeAnnotation
+  | StampAnnotation
+  | TextAnnotation
+  | FormulaAnnotation;
 export type AnnotationType = Annotation["type"];
+
+/** Multi-line, wrapped text layout shared by the canvas and the PDF export. */
+export interface TextLine {
+  text: string;
+  /** Offset from the top of the box, in millimetres. */
+  topMm: number;
+}
+
+export interface TextLayout {
+  lines: TextLine[];
+  fontSizePt: number;
+  lineHeightMm: number;
+  /** Width of the widest line, in millimetres. */
+  widthMm: number;
+}
+
+export interface TextMeasureOptions {
+  fontFamily: string;
+  bold: boolean;
+  italic: boolean;
+  fontSizePt: number;
+  align: TextAlign;
+  autoFit: boolean;
+  widthMm: number;
+  heightMm: number;
+  paddingMm?: number;
+}
 
 /** Loose property patch used by the Inspector across mixed selections. */
 export interface AnnotationPatch {
@@ -99,7 +181,30 @@ export interface AnnotationPatch {
   tipStyle?: MarkerTip;
   locked?: boolean;
   hidden?: boolean;
+  text?: string;
+  fontFamily?: string;
+  fontSizePt?: number;
+  textColor?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strikeOut?: boolean;
+  align?: TextAlign;
+  script?: TextScript;
+  boxFillColor?: string;
+  boxFillTransparent?: boolean;
+  frameType?: 0 | 1 | 2 | 3;
+  frameColor?: string;
+  autoFit?: boolean;
+  rotation?: number;
+  latex?: string;
+  widthMm?: number;
+  heightMm?: number;
 }
+
+export const TEXT_FONTS = ["Helvetica", "TimesRoman", "Courier"] as const;
+
+export type TextFontFamily = (typeof TEXT_FONTS)[number];
 
 export type AlignMode = "left" | "center" | "right" | "top" | "middle" | "bottom";
 

@@ -1,4 +1,4 @@
-import { Command, FileDown, FolderOpen, Grid3x3, PanelLeft, Play, Plus, Redo2, Save, Sparkles, Stamp, Undo2, X } from "lucide-react";
+import { Command, FileDown, FolderOpen, Grid3x3, PanelLeft, Play, Plus, Redo2, Save, Settings, Sparkles, Stamp, Undo2, X } from "lucide-react";
 import { useState } from "react";
 import { downloadPdf, exportInputFromTab, exportPdf, type PersistenceMode } from "../lib/pdfEngine";
 import { useDocStore } from "../stores/useDocStore";
@@ -20,6 +20,7 @@ export function TopBar() {
   const libraryOpen = useUIStore((state) => state.libraryOpen);
   const setNewDocOpen = useUIStore((state) => state.setNewDocOpen);
   const setPresentation = useUIStore((state) => state.setPresentation);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const [busy, setBusy] = useState(false);
 
   const save = async (mode: PersistenceMode) => {
@@ -193,6 +194,16 @@ export function TopBar() {
         onClick={() => setPresentation(true)}
       >
         <Play size={15} strokeWidth={1.75} />
+      </button>
+
+      <button
+        type="button"
+        className="icon-btn hidden sm:grid"
+        aria-label="Settings"
+        title="Settings (Ctrl+,)"
+        onClick={() => setSettingsOpen(true)}
+      >
+        <Settings size={16} strokeWidth={1.75} />
       </button>
 
       <div className="ml-1">
