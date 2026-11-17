@@ -1,3 +1,5 @@
+import type { Annotation } from "./annotationTypes";
+
 export type ThemeName = "light" | "dark" | "sepia";
 
 export interface ColorValue {
@@ -178,6 +180,44 @@ export interface DocumentTab {
   templateId: string;
   landscape: boolean;
   pageCount: number;
+  pages: DocumentPage[];
+  pdf?: PdfSource;
+}
+
+/** A rasterised page from an opened PDF, addressed in page-local millimetres. */
+export interface PdfPageSource {
+  url: string;
+  /** 1-based page number inside the source PDF. */
+  pageNumber: number;
+  widthMm: number;
+  heightMm: number;
+}
+
+export interface DocumentPage {
+  id: string;
+  /** Parametric background recipe; used when `pdf` is absent. */
+  templateId: string;
+  rotation: 0 | 90 | 180 | 270;
+  annotations: Annotation[];
+  pdf?: PdfPageSource;
+}
+
+export interface PdfBookmark {
+  id: string;
+  title: string;
+  /** 0-based page index. */
+  pageIndex: number;
+  depth: number;
+  custom?: boolean;
+}
+
+export interface PdfSource {
+  url: string;
+  name: string;
+  pageCount: number;
+  /** Kept so a reopened workspace can recreate the object URL. */
+  bytes?: Uint8Array;
+  bookmarks: PdfBookmark[];
 }
 
 export interface MigrationManifest {

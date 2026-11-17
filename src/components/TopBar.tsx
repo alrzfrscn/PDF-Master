@@ -1,4 +1,6 @@
-import { Command, Grid3x3, PanelLeft, Play, Plus, Sparkles, Stamp, X } from "lucide-react";
+import { Command, FileDown, FolderOpen, Grid3x3, PanelLeft, Play, Plus, Redo2, Save, Sparkles, Stamp, Undo2, X } from "lucide-react";
+import { useState } from "react";
+import { downloadPdf, exportInputFromTab, exportPdf, type PersistenceMode } from "../lib/pdfEngine";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -18,6 +20,19 @@ export function TopBar() {
   const libraryOpen = useUIStore((state) => state.libraryOpen);
   const setNewDocOpen = useUIStore((state) => state.setNewDocOpen);
   const setPresentation = useUIStore((state) => state.setPresentation);
+  const [busy, setBusy] = useState(false);
+
+  const save = async (mode: PersistenceMode) => {
+    const tab = useDocStore.getState().tabs.find((item) => item.id === useDocStore.getState().activeId);
+    if (!tab || busy) return;
+    setBusy(true);
+    try {
+      const bytes = await exportPdf(exportInputFromTab(tab, mode));
+      downloadPdf(bytes, `${tab.title}${mode === "editable" ? "" : "-flattened"}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <header className="glass relative z-30 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
@@ -92,6 +107,54 @@ export function TopBar() {
       </div>
 
       <div className="mx-0.5 hidden h-7 w-px bg-[var(--border)] md:block" />
+
+      <button
+        type="button"
+        className="icon-btn hidden sm:grid"
+        aria-label="Open PDF"
+        title="Open PDF (Ctrl+O)"
+        onClick={() => document.getElementById("pm-pdf-input")?.click()}
+      >
+        <FolderOpen size={16} strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="icon-btn hidden sm:grid"
+        aria-label="Undo"
+        title="Undo (Ctrl+Z)"
+        onClick={() => useDocStore.getState().undo()}
+      >
+        <Undo2 size={16} strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="icon-btn hidden sm:grid"
+        aria-label="Redo"
+        title="Redo (Ctrl+Y)"
+        onClick={() => useDocStore.getState().redo()}
+      >
+        <Redo2 size={16} strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="chip h-8"
+        aria-label="Save editable PDF"
+        title="Save as PDF with editable annotations (Ctrl+S)"
+        disabled={busy}
+        onClick={() => void save("editable")}
+      >
+        <Save size={13} strokeWidth={1.75} /> Save
+      </button>
+      <button
+        type="button"
+        className="chip hidden h-8 lg:inline-flex"
+        aria-label="Export flattened PDF"
+        title="Export flattened PDF"
+        disabled={busy}
+        onClick={() => void save("flattened")}
+      >
+        <FileDown size={13} strokeWidth={1.75} /> Flatten
+      </button>
 
       <button
         type="button"

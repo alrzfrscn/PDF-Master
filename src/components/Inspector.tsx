@@ -1,14 +1,18 @@
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Eraser, Group, Lock, Rows3, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
 import { useMemo } from "react";
-import { paperById, paperTemplates, presets, stamps, userStamps } from "../lib/data";
-import { pageMm } from "../lib/paper";
+import { paperTemplates, presets, stamps, userStamps } from "../lib/data";
+import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
+import { SHAPE_LABEL, type Annotation, type AnnotationPatch, type AlignMode } from "../lib/annotationTypes";
 import { TOOL_BY_ID } from "../lib/tools";
+import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
+import { useUIStore } from "../stores/useUIStore";
 import { PresetGallery } from "./PresetGallery";
 import { PropertyControls } from "./PropertyControls";
 import { StampGallery } from "./StampGallery";
 import { TOOL_ICONS } from "./toolIcons";
-import { SectionTitle, Segmented } from "./ui/controls";
+import { ColorRow, SectionTitle, Segmented, SliderRow, ToggleRow } from "./ui/controls";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -19,17 +23,174 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+const ALIGNMENTS: { mode: AlignMode; label: string; Icon: typeof AlignStartVertical }[] = [
+  { mode: "left", label: "Align left", Icon: AlignStartVertical },
+  { mode: "center", label: "Align centre", Icon: AlignCenterVertical },
+  { mode: "right", label: "Align right", Icon: AlignEndVertical },
+  { mode: "top", label: "Align top", Icon: AlignStartHorizontal },
+  { mode: "middle", label: "Align middle", Icon: AlignCenterHorizontal },
+  { mode: "bottom", label: "Align bottom", Icon: AlignEndHorizontal },
+];
+
+function firstValue<T>(annotations: Annotation[], pick: (annotation: Annotation) => T | undefined): T | undefined {
+  for (const annotation of annotations) {
+    const value = pick(annotation);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
+  const update = useAnnotationStore((state) => state.update);
+  const align = useAnnotationStore((state) => state.align);
+  const distribute = useAnnotationStore((state) => state.distribute);
+  const groupSelection = useAnnotationStore((state) => state.groupSelection);
+  const ungroupSelection = useAnnotationStore((state) => state.ungroupSelection);
+  const setLocked = useAnnotationStore((state) => state.setLocked);
+  const bringToFront = useAnnotationStore((state) => state.bringToFront);
+  const sendToBack = useAnnotationStore((state) => state.sendToBack);
+  const deleteSelection = useAnnotationStore((state) => state.deleteSelection);
+  const ids = annotations.map((annotation) => annotation.id);
+
+  const color = firstValue(annotations, (annotation) =>
+    annotation.type === "shape" ? annotation.strokeColor : annotation.type === "stamp" ? undefined : annotation.color,
+  );
+  const thickness = firstValue(annotations, (annotation) =>
+    annotation.type === "shape" ? annotation.lineWidthMm : annotation.type === "stamp" ? undefined : annotation.thicknessMm,
+  );
+  const opacity = annotations[0]?.opacity ?? 1;
+  const fill = firstValue(annotations, (annotation) => (annotation.type === "shape" ? annotation.fillColor : undefined));
+  const lineStyle = firstValue(annotations, (annotation) => (annotation.type === "shape" ? annotation.lineStyle : undefined));
+  const locked = annotations.every((annotation) => annotation.locked);
+  const grouped = annotations.some((annotation) => annotation.groupId);
+  const kinds = [...new Set(annotations.map((annotation) => (annotation.type === "shape" ? SHAPE_LABEL[annotation.shapeType] : annotation.type === "pen" ? "Pen" : annotation.type === "marker" ? "Highlighter" : "Stamp")))];
+
+  const patch = (next: AnnotationPatch) => update(ids, next);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-2.5" style={{ background: "var(--panel)" }}>
+      <div className="flex items-center gap-2">
+        <span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+          <Group size={14} strokeWidth={1.8} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[12px] font-semibold">
+            {annotations.length} selected
+          </div>
+          <div className="truncate text-[10px] text-muted">{kinds.join(" · ")}</div>
+        </div>
+        <button type="button" className="icon-btn h-6 w-6" title="Delete" aria-label="Delete selection" onClick={deleteSelection}>
+          <Trash2 size={12} />
+        </button>
+      </div>
+
+      {color !== undefined && (
+        <ColorRow
+          label="Colour"
+          value={color}
+          onChange={(value) => value && patch({ color: value, strokeColor: value })}
+        />
+      )}
+      {thickness !== undefined && (
+        <SliderRow
+          label="Width"
+          value={thickness}
+          min={0.2}
+          max={32}
+          step={0.1}
+          unit="mm"
+          onChange={(value) => patch({ thicknessMm: value, lineWidthMm: value })}
+        />
+      )}
+      <SliderRow
+        label="Opacity"
+        value={Math.round(opacity * 100)}
+        min={5}
+        max={100}
+        step={1}
+        unit="%"
+        onChange={(value) => patch({ opacity: value / 100 })}
+      />
+      {fill !== undefined && (
+        <ColorRow
+          label="Fill"
+          value={fill}
+          allowNone
+          onChange={(value) => patch({ fillColor: value, fillTransparent: value === null })}
+        />
+      )}
+      {lineStyle !== undefined && (
+        <div className="field">
+          <span className="field-label">Line style</span>
+          <Segmented
+            value={lineStyle}
+            options={[
+              { value: "solid", label: "Solid" },
+              { value: "dash", label: "Dash" },
+              { value: "dot", label: "Dot" },
+              { value: "dash-dot", label: "Dash-dot" },
+            ]}
+            onChange={(value) => patch({ lineStyle: value })}
+          />
+        </div>
+      )}
+
+      {annotations.length >= 2 && (
+        <>
+          <SectionTitle>Align</SectionTitle>
+          <div className="grid grid-cols-6 gap-1">
+            {ALIGNMENTS.map(({ mode, label, Icon }) => (
+              <button key={mode} type="button" className="icon-btn h-7 w-full" title={label} aria-label={label} onClick={() => align(mode)}>
+                <Icon size={13} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {annotations.length >= 3 && (
+        <div className="grid grid-cols-2 gap-1">
+          <button type="button" className="chip h-7 justify-center" onClick={() => distribute("x")}>
+            <Columns3 size={12} /> Distribute H
+          </button>
+          <button type="button" className="chip h-7 justify-center" onClick={() => distribute("y")}>
+            <Rows3 size={12} /> Distribute V
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-1">
+        <button type="button" className="chip h-7 justify-center" onClick={grouped ? ungroupSelection : groupSelection} title={grouped ? "Ungroup" : "Group"}>
+          {grouped ? <Ungroup size={12} /> : <Group size={12} />} {grouped ? "Ungroup" : "Group"}
+        </button>
+        <button type="button" className="chip h-7 justify-center" onClick={() => setLocked(!locked)}>
+          {locked ? <Unlock size={12} /> : <Lock size={12} />} {locked ? "Unlock" : "Lock"}
+        </button>
+        <button type="button" className="chip h-7 justify-center" onClick={locked ? sendToBack : bringToFront}>
+          {locked ? <SendToBack size={12} /> : <BringToFront size={12} />} {locked ? "Back" : "Front"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Inspector() {
   const activeTool = useToolStore((state) => state.activeTool);
   const sync = useToolStore((state) => state.sync);
   const setSync = useToolStore((state) => state.setSync);
   const selectedStampId = useToolStore((state) => state.selectedStampId);
+  const eraserSplit = useUIStore((state) => state.eraserSplit);
+  const setEraserSplit = useUIStore((state) => state.setEraserSplit);
 
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
+  const pageIndex = useDocStore((state) => state.page);
+  const selection = useAnnotationStore((state) => state.selection);
+
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
-  const template = paperById.get(tab.templateId) ?? paperTemplates[0];
-  const size = pageMm(template, tab.landscape);
+  const page = tab.pages[pageIndex - 1] ?? tab.pages[0];
+  const template = pageTemplate(page);
+  const size = pageSizeMm(tab, page);
+  const chosen = page.annotations.filter((annotation) => selection.includes(annotation.id));
 
   const meta = TOOL_BY_ID.get(activeTool);
   const Icon = TOOL_ICONS[activeTool];
@@ -42,40 +203,51 @@ export function Inspector() {
     return null;
   }, [selectedStampId]);
 
-  const gridLabel = template.grid
-    ? template.grid.deltaXMm ?? template.grid.deltaYMm ?? template.grid.deltaMm
-    : null;
+  const gridLabel = template.grid ? template.grid.deltaXMm ?? template.grid.deltaYMm ?? template.grid.deltaMm : null;
 
   return (
     <aside className="glass m-2 ml-0 hidden w-[316px] shrink-0 flex-col overflow-hidden rounded-2xl lg:flex">
       <div className="flex items-start gap-2.5 border-b border-[var(--border)] px-3 py-2.5">
-        <div
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-        >
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
           <Icon size={18} strokeWidth={1.75} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold tracking-[-0.01em]">{meta?.name}</span>
-            <kbd className="rounded border border-[var(--border)] px-1 py-px text-[9px] font-medium text-muted">
-              {meta?.shortcut}
-            </kbd>
+            <span className="text-[13px] font-semibold tracking-[-0.01em]">{chosen.length > 0 ? "Selection" : meta?.name}</span>
+            {chosen.length === 0 && (
+              <kbd className="rounded border border-[var(--border)] px-1 py-px text-[9px] font-medium text-muted">{meta?.shortcut}</kbd>
+            )}
           </div>
-          <p className="mt-0.5 text-[10.5px] leading-snug text-muted">{meta?.hint}</p>
+          <p className="mt-0.5 text-[10.5px] leading-snug text-muted">
+            {chosen.length > 0 ? "Edit the selected annotations, or use the mini-bar on the page." : meta?.hint}
+          </p>
         </div>
       </div>
 
       <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
+        {chosen.length > 0 && <SelectionInspector annotations={chosen} />}
+
+        {activeTool === "eraser" && (
+          <div className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-2.5">
+            <div className="flex items-center gap-2 text-[12px] font-medium">
+              <Eraser size={14} /> Eraser mode
+            </div>
+            <ToggleRow
+              label="Split strokes"
+              hint="Off removes the whole annotation, on cuts only the touched part. Hold Alt to flip."
+              checked={eraserSplit}
+              onChange={setEraserSplit}
+            />
+          </div>
+        )}
+
         {meta?.needsProperties ? (
           activeTool === "stamp" ? (
             <>
               {selectedStamp && (
                 <div className="flex items-center gap-2.5 rounded-xl border border-[var(--border)] p-2">
                   <span className="checker grid h-11 w-11 shrink-0 place-items-center rounded-lg p-1">
-                    {selectedStamp.imageUrl && (
-                      <img src={selectedStamp.imageUrl} alt={selectedStamp.name} className="max-h-full max-w-full object-contain" />
-                    )}
+                    {selectedStamp.imageUrl && <img src={selectedStamp.imageUrl} alt={selectedStamp.name} className="max-h-full max-w-full object-contain" />}
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-[12px] font-medium">{selectedStamp.name}</span>
@@ -90,8 +262,7 @@ export function Inspector() {
 
               <div className="divider" />
               <p className="text-[10.5px] leading-relaxed text-muted">
-                Stamps place at their native ink size, exactly as the factory recipes do. Your own stamps come from the
-                PDF Annotator Tools folder; pick one here and click the page to place it in Phase 3.
+                Stamps place at their native ink size; drag to place and scale. Click the page for a one-click placement.
               </p>
             </>
           ) : (
@@ -104,8 +275,7 @@ export function Inspector() {
               <SectionTitle>Tool properties</SectionTitle>
               {activeTool === "marker" ? (
                 <p className="rounded-lg px-2.5 py-2 text-[10.5px] leading-relaxed" style={{ background: "var(--track)" }}>
-                  Highlighter ink is never synchronised, in either direction — the factory contract keeps marker
-                  attributes per tool.
+                  Highlighter ink is never synchronised, in either direction — the factory contract keeps marker attributes per tool.
                 </p>
               ) : (
                 <div className="flex flex-col gap-2">
@@ -128,22 +298,16 @@ export function Inspector() {
           )
         ) : (
           <>
-            <SectionTitle>Document</SectionTitle>
+            <SectionTitle>Page</SectionTitle>
             <div className="flex flex-col gap-1.5">
               <InfoRow label="Template" value={template.name} />
-              <InfoRow label="Style" value={template.styleLabel} />
+              <InfoRow label="Style" value={page.pdf ? "PDF page" : template.styleLabel} />
               <InfoRow label="Size" value={`${Number(size.widthMm.toFixed(1))} × ${Number(size.heightMm.toFixed(1))} mm`} />
               <InfoRow label="Orientation" value={tab.landscape ? "Landscape" : "Portrait"} />
-              <InfoRow label="Grid" value={gridLabel ? `${gridLabel} mm` : "None"} />
-              <InfoRow
-                label="Margins"
-                value={
-                  template.bounds
-                    ? `${template.bounds.left} / ${template.bounds.top} / ${template.bounds.right} / ${template.bounds.bottom}`
-                    : "Full bleed"
-                }
-              />
-              <InfoRow label="Recipe" value={`paper-${String(template.index).padStart(3, "0")}`} />
+              <InfoRow label="Rotation" value={`${page.rotation}°`} />
+              <InfoRow label="Grid" value={page.pdf ? "PDF" : gridLabel ? `${gridLabel} mm` : "None"} />
+              <InfoRow label="Annotations" value={`${page.annotations.length} on this page`} />
+              <InfoRow label="Pages" value={`${tab.pages.length}`} />
             </div>
             <div className="divider" />
             <SectionTitle>Migration</SectionTitle>

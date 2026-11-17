@@ -1,7 +1,13 @@
-import { Bookmark, FileText, MessageSquareText, Plus, Star } from "lucide-react";
-import { paperById, paperTemplates, stamps, userStamps } from "../lib/data";
-import { PX_PER_MM, pageMm } from "../lib/paper";
+import { Bookmark, BookmarkPlus, FileText, Highlighter, MessageSquareText, PenLine, Plus, RotateCw, Square, Stamp, Star, Trash2, CopyPlus, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { paperTemplates, stampById, stamps, userStamps } from "../lib/data";
+import { PX_PER_MM } from "../lib/paper";
+import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
+import { renderPdfPage } from "../lib/pdfEngine";
+import { SHAPE_LABEL, type Annotation } from "../lib/annotationTypes";
+import type { DocumentPage, DocumentTab } from "../lib/types";
 import type { SidebarTab } from "../stores/useUIStore";
+import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
 import { useUIStore } from "../stores/useUIStore";
@@ -27,6 +33,81 @@ function EmptyState({ Icon, title, body }: { Icon: typeof FileText; title: strin
   );
 }
 
+function PageThumb({ tab, page, active, index, onClick }: { tab: DocumentTab; page: DocumentPage; active: boolean; index: number; onClick: () => void }) {
+  const size = pageSizeMm(tab, page);
+  const rotation = page.rotation === 90 || page.rotation === 270;
+  const width = rotation ? size.heightMm : size.widthMm;
+  const height = rotation ? size.widthMm : size.heightMm;
+  const boxWidth = 48;
+  const boxHeight = 62;
+  const scale = Math.min(boxWidth / (width * PX_PER_MM), boxHeight / (height * PX_PER_MM));
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!page.pdf || !canvasRef.current) return;
+    void renderPdfPage(page.pdf.url, page.pdf.pageNumber, canvasRef.current, 96, 96 * (height / width), 1);
+  }, [page.pdf, width, height]);
+
+  return (
+    <button
+      type="button"
+      className="tile group flex flex-col gap-1 p-1.5 text-left"
+      aria-pressed={active}
+      title={`Page ${index + 1}${page.annotations.length ? ` · ${page.annotations.length} annotations` : ""}`}
+      onClick={onClick}
+    >
+      <span
+        className="relative grid place-items-center overflow-hidden rounded-[3px] bg-[var(--paper)]"
+        style={{ width: boxWidth, height: boxHeight, boxShadow: "var(--shadow-soft)" }}
+      >
+        {page.pdf ? (
+          <canvas ref={canvasRef} className="h-full w-full object-cover" />
+        ) : (
+          <span style={{ display: "block", transform: `scale(${scale})`, transformOrigin: "center" }}>
+            <PaperSheet template={pageTemplate(page)} landscape={tab.landscape} />
+          </span>
+        )}
+        {page.annotations.length > 0 && (
+          <span
+            className="absolute right-0.5 top-0.5 rounded-full px-1 text-[9px] font-semibold"
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+          >
+            {page.annotations.length}
+          </span>
+        )}
+      </span>
+      <span className="flex items-center justify-between text-[10px] text-muted">
+        <span>{index + 1}</span>
+        <span>{page.rotation ? `${page.rotation}°` : ""}</span>
+      </span>
+    </button>
+  );
+}
+
+function annotationLabel(annotation: Annotation): string {
+  if (annotation.type === "pen") return "Pen";
+  if (annotation.type === "marker") return "Highlighter";
+  if (annotation.type === "stamp") {
+    const factory = stampById.get(annotation.stampId);
+    return factory?.title.en ?? userStamps.find((stamp) => stamp.id === annotation.stampId)?.name ?? "Stamp";
+  }
+  return SHAPE_LABEL[annotation.shapeType];
+}
+
+function annotationColor(annotation: Annotation): string | null {
+  if (annotation.type === "pen" || annotation.type === "marker") return annotation.color;
+  if (annotation.type === "shape") return annotation.strokeColor;
+  return null;
+}
+
+function AnnotationIcon({ annotation }: { annotation: Annotation }) {
+  const props = { size: 13, strokeWidth: 1.75 } as const;
+  if (annotation.type === "pen") return <PenLine {...props} />;
+  if (annotation.type === "marker") return <Highlighter {...props} />;
+  if (annotation.type === "stamp") return <Stamp {...props} />;
+  return <Square {...props} />;
+}
+
 export function Sidebar() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const sidebarTab = useUIStore((state) => state.sidebarTab);
@@ -37,14 +118,22 @@ export function Sidebar() {
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
   const setLandscape = useDocStore((state) => state.setLandscape);
-  const page = useDocStore((state) => state.page);
+  const pageIndex = useDocStore((state) => state.page);
+  const setPage = useDocStore((state) => state.setPage);
+  const addPage = useDocStore((state) => state.addPage);
+  const duplicatePage = useDocStore((state) => state.duplicatePage);
+  const rotatePage = useDocStore((state) => state.rotatePage);
+  const reorderPage = useDocStore((state) => state.reorderPage);
+  const deletePage = useDocStore((state) => state.deletePage);
+  const addBookmark = useDocStore((state) => state.addBookmark);
+  const selection = useAnnotationStore((state) => state.selection);
+  const select = useAnnotationStore((state) => state.select);
+  const remove = useAnnotationStore((state) => state.remove);
+  const update = useAnnotationStore((state) => state.update);
   const recentStamps = useToolStore((state) => state.recentStamps);
   const selectStamp = useToolStore((state) => state.selectStamp);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
-  const template = paperById.get(tab.templateId) ?? paperTemplates[0];
-  const size = pageMm(template, tab.landscape);
-  const previewScale = 52 / (size.widthMm * PX_PER_MM);
 
   if (!sidebarOpen) {
     return (
@@ -73,6 +162,11 @@ export function Sidebar() {
   const styleCounts = new Map<string, number>();
   for (const recipe of paperTemplates) styleCounts.set(recipe.styleLabel, (styleCounts.get(recipe.styleLabel) ?? 0) + 1);
 
+  const jumpTo = (pageNumber: number, annotationId?: string) => {
+    setPage(pageNumber);
+    if (annotationId) select([annotationId]);
+  };
+
   return (
     <aside className="glass anim-in m-2 mr-0 flex w-[248px] shrink-0 flex-col overflow-hidden rounded-2xl">
       <div className="flex items-center gap-1 border-b border-[var(--border)] p-1.5">
@@ -94,26 +188,78 @@ export function Sidebar() {
       <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
         {sidebarTab === "pages" && (
           <>
-            <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pageCount} page</span>}>Pages</SectionTitle>
-            <button
-              type="button"
-              className="tile flex items-center gap-2.5 p-2 text-left"
-              aria-pressed
-              onClick={() => useDocStore.getState().setPage(1)}
-            >
-              <span
-                className="overflow-hidden rounded-[3px]"
-                style={{ width: 52, height: size.heightMm * PX_PER_MM * previewScale, boxShadow: "var(--shadow-soft)" }}
+            <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pages.length} pages</span>}>Pages</SectionTitle>
+            <div className="grid grid-cols-3 gap-1.5">
+              {tab.pages.map((item, index) => (
+                <PageThumb
+                  key={item.id}
+                  tab={tab}
+                  page={item}
+                  index={index}
+                  active={index === pageIndex - 1}
+                  onClick={() => setPage(index + 1)}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button type="button" className="chip h-7 flex-1 justify-center" title="Add page" onClick={() => addPage()}>
+                <Plus size={12} /> Add
+              </button>
+              <button type="button" className="chip h-7 flex-1 justify-center" title="Duplicate page" onClick={() => duplicatePage()}>
+                <CopyPlus size={12} /> Copy
+              </button>
+              <button type="button" className="chip h-7 flex-1 justify-center" title="Rotate page 90°" onClick={() => rotatePage()}>
+                <RotateCw size={12} /> Rotate
+              </button>
+              <button
+                type="button"
+                className="chip h-7 justify-center px-2"
+                title="Delete page"
+                disabled={tab.pages.length <= 1}
+                onClick={() => deletePage()}
               >
-                <span style={{ display: "block", transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
-                  <PaperSheet template={template} landscape={tab.landscape} />
-                </span>
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="chip h-7 flex-1 justify-center"
+                title="Move page up"
+                disabled={pageIndex <= 1}
+                onClick={() => reorderPage(pageIndex - 1, pageIndex - 2)}
+              >
+                <ArrowUp size={12} /> Move up
+              </button>
+              <button
+                type="button"
+                className="chip h-7 flex-1 justify-center"
+                title="Move page down"
+                disabled={pageIndex >= tab.pages.length}
+                onClick={() => reorderPage(pageIndex - 1, pageIndex)}
+              >
+                <ArrowDown size={12} /> Move down
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-1">
+              <button type="button" className="chip h-7 flex-1 justify-center" disabled={pageIndex <= 1} onClick={() => setPage(pageIndex - 1)}>
+                <ChevronLeft size={12} /> Prev
+              </button>
+              <span className="text-[10.5px] text-muted">
+                {pageIndex} / {tab.pages.length}
               </span>
-              <span className="min-w-0">
-                <span className="block text-[11.5px] font-medium">Page {page}</span>
-                <span className="block truncate text-[10px] text-muted">{template.name}</span>
-              </span>
-            </button>
+              <button
+                type="button"
+                className="chip h-7 flex-1 justify-center"
+                disabled={pageIndex >= tab.pages.length}
+                onClick={() => setPage(pageIndex + 1)}
+              >
+                Next <ChevronRight size={12} />
+              </button>
+            </div>
 
             <div className="divider" />
             <SectionTitle>Document setup</SectionTitle>
@@ -129,18 +275,12 @@ export function Sidebar() {
               <span className="text-[11.5px]">Alignment guides</span>
               <Switch checked={auxLines} onChange={toggleAuxLines} label="Alignment guides" />
             </div>
-            <button
-              type="button"
-              className="chip h-8 justify-center"
-              onClick={() => setNewDocOpen(true)}
-            >
+            <button type="button" className="chip h-8 justify-center" onClick={() => setNewDocOpen(true)}>
               <Plus size={13} strokeWidth={1.75} /> Change template…
             </button>
 
             <div className="divider" />
-            <SectionTitle aside={<span className="text-[10px] text-muted">{paperTemplates.length} recipes</span>}>
-              Paper styles
-            </SectionTitle>
+            <SectionTitle aside={<span className="text-[10px] text-muted">{paperTemplates.length} recipes</span>}>Paper styles</SectionTitle>
             <div className="flex flex-wrap gap-1">
               {[...styleCounts.entries()].map(([label, count]) => (
                 <button key={label} type="button" className="chip" onClick={() => setNewDocOpen(true)}>
@@ -152,26 +292,115 @@ export function Sidebar() {
         )}
 
         {sidebarTab === "bookmarks" && (
-          <EmptyState
-            Icon={Bookmark}
-            title="No bookmarks yet"
-            body="Bookmarks are stored with the document once you open a PDF in Phase 3."
-          />
+          <>
+            <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pdf?.bookmarks.length ?? 0}</span>}>Bookmarks</SectionTitle>
+            {!tab.pdf ? (
+              <p className="rounded-lg px-2.5 py-2 text-[10.5px] leading-relaxed text-muted" style={{ background: "var(--track)" }}>
+                Open a PDF to import its outline. Parametric pages keep their own page list here.
+              </p>
+            ) : (
+              <button type="button" className="chip h-8 justify-center" onClick={() => addBookmark(`Page ${pageIndex}`)}>
+                <BookmarkPlus size={13} /> Bookmark page {pageIndex}
+              </button>
+            )}
+            <div className="flex flex-col gap-0.5">
+              {(tab.pdf?.bookmarks ?? []).map((bookmark) => (
+                <button
+                  key={bookmark.id}
+                  type="button"
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11.5px] hover:bg-[var(--hover)]"
+                  style={{ paddingLeft: 8 + bookmark.depth * 12 }}
+                  onClick={() => setPage(bookmark.pageIndex + 1)}
+                >
+                  <Bookmark size={12} className="shrink-0 text-muted" strokeWidth={1.75} />
+                  <span className="min-w-0 flex-1 truncate">{bookmark.title}</span>
+                  <span className="text-[10px] text-muted">{bookmark.pageIndex + 1}</span>
+                </button>
+              ))}
+            </div>
+            {tab.pdf && tab.pdf.bookmarks.length === 0 && (
+              <EmptyState Icon={Bookmark} title="No bookmarks" body="This PDF has no outline. Add a bookmark for the current page." />
+            )}
+          </>
         )}
 
         {sidebarTab === "annotations" && (
-          <EmptyState
-            Icon={MessageSquareText}
-            title="No annotations yet"
-            body="Ink and stamps you draw on the page will be listed here with their presets."
-          />
+          <>
+            <SectionTitle
+              aside={<span className="text-[10px] text-muted">{tab.pages.reduce((sum, item) => sum + item.annotations.length, 0)}</span>}
+            >
+              Annotations
+            </SectionTitle>
+            {tab.pages.every((item) => item.annotations.length === 0) ? (
+              <EmptyState
+                Icon={MessageSquareText}
+                title="No annotations yet"
+                body="Ink, shapes and stamps you draw are listed here per page."
+              />
+            ) : (
+              tab.pages.map((item, index) => {
+                if (item.annotations.length === 0) return null;
+                return (
+                  <div key={item.id} className="flex flex-col gap-0.5">
+                    <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">Page {index + 1}</div>
+                    {item.annotations.map((annotation) => (
+                      <div
+                        key={annotation.id}
+                        className={`group flex items-center gap-1.5 rounded-lg px-1.5 py-1 ${
+                          selection.includes(annotation.id) ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--hover)]"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                          onClick={() => jumpTo(index + 1, annotation.id)}
+                        >
+                          <span
+                            className="grid h-5 w-5 shrink-0 place-items-center rounded-md"
+                            style={{ background: "var(--track)", color: annotationColor(annotation) ?? "var(--muted)" }}
+                          >
+                            <AnnotationIcon annotation={annotation} />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[11.5px]">{annotationLabel(annotation)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn h-5 w-5 opacity-60 group-hover:opacity-100"
+                          aria-label={annotation.hidden ? "Show" : "Hide"}
+                          title={annotation.hidden ? "Show" : "Hide"}
+                          onClick={() => {
+                            jumpTo(index + 1);
+                            update([annotation.id], { hidden: !annotation.hidden });
+                          }}
+                        >
+                          {annotation.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn h-5 w-5 opacity-60 group-hover:opacity-100"
+                          aria-label="Delete annotation"
+                          title="Delete"
+                          onClick={() => {
+                            jumpTo(index + 1);
+                            remove([annotation.id]);
+                          }}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </>
         )}
 
         {sidebarTab === "favorites" && (
           <>
             <SectionTitle aside={<span className="text-[10px] text-muted">{recent.length}</span>}>Recent stamps</SectionTitle>
             {recent.length === 0 ? (
-              <EmptyState Icon={Star} title="Nothing pinned yet" body="Stamp picked from the gallery shows up here for one-click reuse." />
+              <EmptyState Icon={Star} title="Nothing pinned yet" body="A stamp picked from the gallery shows up here for one-click reuse." />
             ) : (
               <div className="grid grid-cols-3 gap-1.5">
                 {recent.map((stamp) => {

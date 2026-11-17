@@ -20,6 +20,8 @@ interface UIState {
   libraryOpen: boolean;
   newDocOpen: boolean;
   presentation: boolean;
+  eraserSplit: boolean;
+  setEraserSplit: (split: boolean) => void;
   setTheme: (theme: ThemeName) => void;
   toggleSidebar: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
@@ -39,6 +41,8 @@ export const useUIStore = create<UIState>((set) => ({
   libraryOpen: false,
   newDocOpen: false,
   presentation: false,
+  eraserSplit: false,
+  setEraserSplit: (eraserSplit) => set({ eraserSplit }),
   setTheme: (theme) => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("pa.theme", theme);

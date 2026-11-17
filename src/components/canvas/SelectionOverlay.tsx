@@ -1,0 +1,156 @@
+import {
+  BringToFront,
+  Copy,
+  FlipHorizontal2,
+  FlipVertical2,
+  Group,
+  Lock,
+  RotateCw,
+  SendToBack,
+  Trash2,
+  Ungroup,
+  Unlock,
+} from "lucide-react";
+import type { BBox, Pt } from "../../lib/annotationTypes";
+import { PX_PER_MM } from "../../lib/paper";
+
+export type HandleId = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "rotate";
+
+export function handlePoints(box: BBox, rotateGapMm: number): Record<HandleId, Pt> {
+  const x0 = box.x;
+  const y0 = box.y;
+  const x1 = box.x + box.width;
+  const y1 = box.y + box.height;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  return {
+    nw: [x0, y0],
+    n: [cx, y0],
+    ne: [x1, y0],
+    e: [x1, cy],
+    se: [x1, y1],
+    s: [cx, y1],
+    sw: [x0, y1],
+    w: [x0, cy],
+    rotate: [cx, y0 - rotateGapMm],
+  };
+}
+
+export type SelectionAction =
+  | "duplicate"
+  | "rotate"
+  | "flip-h"
+  | "flip-v"
+  | "group"
+  | "ungroup"
+  | "lock"
+  | "front"
+  | "back"
+  | "delete";
+
+const BUTTONS: { action: SelectionAction; label: string; Icon: typeof Copy }[] = [
+  { action: "duplicate", label: "Duplicate (Ctrl+D)", Icon: Copy },
+  { action: "rotate", label: "Rotate 90°", Icon: RotateCw },
+  { action: "flip-h", label: "Flip horizontal", Icon: FlipHorizontal2 },
+  { action: "flip-v", label: "Flip vertical", Icon: FlipVertical2 },
+  { action: "group", label: "Group (Ctrl+G)", Icon: Group },
+  { action: "ungroup", label: "Ungroup (Ctrl+Shift+G)", Icon: Ungroup },
+  { action: "lock", label: "Lock / unlock", Icon: Lock },
+  { action: "front", label: "Bring to front", Icon: BringToFront },
+  { action: "back", label: "Send to back", Icon: SendToBack },
+  { action: "delete", label: "Delete", Icon: Trash2 },
+];
+
+interface Props {
+  bounds: BBox | null;
+  count: number;
+  zoom: number;
+  locked: boolean;
+  grouped: boolean;
+  onHandleDown: (handle: HandleId, event: React.PointerEvent) => void;
+  onAction: (action: SelectionAction) => void;
+}
+
+/** Screen-space selection chrome; the page wrapper's CSS zoom would scale it, so it counter-scales. */
+export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandleDown, onAction }: Props) {
+  if (!bounds) return null;
+  const scale = PX_PER_MM;
+  const left = bounds.x * scale;
+  const top = bounds.y * scale;
+  const width = Math.max(1, bounds.width * scale);
+  const height = Math.max(1, bounds.height * scale);
+  const size = 9 / zoom;
+  const rotateGap = (bounds.height * scale + 26) / scale;
+  const handles = handlePoints(bounds, rotateGap);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <div
+        className="absolute"
+        style={{ left, top, width, height, border: `${1.25 / zoom}px solid var(--accent)`, borderRadius: 1 }}
+      />
+      {(Object.keys(handles) as HandleId[]).map((handle) => {
+        const [x, y] = handles[handle];
+        const isRotate = handle === "rotate";
+        return (
+          <button
+            key={handle}
+            type="button"
+            aria-label={isRotate ? "Rotate selection" : `Resize ${handle}`}
+            className="pointer-events-auto absolute rounded-full border border-[var(--accent)]"
+            style={{
+              left: x * scale - size / 2,
+              top: y * scale - size / 2,
+              width: isRotate ? size + 3 : size,
+              height: isRotate ? size + 3 : size,
+              background: isRotate ? "var(--glass-strong)" : "var(--paper)",
+              cursor: isRotate ? "grab" : `${handle}-resize`,
+              touchAction: "none",
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onHandleDown(handle, event);
+            }}
+          />
+        );
+      })}
+      <div
+        className="absolute"
+        style={{
+          left: left + width / 2,
+          top: top - (rotateGap - bounds.height) * scale,
+          height: (rotateGap - bounds.height) * scale,
+          width: 1 / zoom,
+          background: "var(--accent)",
+          transform: "translateY(-100%)",
+        }}
+      />
+      <div
+        className="absolute"
+        style={{ left: left + width / 2, top, transform: "translate(-50%, -100%)", transformOrigin: "bottom center" }}
+      >
+        <div style={{ transform: `scale(${1 / zoom})`, transformOrigin: "bottom center", paddingBottom: 10 }}>
+          <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-lg px-1 py-0.5 shadow-lg">
+            {BUTTONS.map(({ action, label, Icon }) => (
+              <button
+                key={action}
+                type="button"
+                className="icon-btn h-6 w-6"
+                title={label}
+                aria-label={label}
+                style={action === "delete" ? { color: "var(--danger)" } : undefined}
+                onClick={() => onAction(action)}
+              >
+                <Icon size={12.5} strokeWidth={1.9} />
+              </button>
+            ))}
+            <span className="ml-1 flex items-center gap-1 pr-1 text-[10px] text-muted">
+              {locked ? <Lock size={10} /> : grouped ? <Group size={10} /> : <Unlock size={10} />}
+              {count}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

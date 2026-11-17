@@ -77,17 +77,23 @@ export function NewDocumentModal() {
   const setNewDocOpen = useUIStore((state) => state.setNewDocOpen);
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
+  const activePageIndex = useDocStore((state) => state.page);
   const applyTemplate = useDocStore((state) => state.applyTemplate);
   const newTab = useDocStore((state) => state.newTab);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
+  const activePage = tab.pages[activePageIndex - 1] ?? tab.pages[0];
   const [size, setSize] = useState("All");
   const [style, setStyle] = useState("All");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(tab.templateId);
+  const [selectedId, setSelectedId] = useState(activePage.templateId);
 
   useEffect(() => {
-    if (open) setSelectedId(useDocStore.getState().tabs.find((item) => item.id === useDocStore.getState().activeId)?.templateId ?? tab.templateId);
+    if (open) {
+      const state = useDocStore.getState();
+      const current = state.tabs.find((item) => item.id === state.activeId);
+      setSelectedId(current?.pages[state.page - 1]?.templateId ?? current?.templateId ?? tab.templateId);
+    }
   }, [open, tab.templateId]);
 
   const styles = useMemo(() => {
@@ -208,17 +214,29 @@ export function NewDocumentModal() {
             <h3 className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">Note PDF templates</h3>
             <div className="flex flex-wrap gap-2">
               {pdfTemplates.map((pdf) => (
-                <a
+                <button
                   key={pdf.name}
-                  href={pdf.url}
-                  target="_blank"
-                  rel="noreferrer"
+                  type="button"
                   className="chip h-7"
                   title={`${Math.round(pdf.bytes / 1024)} kB · sha256 ${pdf.sha256.slice(0, 12)}…`}
+                  onClick={() => {
+                    void useDocStore.getState().openPdfUrl(pdf.url, pdf.name);
+                    close();
+                  }}
                 >
                   <FileText size={12} strokeWidth={1.75} /> {pdf.name}
-                </a>
+                </button>
               ))}
+              <button
+                type="button"
+                className="chip h-7"
+                onClick={() => {
+                  document.getElementById("pm-pdf-input")?.click();
+                  close();
+                }}
+              >
+                <FileText size={12} strokeWidth={1.75} /> Open another PDF…
+              </button>
             </div>
           </div>
         </div>
