@@ -1,4 +1,4 @@
-import { Command, FileDown, FolderOpen, Grid3x3, PanelLeft, Play, Plus, Redo2, Save, Settings, Sparkles, Stamp, Undo2, X } from "lucide-react";
+import { Command, FileDown, FolderOpen, Grid3x3, PanelLeft, Play, Plus, Printer, Redo2, Save, Settings, Sparkles, Stamp, Undo2, X } from "lucide-react";
 import { useState } from "react";
 import { downloadPdf, exportInputFromTab, exportPdf, type PersistenceMode } from "../lib/pdfEngine";
 import { useDocStore } from "../stores/useDocStore";
@@ -36,7 +36,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="glass relative z-30 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
+    <header className="top-bar glass relative z-30 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
       <button
         type="button"
         className="icon-btn"
@@ -155,6 +155,15 @@ export function TopBar() {
         onClick={() => void save("flattened")}
       >
         <FileDown size={13} strokeWidth={1.75} /> Flatten
+      </button>
+      <button
+        type="button"
+        className="icon-btn hidden sm:grid"
+        aria-label="Print page"
+        title="Print current page (Ctrl+P)"
+        onClick={() => window.print()}
+      >
+        <Printer size={16} strokeWidth={1.75} />
       </button>
 
       <button

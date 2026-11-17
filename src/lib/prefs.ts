@@ -25,6 +25,8 @@ function readPrefs(): Prefs {
 
 interface PrefState extends Prefs {
   set: (patch: Partial<Prefs>) => void;
+  /** Replaces preferences from a workspace backup. */
+  replace: (prefs: Partial<Prefs>) => void;
 }
 
 export const usePrefsStore = create<PrefState>((set, get) => ({
@@ -34,5 +36,10 @@ export const usePrefsStore = create<PrefState>((set, get) => ({
     const value: Prefs = { scratchOut: next.scratchOut, measureUnit: next.measureUnit, snapshotDpi: next.snapshotDpi };
     if (typeof localStorage !== "undefined") localStorage.setItem(PREFS_KEY, JSON.stringify(value));
     set(patch);
+  },
+  replace: (prefs) => {
+    const value: Prefs = { ...DEFAULTS, ...prefs };
+    if (typeof localStorage !== "undefined") localStorage.setItem(PREFS_KEY, JSON.stringify(value));
+    set(value);
   },
 }));

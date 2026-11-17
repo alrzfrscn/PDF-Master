@@ -1,0 +1,16 @@
+[package]
+name = "pdf-master"
+version = "0.2.0"
+description = "PDF Master desktop shell"
+authors = ["PDF Master"]
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

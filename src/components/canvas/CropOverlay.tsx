@@ -111,7 +111,7 @@ export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 z-30 select-none"
+      className="crop-overlay absolute inset-0 z-30 select-none"
       style={{ touchAction: "none", cursor: "crosshair" }}
       onPointerMove={move}
       onPointerUp={end}

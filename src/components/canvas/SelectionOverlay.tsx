@@ -87,7 +87,7 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
   const handles = handlePoints(bounds, rotateGap);
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-20">
+    <div className="selection-chrome pointer-events-none absolute inset-0 z-20">
       <div
         className="absolute"
         style={{ left, top, width, height, border: `${1.25 / zoom}px solid var(--accent)`, borderRadius: 1 }}

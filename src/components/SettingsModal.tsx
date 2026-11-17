@@ -11,7 +11,7 @@ import {
   type ShortcutAction,
   useShortcutStore,
 } from "../lib/shortcuts";
-import { parseWorkspaceBackup, storageEstimate, workspaceBackup } from "../lib/storage";
+import { applyWorkspaceStores, parseWorkspaceBackup, storageEstimate, workspaceBackup } from "../lib/storage";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
 import { SectionTitle, Segmented, ToggleRow } from "./ui/controls";
@@ -80,7 +80,9 @@ export function SettingsModal() {
       return;
     }
     useDocStore.getState().restore(parsed.tabs, parsed.activeId);
-    setToast(`Restored ${parsed.tabs.length} tab${parsed.tabs.length === 1 ? "" : "s"}`);
+    applyWorkspaceStores(parsed.stores);
+    const extras = parsed.stores ? " with stamps, scales, shortcuts and preferences" : "";
+    setToast(`Restored ${parsed.tabs.length} tab${parsed.tabs.length === 1 ? "" : "s"}${extras}`);
   };
 
   const quota = estimate && estimate.quota > 0 ? Math.min(100, (estimate.usage / estimate.quota) * 100) : 0;
@@ -230,7 +232,7 @@ export function SettingsModal() {
                 </div>
                 <p className="text-[10.5px] text-muted">
                   Autosave uses {megabytes(estimate.usage)} of {megabytes(estimate.quota)} ({quota.toFixed(1)} %). Backups carry every
-                  tab, its pages and annotations.
+                  tab, its pages and annotations, plus custom stamps, calibrated scales, shortcuts, preferences and theme.
                 </p>
               </>
             ) : (

@@ -208,6 +208,17 @@ describe("PDF engine", () => {
     expect(sidecar?.pages[0].annotations[1]).toMatchObject({ type: "formula", latex: "E = mc^2" });
   });
 
+  it("keeps bookmarks in the sidecar across an export round-trip", async () => {
+    const bookmarks = [
+      { id: "bm-1", title: "Chapter 1", pageIndex: 0, depth: 0 },
+      { id: "bm-2", title: "My note", pageIndex: 0, depth: 1, custom: true },
+    ];
+    const bytes = await exportPdf({ ...input("editable"), bookmarks });
+    const sidecar = await loadSidecar(bytes);
+    expect(sidecar?.bookmarks).toEqual(bookmarks);
+    expect((await loadSidecar(await exportPdf({ ...input("flattened"), bookmarks })))?.bookmarks).toBeUndefined();
+  });
+
   it("rebuilds the page tree in tab order, count and size", async () => {
     const pt = 72 / 25.4;
     const base = await exportPdf({

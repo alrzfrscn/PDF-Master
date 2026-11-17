@@ -1,5 +1,5 @@
 import { PDFDocument, PDFName, PDFString, StandardFonts, degrees, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
-import type { PaperTemplate, DocumentTab } from "./types";
+import type { PaperTemplate, DocumentTab, PdfBookmark } from "./types";
 import type { Annotation, FormulaAnnotation, Pt, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, formatDimension } from "./annotationGeometry";
 import { inkPath, polylinePath } from "./ink";
@@ -146,6 +146,8 @@ export interface PdfExportInput {
   pages: PdfExportPage[];
   sourceBytes?: Uint8Array;
   mode: PersistenceMode;
+  /** Outline entries kept in the sidecar so a reopened tab has its bookmarks back. */
+  bookmarks?: PdfBookmark[];
 }
 
 export interface SerializedPage {
@@ -164,6 +166,7 @@ export interface SerializedDocument {
   title: string;
   savedAt: string;
   pages: SerializedPage[];
+  bookmarks?: PdfBookmark[];
 }
 
 function base64Encode(bytes: Uint8Array): string {
@@ -768,6 +771,7 @@ function serializedFromInput(
     version: 1,
     title: input.title,
     savedAt: new Date().toISOString(),
+    ...(input.bookmarks?.length ? { bookmarks: input.bookmarks } : {}),
     pages: input.pages.map((page, index) => ({
       templateId: page.templateId,
       landscape: page.landscape,
@@ -865,6 +869,7 @@ export function exportInputFromTab(tab: DocumentTab, mode: PersistenceMode): Pdf
     title: tab.title,
     mode,
     sourceBytes: tab.pdf?.bytes,
+    bookmarks: tab.pdf?.bookmarks,
     pages: tab.pages.map((page) => {
       const template = paperById.get(page.templateId);
       const pdf = page.pdf;

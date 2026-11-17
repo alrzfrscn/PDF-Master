@@ -902,7 +902,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
 
   const saveStampFrom = async (region: BBox, label: string) => {
     const image = await capture(region);
-    if (!image) return;
+    if (!image) return false;
     useCustomStampStore.getState().add({
       name: label,
       imageUrl: image.dataUrl,
@@ -910,6 +910,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       height: image.height,
     });
     setSnap({ region, image, status: "Saved to stamps" });
+    return true;
   };
 
   const onAction = (action: SelectionAction) => {
@@ -931,7 +932,11 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       applySelectionTransform("flip", { origin: center, axis: action === "flip-h" ? "h" : "v" });
     }
     if (action === "save-stamp" && bounds) {
-      void saveStampFrom(bounds, `Selection ${new Date().toLocaleTimeString()}`);
+      void saveStampFrom(bounds, `Selection ${new Date().toLocaleTimeString()}`).then((saved) => {
+        if (!saved) return;
+        useToolStore.getState().setTool("stamp");
+        useUIStore.getState().setToast("Selection saved to the custom stamp gallery");
+      });
     }
   };
 

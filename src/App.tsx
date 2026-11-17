@@ -11,6 +11,8 @@ import { StatusLine } from "./components/StatusLine";
 import { ToolBar } from "./components/ToolBar";
 import { TopBar } from "./components/TopBar";
 import { addImageStamp } from "./lib/images";
+import { parseBootArgs, resolvePaperTarget } from "./lib/bootArgs";
+import { paperTemplates } from "./lib/data";
 import { downloadPdf, exportInputFromTab, exportPdf } from "./lib/pdfEngine";
 import { readImageFile } from "./lib/raster";
 import { bindingFromEvent, normalizeBinding, useShortcutStore } from "./lib/shortcuts";
@@ -47,9 +49,17 @@ export default function App() {
 
   // Restore the last workspace, then autosave every change to IndexedDB.
   useEffect(() => {
+    const boot = parseBootArgs(typeof window === "undefined" ? "" : window.location.search);
     void loadWorkspace().then((saved) => {
       if (saved) useDocStore.getState().restore(saved.tabs, saved.activeId);
       ready.current = true;
+      // Desktop launch contract: a requested paper size, presentation, or print run.
+      if (boot.newDoc) {
+        const target = resolvePaperTarget(boot.newDoc, paperTemplates);
+        if (target) useDocStore.getState().newTab(target.templateId, boot.newDoc.trim(), target.landscape);
+      }
+      if (boot.fullscreen) useUIStore.getState().setPresentation(true);
+      if (boot.print) window.setTimeout(() => window.print(), 500);
     });
     let timer = 0;
     const unsubscribe = useDocStore.subscribe((state) => {
@@ -128,6 +138,11 @@ export default function App() {
           if (tab) {
             void exportPdf(exportInputFromTab(tab, "editable")).then((bytes) => downloadPdf(bytes, tab.title));
           }
+          return;
+        }
+        if (action === "print") {
+          event.preventDefault();
+          window.print();
           return;
         }
         if (action === "undo" || (key === "z" && !event.shiftKey)) {
