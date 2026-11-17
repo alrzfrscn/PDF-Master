@@ -27,6 +27,7 @@ export const TOOLS: ToolMeta[] = [
   { id: "formula", name: "Formula", shortcut: "F", needsProperties: true, hint: "LaTeX expressions as ink." },
   { id: "crop", name: "Crop", shortcut: "C", needsProperties: false, hint: "Crop the page box." },
   { id: "snapshot", name: "Snapshot", shortcut: "⇧S", needsProperties: false, hint: "Copy a region or save it as a stamp." },
+  { id: "image", name: "Image", shortcut: "I", needsProperties: false, hint: "Place a PNG, JPEG, WebP or SVG image." },
 ];
 
 export const TOOL_BY_ID = new Map(TOOLS.map((tool) => [tool.id, tool]));
@@ -43,7 +44,7 @@ export const TOOLBAR: ToolbarEntry[][] = [
   ["hand", "select", "lasso"],
   ["pen", "marker", "text", "shapes"],
   ["stamp", "eraser"],
-  ["measure", "formula", "crop", "snapshot"],
+  ["measure", "formula", "crop", "snapshot", "image"],
 ];
 
 export const SIDEBAR_TABS = [

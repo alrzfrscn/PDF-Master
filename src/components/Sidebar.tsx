@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkPlus, FileText, Highlighter, MessageSquareText, PenLine, Plus, RotateCw, Square, Stamp, Star, Trash2, CopyPlus, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
+import { Bookmark, BookmarkPlus, FileText, Highlighter, MessageSquareText, PenLine, Plus, RotateCw, Sigma, Square, Stamp, Star, Trash2, CopyPlus, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Type } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { paperTemplates, stampById, stamps, userStamps } from "../lib/data";
 import { PX_PER_MM } from "../lib/paper";
@@ -91,12 +91,15 @@ function annotationLabel(annotation: Annotation): string {
     const factory = stampById.get(annotation.stampId);
     return factory?.title.en ?? userStamps.find((stamp) => stamp.id === annotation.stampId)?.name ?? "Stamp";
   }
+  if (annotation.type === "text") return "Text";
+  if (annotation.type === "formula") return "Formula";
   return SHAPE_LABEL[annotation.shapeType];
 }
 
 function annotationColor(annotation: Annotation): string | null {
-  if (annotation.type === "pen" || annotation.type === "marker") return annotation.color;
+  if (annotation.type === "pen" || annotation.type === "marker" || annotation.type === "formula") return annotation.color;
   if (annotation.type === "shape") return annotation.strokeColor;
+  if (annotation.type === "text") return annotation.textColor;
   return null;
 }
 
@@ -105,6 +108,8 @@ function AnnotationIcon({ annotation }: { annotation: Annotation }) {
   if (annotation.type === "pen") return <PenLine {...props} />;
   if (annotation.type === "marker") return <Highlighter {...props} />;
   if (annotation.type === "stamp") return <Stamp {...props} />;
+  if (annotation.type === "text") return <Type {...props} />;
+  if (annotation.type === "formula") return <Sigma {...props} />;
   return <Square {...props} />;
 }
 

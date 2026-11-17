@@ -1,8 +1,18 @@
-import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Eraser, Group, Lock, Rows3, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
-import { useMemo } from "react";
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Crop, Eraser, Group, Lock, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
+import { useMemo, useState } from "react";
 import { paperTemplates, presets, stamps, userStamps } from "../lib/data";
 import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
-import { SHAPE_LABEL, type Annotation, type AnnotationPatch, type AlignMode } from "../lib/annotationTypes";
+import { SHAPE_LABEL, TEXT_FONTS, type Annotation, type AnnotationPatch, type AlignMode, type TextAlign } from "../lib/annotationTypes";
+import { useCustomStampStore } from "../lib/customStamps";
+import {
+  MEASURE_MODES,
+  MEASURE_UNITS,
+  PRESET_SCALES,
+  calibrateDenominator,
+  customScaleLabel,
+  useScaleStore,
+} from "../lib/measure";
+import { usePrefsStore, type SnapshotDpi } from "../lib/prefs";
 import { TOOL_BY_ID } from "../lib/tools";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
@@ -40,6 +50,126 @@ function firstValue<T>(annotations: Annotation[], pick: (annotation: Annotation)
   return undefined;
 }
 
+function MeasureInspector({ pageWidthMm }: { pageWidthMm: number }) {
+  const measureMode = useUIStore((state) => state.measureMode);
+  const setMeasureMode = useUIStore((state) => state.setMeasureMode);
+  const measureUnit = usePrefsStore((state) => state.measureUnit);
+  const setPrefs = usePrefsStore((state) => state.set);
+  const custom = useScaleStore((state) => state.custom);
+  const activeId = useScaleStore((state) => state.activeId);
+  const setActive = useScaleStore((state) => state.setActive);
+  const addCustom = useScaleStore((state) => state.addCustom);
+  const [pageLength, setPageLength] = useState(() => Number(pageWidthMm.toFixed(1)));
+  const [realLength, setRealLength] = useState(210);
+
+  const denominator = calibrateDenominator(pageLength, realLength, measureUnit);
+  const scales = [...PRESET_SCALES, ...custom];
+
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-[var(--border)] p-2.5">
+      <div className="flex items-center gap-2 text-[12px] font-medium">
+        <Ruler size={14} /> Measure
+      </div>
+      <Segmented value={measureMode} options={MEASURE_MODES} onChange={setMeasureMode} />
+      <p className="text-[10.5px] leading-relaxed text-muted">
+        {measureMode === "distance"
+          ? "Drag a line, then Commit on the page bar."
+          : measureMode === "angle"
+            ? "Click the vertex, then one point on each arm."
+            : "Click each corner; Enter closes the shape."}
+      </p>
+
+      <div className="field">
+        <span className="field-label">Scale</span>
+        <select className="text-input" value={activeId} onChange={(event) => setActive(event.target.value)} aria-label="Measurement scale">
+          {scales.map((scale) => (
+            <option key={scale.id} value={scale.id}>
+              {scale.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Default unit</span>
+        <Segmented
+          value={measureUnit}
+          options={MEASURE_UNITS}
+          onChange={(value) => setPrefs({ measureUnit: value })}
+        />
+      </div>
+
+      <SectionTitle>Calibrate</SectionTitle>
+      <div className="grid grid-cols-2 gap-1.5">
+        <label className="field">
+          <span className="field-label">On page (mm)</span>
+          <input
+            type="number"
+            min={1}
+            step={0.1}
+            className="text-input"
+            value={pageLength}
+            onChange={(event) => setPageLength(Number(event.target.value))}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">Real length ({measureUnit})</span>
+          <input
+            type="number"
+            min={0.1}
+            step={0.1}
+            className="text-input"
+            value={realLength}
+            onChange={(event) => setRealLength(Number(event.target.value))}
+          />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        <button type="button" className="chip h-7 justify-center" onClick={() => setPageLength(Number(pageWidthMm.toFixed(1)))}>
+          Calibrate from Page
+        </button>
+        <button
+          type="button"
+          className="chip h-7 justify-center"
+          disabled={!denominator}
+          onClick={() => {
+            if (!denominator) return;
+            addCustom({ id: `custom-${Date.now().toString(36)}`, label: customScaleLabel(denominator), denominator });
+          }}
+        >
+          <Save size={11} /> Save scale
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SnapshotPanel() {
+  const snapshotDpi = usePrefsStore((state) => state.snapshotDpi);
+  const setPrefs = usePrefsStore((state) => state.set);
+  const options: { value: string; label: string }[] = [
+    { value: "72", label: "72 DPI" },
+    { value: "150", label: "150 DPI" },
+    { value: "300", label: "300 DPI" },
+  ];
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-2.5">
+      <div className="flex items-center gap-2 text-[12px] font-medium">
+        <Crop size={14} /> Snapshot
+      </div>
+      <Segmented
+        value={String(snapshotDpi)}
+        options={options}
+        onChange={(value) => setPrefs({ snapshotDpi: Number(value) as SnapshotDpi })}
+      />
+      <p className="text-[10.5px] leading-relaxed text-muted">
+        Drag a region with this tool, then copy or download the PNG, or keep it as a reusable stamp. Resolution applies to
+        the next capture.
+      </p>
+    </div>
+  );
+}
+
 function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
   const update = useAnnotationStore((state) => state.update);
   const align = useAnnotationStore((state) => state.align);
@@ -53,19 +183,31 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
   const ids = annotations.map((annotation) => annotation.id);
 
   const color = firstValue(annotations, (annotation) =>
-    annotation.type === "shape" ? annotation.strokeColor : annotation.type === "stamp" ? undefined : annotation.color,
+    annotation.type === "shape"
+      ? annotation.strokeColor
+      : annotation.type === "text"
+        ? annotation.textColor
+        : annotation.type === "stamp"
+          ? undefined
+          : annotation.color,
   );
   const thickness = firstValue(annotations, (annotation) =>
-    annotation.type === "shape" ? annotation.lineWidthMm : annotation.type === "stamp" ? undefined : annotation.thicknessMm,
+    annotation.type === "shape"
+      ? annotation.lineWidthMm
+      : annotation.type === "pen" || annotation.type === "marker"
+        ? annotation.thicknessMm
+        : undefined,
   );
   const opacity = annotations[0]?.opacity ?? 1;
   const fill = firstValue(annotations, (annotation) => (annotation.type === "shape" ? annotation.fillColor : undefined));
   const lineStyle = firstValue(annotations, (annotation) => (annotation.type === "shape" ? annotation.lineStyle : undefined));
   const locked = annotations.every((annotation) => annotation.locked);
   const grouped = annotations.some((annotation) => annotation.groupId);
-  const kinds = [...new Set(annotations.map((annotation) => (annotation.type === "shape" ? SHAPE_LABEL[annotation.shapeType] : annotation.type === "pen" ? "Pen" : annotation.type === "marker" ? "Highlighter" : "Stamp")))];
+  const kinds = [...new Set(annotations.map((annotation) => annotation.type === "shape" ? SHAPE_LABEL[annotation.shapeType] : annotation.type === "pen" ? "Pen" : annotation.type === "marker" ? "Highlighter" : annotation.type === "text" ? "Text" : annotation.type === "formula" ? "Formula" : "Stamp"))];
 
   const patch = (next: AnnotationPatch) => update(ids, next);
+  const singleText = annotations.length === 1 && annotations[0].type === "text" ? annotations[0] : null;
+  const singleFormula = annotations.length === 1 && annotations[0].type === "formula" ? annotations[0] : null;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] p-2.5" style={{ background: "var(--panel)" }}>
@@ -88,7 +230,7 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
         <ColorRow
           label="Colour"
           value={color}
-          onChange={(value) => value && patch({ color: value, strokeColor: value })}
+          onChange={(value) => value && patch({ color: value, strokeColor: value, textColor: value })}
         />
       )}
       {thickness !== undefined && (
@@ -133,6 +275,119 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
             onChange={(value) => patch({ lineStyle: value })}
           />
         </div>
+      )}
+
+      {singleText && (
+        <>
+          <SectionTitle>Text</SectionTitle>
+          <div className="field">
+            <span className="field-label">Font</span>
+            <select
+              className="text-input"
+              value={singleText.fontFamily}
+              aria-label="Text font"
+              onChange={(event) => patch({ fontFamily: event.target.value })}
+            >
+              {TEXT_FONTS.map((font) => (
+                <option key={font} value={font}>
+                  {font}
+                </option>
+              ))}
+            </select>
+          </div>
+          <SliderRow
+            label="Size"
+            value={singleText.fontSizePt}
+            min={6}
+            max={72}
+            step={1}
+            unit="pt"
+            onChange={(value) => patch({ fontSizePt: value })}
+          />
+          <ColorRow label="Text" value={singleText.textColor} onChange={(value) => value && patch({ textColor: value })} />
+          <div className="grid grid-cols-4 gap-1">
+            {[
+              { label: "Bold", active: singleText.bold, toggle: () => patch({ bold: !singleText.bold }) },
+              { label: "Italic", active: singleText.italic, toggle: () => patch({ italic: !singleText.italic }) },
+              { label: "Underline", active: singleText.underline, toggle: () => patch({ underline: !singleText.underline }) },
+              { label: "Strike", active: singleText.strikeOut, toggle: () => patch({ strikeOut: !singleText.strikeOut }) },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className="chip h-7 justify-center"
+                aria-pressed={item.active}
+                onClick={item.toggle}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="field">
+            <span className="field-label">Align</span>
+            <Segmented<TextAlign>
+              value={singleText.align}
+              options={[
+                { value: "left", label: "Left" },
+                { value: "center", label: "Centre" },
+                { value: "right", label: "Right" },
+              ]}
+              onChange={(value) => patch({ align: value })}
+            />
+          </div>
+          <div className="field">
+            <span className="field-label">Frame</span>
+            <Segmented
+              value={String(singleText.frameType)}
+              options={[
+                { value: "0", label: "None" },
+                { value: "1", label: "Box" },
+                { value: "2", label: "Round" },
+                { value: "3", label: "Shadow" },
+              ]}
+              onChange={(value) => patch({ frameType: Number(value) as 0 | 1 | 2 | 3 })}
+            />
+          </div>
+          <ColorRow
+            label="Text box fill"
+            value={singleText.boxFillTransparent ? null : singleText.boxFillColor}
+            allowNone
+            onChange={(value) =>
+              patch({ boxFillColor: value ?? "#ffffff", boxFillTransparent: value === null })
+            }
+          />
+        </>
+      )}
+
+      {singleFormula && (
+        <>
+          <SectionTitle>Formula</SectionTitle>
+          <label className="field">
+            <span className="field-label">LaTeX</span>
+            <input
+              className="text-input"
+              value={singleFormula.latex}
+              aria-label="Formula LaTeX"
+              onChange={(event) => patch({ latex: event.target.value })}
+            />
+          </label>
+          <SliderRow
+            label="Size"
+            value={singleFormula.fontSizePt}
+            min={6}
+            max={72}
+            step={1}
+            unit="pt"
+            onChange={(value) => patch({ fontSizePt: value })}
+          />
+          <ColorRow label="Ink" value={singleFormula.color} onChange={(value) => value && patch({ color: value })} />
+          <ColorRow
+            label="Fill"
+            value={singleFormula.fillTransparent ? null : singleFormula.fillColor}
+            allowNone
+            onChange={(value) => patch({ fillColor: value ?? "#ffffff", fillTransparent: value === null })}
+          />
+        </>
       )}
 
       {annotations.length >= 2 && (
@@ -187,10 +442,12 @@ export function Inspector() {
   const selection = useAnnotationStore((state) => state.selection);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
-  const page = tab.pages[pageIndex - 1] ?? tab.pages[0];
+  const pageNumber = Math.min(Math.max(1, pageIndex), tab.pages.length);
+  const page = tab.pages[pageNumber - 1] ?? tab.pages[0];
   const template = pageTemplate(page);
   const size = pageSizeMm(tab, page);
   const chosen = page.annotations.filter((annotation) => selection.includes(annotation.id));
+  const customStamps = useCustomStampStore((state) => state.stamps);
 
   const meta = TOOL_BY_ID.get(activeTool);
   const Icon = TOOL_ICONS[activeTool];
@@ -200,8 +457,10 @@ export function Inspector() {
     if (factory) return { name: factory.title.en, imageUrl: factory.imageUrl, width: factory.width, height: factory.height, sub: "Factory stamp" };
     const user = userStamps.find((stamp) => stamp.id === selectedStampId);
     if (user) return { name: user.name, imageUrl: user.imageUrl, width: user.inkWidth, height: user.inkHeight, sub: user.groupName };
+    const custom = customStamps.find((stamp) => stamp.id === selectedStampId);
+    if (custom) return { name: custom.name, imageUrl: custom.imageUrl, width: custom.width, height: custom.height, sub: "Saved stamp" };
     return null;
-  }, [selectedStampId]);
+  }, [customStamps, selectedStampId]);
 
   const gridLabel = template.grid ? template.grid.deltaXMm ?? template.grid.deltaYMm ?? template.grid.deltaMm : null;
 
@@ -238,6 +497,33 @@ export function Inspector() {
               checked={eraserSplit}
               onChange={setEraserSplit}
             />
+          </div>
+        )}
+
+        {activeTool === "measure" && <MeasureInspector pageWidthMm={size.widthMm} />}
+        {activeTool === "snapshot" && <SnapshotPanel />}
+        {activeTool === "crop" && (
+          <div className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-2.5">
+            <div className="flex items-center gap-2 text-[12px] font-medium">
+              <Crop size={14} /> Crop page
+            </div>
+            <p className="text-[10.5px] leading-relaxed text-muted">
+              {page.cropBox
+                ? `Cropped to ${page.cropBox.widthMm.toFixed(1)} × ${page.cropBox.heightMm.toFixed(1)} mm at ${page.cropBox.xMm.toFixed(1)}, ${page.cropBox.yMm.toFixed(1)}. The PDF export uses the same box.`
+                : "Drag the frame on the page, then Apply crop. The cropped margin stays in the file but is hidden."}
+            </p>
+            <button
+              type="button"
+              className="chip h-7 justify-center"
+              disabled={!page.cropBox}
+              onClick={() => {
+                const doc = useDocStore.getState();
+                doc.pushHistory(tab.id);
+                doc.updatePage(tab.id, pageNumber - 1, { cropBox: undefined });
+              }}
+            >
+              Reset crop
+            </button>
           </div>
         )}
 

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { CommandPalette } from "./components/CommandPalette";
 import { Inspector } from "./components/Inspector";
 import { NewDocumentModal } from "./components/NewDocumentModal";
+import { SettingsModal } from "./components/SettingsModal";
 import { PaperViewport } from "./components/canvas/PaperViewport";
 import { PresentationBar } from "./components/PresentationBar";
 import { Sidebar } from "./components/Sidebar";
@@ -9,18 +10,17 @@ import { StampLibrary } from "./components/StampLibrary";
 import { StatusLine } from "./components/StatusLine";
 import { ToolBar } from "./components/ToolBar";
 import { TopBar } from "./components/TopBar";
+import { addImageStamp } from "./lib/images";
 import { downloadPdf, exportInputFromTab, exportPdf } from "./lib/pdfEngine";
+import { readImageFile } from "./lib/raster";
+import { bindingFromEvent, normalizeBinding, useShortcutStore } from "./lib/shortcuts";
 import { loadWorkspace, saveWorkspace } from "./lib/storage";
-import { TOOLS } from "./lib/tools";
+import { TOOL_BY_ID } from "./lib/tools";
 import type { ToolId } from "./lib/types";
 import { useAnnotationStore } from "./stores/useAnnotationStore";
 import { useDocStore } from "./stores/useDocStore";
 import { useToolStore } from "./stores/useToolStore";
 import { useUIStore } from "./stores/useUIStore";
-
-const KEY_TO_TOOL = new Map<string, ToolId>(
-  TOOLS.filter((tool) => tool.shortcut.length === 1).map((tool) => [tool.shortcut.toLowerCase(), tool.id]),
-);
 
 function isTyping(target: EventTarget | null): boolean {
   return (
@@ -36,12 +36,14 @@ export default function App() {
   const presentation = useUIStore((state) => state.presentation);
   const setPresentation = useUIStore((state) => state.setPresentation);
   const setPaletteOpen = useUIStore((state) => state.setPaletteOpen);
+  const toast = useUIStore((state) => state.toast);
   const setTool = useToolStore((state) => state.setTool);
   const zoomBy = useDocStore((state) => state.zoomBy);
   const setFit = useDocStore((state) => state.setFit);
   const setPage = useDocStore((state) => state.setPage);
   const fileRef = useRef<HTMLInputElement>(null);
   const ready = useRef(false);
+  const saveFailed = useRef(false);
 
   // Restore the last workspace, then autosave every change to IndexedDB.
   useEffect(() => {
@@ -53,7 +55,13 @@ export default function App() {
     const unsubscribe = useDocStore.subscribe((state) => {
       if (!ready.current) return;
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => void saveWorkspace(state.tabs, state.activeId), 700);
+      timer = window.setTimeout(() => {
+        void saveWorkspace(state.tabs, state.activeId).then((ok) => {
+          if (ok || saveFailed.current) return;
+          saveFailed.current = true;
+          useUIStore.getState().setToast("Workspace autosave failed — storage may be full. Export a backup from Settings.");
+        });
+      }, 700);
     });
     return () => {
       unsubscribe();
@@ -62,24 +70,59 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => useUIStore.getState().setToast(null), 3400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  // Images arrive through the clipboard as files, not annotations.
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      if (isTyping(event.target)) return;
+      const items = [...(event.clipboardData?.items ?? [])];
+      const item = items.find((entry) => entry.type.startsWith("image/"));
+      const file = item?.getAsFile();
+      if (!file) return;
+      event.preventDefault();
+      void readImageFile(file)
+        .then((image) => addImageStamp(image))
+        .catch(() => useUIStore.getState().setToast("That clipboard image could not be read"));
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTyping(event.target)) return;
       const command = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
       const annotations = useAnnotationStore.getState();
+      const pressed = bindingFromEvent(event);
+      const action = pressed ? useShortcutStore.getState().resolve().get(normalizeBinding(pressed)) : undefined;
 
       if (command) {
-        if (key === "k") {
+        if (action === "palette") {
           event.preventDefault();
           useUIStore.getState().setPaletteOpen(!useUIStore.getState().paletteOpen);
           return;
         }
-        if (key === "o") {
+        if (action === "settings") {
+          event.preventDefault();
+          useUIStore.getState().setSettingsOpen(true);
+          return;
+        }
+        if (action === "presentation") {
+          event.preventDefault();
+          setPresentation(true);
+          return;
+        }
+        if (action === "open") {
           event.preventDefault();
           fileRef.current?.click();
           return;
         }
-        if (key === "s") {
+        if (action === "save") {
           event.preventDefault();
           const tab = useDocStore.getState().tabs.find((item) => item.id === useDocStore.getState().activeId);
           if (tab) {
@@ -87,13 +130,12 @@ export default function App() {
           }
           return;
         }
-        if (key === "z") {
+        if (action === "undo" || (key === "z" && !event.shiftKey)) {
           event.preventDefault();
-          if (event.shiftKey) useDocStore.getState().redo();
-          else useDocStore.getState().undo();
+          useDocStore.getState().undo();
           return;
         }
-        if (key === "y") {
+        if (action === "redo" || key === "y" || (key === "z" && event.shiftKey)) {
           event.preventDefault();
           useDocStore.getState().redo();
           return;
@@ -146,6 +188,7 @@ export default function App() {
         const ui = useUIStore.getState();
         if (ui.paletteOpen) ui.setPaletteOpen(false);
         else if (ui.libraryOpen) ui.setLibraryOpen(false);
+        else if (ui.settingsOpen) ui.setSettingsOpen(false);
         else if (ui.newDocOpen) ui.setNewDocOpen(false);
         else if (ui.presentation) setPresentation(false);
         else useAnnotationStore.getState().clearSelection();
@@ -169,6 +212,15 @@ export default function App() {
         return;
       }
 
+      if (action === "fit-page") {
+        setFit("page");
+        return;
+      }
+      if (action && TOOL_BY_ID.has(action as ToolId)) {
+        setTool(action as ToolId);
+        return;
+      }
+
       if (event.altKey) return;
 
       if (event.key === "+" || event.key === "=") {
@@ -179,18 +231,11 @@ export default function App() {
         zoomBy(-1);
         return;
       }
-      if (event.key === "0") {
-        setFit("page");
-        return;
-      }
       if (event.key === "PageDown" || event.key === "PageUp") {
         event.preventDefault();
         setPage(useDocStore.getState().page + (event.key === "PageDown" ? 1 : -1));
         return;
       }
-
-      const tool = KEY_TO_TOOL.get(key);
-      if (tool) setTool(tool);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -230,7 +275,13 @@ export default function App() {
           <CommandPalette />
           <StampLibrary />
           <NewDocumentModal />
+          <SettingsModal />
         </>
+      )}
+      {toast && (
+        <div className="pointer-events-none fixed bottom-5 left-1/2 z-[60] -translate-x-1/2">
+          <div className="glass-strong rounded-xl px-3.5 py-2 text-[11.5px] shadow-lg">{toast}</div>
+        </div>
       )}
     </div>
   );

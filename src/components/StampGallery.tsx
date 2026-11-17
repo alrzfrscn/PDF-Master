@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, Search } from "lucide-react";
+import { useCustomStampStore } from "../lib/customStamps";
 import { stampGroups, stamps, userStamps } from "../lib/data";
 import type { UserStamp } from "../lib/types";
 import { useToolStore } from "../stores/useToolStore";
@@ -34,28 +35,73 @@ const USER_ITEMS: GalleryItem[] = userStamps.map((stamp: UserStamp) => ({
   height: stamp.inkHeight,
 }));
 
+const TILE_PX = 72;
+const GAP = 8;
+
 export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" | "library"; onPick?: () => void }) {
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState("all");
+  const [scrollTop, setScrollTop] = useState(0);
+  const [height, setHeight] = useState(320);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const selectedStampId = useToolStore((state) => state.selectedStampId);
   const selectStamp = useToolStore((state) => state.selectStamp);
   const setLibraryOpen = useUIStore((state) => state.setLibraryOpen);
+  const customStamps = useCustomStampStore((state) => state.stamps);
   const library = variant === "library";
   const groups = useMemo(stampGroups, []);
+  const columns = library ? 7 : 3;
+
+  const customItems = useMemo<GalleryItem[]>(
+    () =>
+      customStamps.map((stamp) => ({
+        id: stamp.id,
+        name: stamp.name,
+        sub: "Saved stamp",
+        imageUrl: stamp.imageUrl,
+        width: stamp.width,
+        height: stamp.height,
+      })),
+    [customStamps],
+  );
 
   const items = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const source =
       group === "user"
         ? USER_ITEMS
-        : group === "all"
-          ? [...FACTORY_ITEMS, ...USER_ITEMS]
-          : FACTORY_ITEMS.filter((item) => FACTORY_GROUP.get(item.id) === group);
+        : group === "custom"
+          ? customItems
+          : group === "all"
+            ? [...FACTORY_ITEMS, ...USER_ITEMS, ...customItems]
+            : FACTORY_ITEMS.filter((item) => FACTORY_GROUP.get(item.id) === group);
     if (!needle) return source;
     return source.filter(
       (item) => item.name.toLowerCase().includes(needle) || item.sub.toLowerCase().includes(needle),
     );
+  }, [customItems, group, query]);
+
+  // A filter change starts the list over; a stale scrollTop would show blank rows.
+  useEffect(() => {
+    setScrollTop(0);
+    scrollRef.current?.scrollTo({ top: 0 });
   }, [group, query]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setHeight(element.clientHeight));
+    observer.observe(element);
+    setHeight(element.clientHeight);
+    return () => observer.disconnect();
+  }, []);
+
+  const stride = TILE_PX + GAP;
+  const rows = Math.ceil(items.length / columns);
+  const firstRow = Math.max(0, Math.floor(scrollTop / stride) - 1);
+  const lastRow = Math.min(rows, Math.ceil((scrollTop + height) / stride) + 1);
+  const visible = items.slice(firstRow * columns, lastRow * columns);
+  const total = stamps.length + userStamps.length + customStamps.length;
 
   return (
     <div className="flex min-h-0 flex-col gap-2.5">
@@ -63,7 +109,7 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
         aside={
           <span className="flex items-center gap-2">
             <span className="text-[10px] tabular-nums text-muted">
-              {items.length} / {stamps.length + userStamps.length}
+              {items.length} / {total}
             </span>
             {!library && (
               <button
@@ -86,7 +132,7 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
         <Search size={13} strokeWidth={1.75} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
         <input
           className="text-input pl-7"
-          placeholder="Search 464 factory stamps and your own…"
+          placeholder={`Search ${total} stamps and your own…`}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           aria-label="Search stamps"
@@ -96,6 +142,9 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
       <div className="scroll-thin -mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
         <button type="button" className="chip" aria-pressed={group === "all"} onClick={() => setGroup("all")}>
           All
+        </button>
+        <button type="button" className="chip" aria-pressed={group === "custom"} onClick={() => setGroup("custom")}>
+          Custom <span className="opacity-60">{customStamps.length}</span>
         </button>
         <button type="button" className="chip" aria-pressed={group === "user"} onClick={() => setGroup("user")}>
           My stamps <span className="opacity-60">{userStamps.length}</span>
@@ -113,48 +162,59 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
         ))}
       </div>
 
-      {/* auto-rows-max: the max-height scroller otherwise collapses every tile row to its 2 px border. */}
       <div
-        className={`scroll-thin min-h-0 auto-rows-max overflow-y-auto pr-1 ${
-          library ? "grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2" : "grid grid-cols-3 gap-1.5"
-        }`}
+        ref={scrollRef}
+        className="scroll-thin min-h-0 overflow-y-auto pr-1"
         style={library ? { maxHeight: "58vh" } : { maxHeight: 320 }}
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
       >
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="tile group flex flex-col overflow-hidden text-left"
-            aria-pressed={selectedStampId === item.id}
-            title={`${item.name} — ${item.sub}`}
-            onClick={() => {
-              selectStamp(item.id);
-              onPick?.();
+        <div className="relative" style={{ height: rows * stride }}>
+          <div
+            className="absolute left-0 right-0 grid"
+            style={{
+              top: firstRow * stride,
+              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+              gap: GAP,
+              gridAutoRows: TILE_PX,
             }}
           >
-            <span className="checker flex h-[52px] w-full items-center justify-center p-1.5">
-              <img
-                src={item.imageUrl}
-                alt={item.name}
-                loading="lazy"
-                decoding="async"
-                className="max-h-full max-w-full object-contain drop-shadow-sm"
-              />
-            </span>
-            <span className="truncate px-1.5 py-1 text-[9.5px] leading-tight text-muted group-hover:text-fg">
-              {item.name}
-            </span>
-          </button>
-        ))}
+            {visible.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="tile group flex h-full flex-col overflow-hidden text-left"
+                aria-pressed={selectedStampId === item.id}
+                title={`${item.name} — ${item.sub}`}
+                onClick={() => {
+                  selectStamp(item.id);
+                  onPick?.();
+                }}
+              >
+                <span className="checker flex h-[52px] w-full shrink-0 items-center justify-center p-1.5">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="max-h-full max-w-full object-contain drop-shadow-sm"
+                  />
+                </span>
+                <span className="truncate px-1.5 py-1 text-[9.5px] leading-tight text-muted group-hover:text-fg">
+                  {item.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
         {items.length === 0 && (
-          <p className="col-span-full py-6 text-center text-[11.5px] text-muted">No stamp matches “{query}”.</p>
+          <p className="py-6 text-center text-[11.5px] text-muted">No stamp matches “{query}”.</p>
         )}
       </div>
 
       {library && (
         <p className="text-[10.5px] leading-relaxed text-muted">
           {stamps.length} factory stamps migrated · 3 recipes have no recoverable bitmap and keep their vector ink for
-          Phase 3 · {userStamps.length} stamps from your Tools folder.
+          Phase 3 · {userStamps.length} from your Tools folder · {customStamps.length} saved from snapshots.
         </p>
       )}
     </div>

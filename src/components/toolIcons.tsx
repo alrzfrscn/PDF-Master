@@ -12,6 +12,7 @@ import {
   Minus,
   MousePointer2,
   Pen,
+  Image as ImageIcon,
   Ruler,
   ScanLine,
   Sigma,
@@ -43,4 +44,5 @@ export const TOOL_ICONS: Record<ToolId, IconComponent> = {
   formula: Sigma,
   crop: Crop,
   snapshot: Camera,
+  image: ImageIcon,
 };

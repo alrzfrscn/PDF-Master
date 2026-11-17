@@ -25,6 +25,7 @@ export function CommandPalette() {
   const setLibraryOpen = useUIStore((state) => state.setLibraryOpen);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const setPresentation = useUIStore((state) => state.setPresentation);
+  const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const setTool = useToolStore((state) => state.setTool);
   const newTab = useDocStore((state) => state.newTab);
   const setFit = useDocStore((state) => state.setFit);
@@ -67,6 +68,17 @@ export function CommandPalette() {
         Icon: TOOL_ICONS.stamp,
         run: () => {
           setLibraryOpen(true);
+          close();
+        },
+      },
+      {
+        id: "settings",
+        label: "Open settings",
+        hint: "Shortcuts, preferences",
+        group: "Actions",
+        Icon: Command,
+        run: () => {
+          setSettingsOpen(true);
           close();
         },
       },
@@ -141,7 +153,7 @@ export function CommandPalette() {
       },
     }));
     return [...toolItems, ...actions, ...paperItems];
-  }, [newTab, setFit, setLibraryOpen, setNewDocOpen, setPaletteOpen, setPresentation, setTheme, setTool, setZoom, toggleSidebar]);
+  }, [newTab, setFit, setLibraryOpen, setNewDocOpen, setPaletteOpen, setPresentation, setSettingsOpen, setTheme, setTool, setZoom, toggleSidebar]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();

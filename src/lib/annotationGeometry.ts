@@ -71,20 +71,27 @@ export function boxCenter(box: BBox): Pt {
   return [box.x + box.width / 2, box.y + box.height / 2];
 }
 
-function stampCorners(annotation: Extract<Annotation, { type: "stamp" }>): Pt[] {
-  const cx = annotation.xMm + annotation.widthMm / 2;
-  const cy = annotation.yMm + annotation.heightMm / 2;
-  const angle = annotation.rotation * RAD;
+/** Corners of a rotated box, in page-local millimetres. */
+export function boxCorners(xMm: number, yMm: number, widthMm: number, heightMm: number, rotation: number): Pt[] {
+  const cx = xMm + widthMm / 2;
+  const cy = yMm + heightMm / 2;
+  const angle = rotation * RAD;
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
-  const hw = annotation.widthMm / 2;
-  const hh = annotation.heightMm / 2;
+  const hw = widthMm / 2;
+  const hh = heightMm / 2;
   return [
     [-hw, -hh],
     [hw, -hh],
     [hw, hh],
     [-hw, hh],
   ].map(([x, y]) => [cx + x * cos - y * sin, cy + x * sin + y * cos] as Pt);
+}
+
+export function isBoxAnnotation(
+  annotation: Annotation,
+): annotation is Extract<Annotation, { type: "stamp" | "text" | "formula" }> {
+  return annotation.type === "stamp" || annotation.type === "text" || annotation.type === "formula";
 }
 
 export function annotationBounds(annotation: Annotation): BBox {
@@ -98,7 +105,11 @@ export function annotationBounds(annotation: Annotation): BBox {
         Math.max(annotation.lineWidthMm, 0) / 2,
       );
     case "stamp":
-      return pointsBounds(stampCorners(annotation));
+    case "text":
+    case "formula":
+      return pointsBounds(
+        boxCorners(annotation.xMm, annotation.yMm, annotation.widthMm, annotation.heightMm, annotation.rotation),
+      );
   }
 }
 
@@ -177,6 +188,16 @@ export function hitTest(annotation: Annotation, p: Pt, toleranceMm = 1.4): boole
         local[0] >= 0 && local[1] >= 0 && local[0] <= annotation.widthMm && local[1] <= annotation.heightMm
       );
     }
+    case "text":
+    case "formula": {
+      const local = toBoxLocal(annotation, p);
+      return (
+        local[0] >= -toleranceMm &&
+        local[1] >= -toleranceMm &&
+        local[0] <= annotation.widthMm + toleranceMm &&
+        local[1] <= annotation.heightMm + toleranceMm
+      );
+    }
   }
 }
 
@@ -194,14 +215,20 @@ function ellipseRadius(box: BBox, p: Pt): number {
 }
 
 function toStampLocal(annotation: Extract<Annotation, { type: "stamp" }>, p: Pt): Pt {
+  const local = toBoxLocal(annotation, p);
+  return [annotation.flipH ? annotation.widthMm - local[0] : local[0], annotation.flipV ? annotation.heightMm - local[1] : local[1]];
+}
+
+function toBoxLocal(
+  annotation: Pick<Extract<Annotation, { type: "text" }>, "xMm" | "yMm" | "widthMm" | "heightMm" | "rotation">,
+  p: Pt,
+): Pt {
   const cx = annotation.xMm + annotation.widthMm / 2;
   const cy = annotation.yMm + annotation.heightMm / 2;
   const angle = -annotation.rotation * RAD;
   const dx = p[0] - cx;
   const dy = p[1] - cy;
-  const x = dx * Math.cos(angle) - dy * Math.sin(angle) + annotation.widthMm / 2;
-  const y = dx * Math.sin(angle) + dy * Math.cos(angle) + annotation.heightMm / 2;
-  return [annotation.flipH ? annotation.widthMm - x : x, annotation.flipV ? annotation.heightMm - y : y];
+  return [dx * Math.cos(angle) - dy * Math.sin(angle) + annotation.widthMm / 2, dx * Math.sin(angle) + dy * Math.cos(angle) + annotation.heightMm / 2];
 }
 
 function mapPoints<T extends Annotation>(annotation: T, mapper: (p: Pt) => Pt): T {
@@ -245,15 +272,19 @@ export function scaleAnnotation(
   if (next.type === "shape") {
     return { ...next, lineWidthMm: Math.max(0.05, next.lineWidthMm * factor) };
   }
-  const source = annotation as Extract<Annotation, { type: "stamp" }>;
-  const target = next as Extract<Annotation, { type: "stamp" }>;
-  return {
+  const source = annotation as Extract<Annotation, { type: "stamp" | "text" | "formula" }>;
+  const target = next as Extract<Annotation, { type: "stamp" | "text" | "formula" }>;
+  const scaled = {
     ...target,
     xMm: origin[0] + (source.xMm - origin[0]) * scaleX,
     yMm: origin[1] + (source.yMm - origin[1]) * scaleY,
     widthMm: Math.max(0.5, source.widthMm * Math.abs(scaleX)),
     heightMm: Math.max(0.5, source.heightMm * Math.abs(scaleY)),
   };
+  if (scaled.type === "text" || scaled.type === "formula") {
+    return { ...scaled, fontSizePt: Math.max(4, scaled.fontSizePt * factor) };
+  }
+  return scaled;
 }
 
 export function rotateAnnotation<T extends Annotation>(annotation: T, center: Pt, degrees: number): T {
@@ -266,7 +297,7 @@ export function rotateAnnotation<T extends Annotation>(annotation: T, center: Pt
     return [center[0] + dx * cos - dy * sin, center[1] + dx * sin + dy * cos];
   };
   const next = mapPoints(annotation, map);
-  if (next.type === "stamp") {
+  if (next.type === "stamp" || next.type === "text" || next.type === "formula") {
     return { ...next, rotation: normalizeAngle(next.rotation + degrees) };
   }
   return next;
@@ -281,9 +312,11 @@ export function flipAnnotation<T extends Annotation>(annotation: T, axis: "h" | 
   return next;
 }
 
-export function formatDimension(valueMm: number, unit: "mm" | "cm" | "in"): string {
+export function formatDimension(valueMm: number, unit: "mm" | "cm" | "m" | "in" | "ft"): string {
   if (unit === "cm") return `${(valueMm / 10).toFixed(2)} cm`;
+  if (unit === "m") return `${(valueMm / 1000).toFixed(3)} m`;
   if (unit === "in") return `${(valueMm / 25.4).toFixed(3)} in`;
+  if (unit === "ft") return `${(valueMm / 304.8).toFixed(3)} ft`;
   return `${valueMm.toFixed(1)} mm`;
 }
 

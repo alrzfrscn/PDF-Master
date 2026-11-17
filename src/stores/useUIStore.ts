@@ -11,6 +11,8 @@ if (typeof document !== "undefined") document.documentElement.dataset.theme = in
 
 export type SidebarTab = "pages" | "bookmarks" | "annotations" | "favorites";
 
+export type MeasureModeUi = "distance" | "perimeter" | "area" | "angle";
+
 interface UIState {
   theme: ThemeName;
   sidebarOpen: boolean;
@@ -20,6 +22,9 @@ interface UIState {
   libraryOpen: boolean;
   newDocOpen: boolean;
   presentation: boolean;
+  settingsOpen: boolean;
+  measureMode: MeasureModeUi;
+  toast: string | null;
   eraserSplit: boolean;
   setEraserSplit: (split: boolean) => void;
   setTheme: (theme: ThemeName) => void;
@@ -30,6 +35,9 @@ interface UIState {
   setLibraryOpen: (open: boolean) => void;
   setNewDocOpen: (open: boolean) => void;
   setPresentation: (on: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
+  setMeasureMode: (mode: MeasureModeUi) => void;
+  setToast: (toast: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -41,6 +49,9 @@ export const useUIStore = create<UIState>((set) => ({
   libraryOpen: false,
   newDocOpen: false,
   presentation: false,
+  settingsOpen: false,
+  measureMode: "distance",
+  toast: null,
   eraserSplit: false,
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),
   setTheme: (theme) => {
@@ -55,4 +66,7 @@ export const useUIStore = create<UIState>((set) => ({
   setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
   setNewDocOpen: (newDocOpen) => set({ newDocOpen }),
   setPresentation: (presentation) => set({ presentation }),
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setMeasureMode: (measureMode) => set({ measureMode }),
+  setToast: (toast) => set({ toast }),
 }));

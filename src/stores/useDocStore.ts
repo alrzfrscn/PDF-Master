@@ -268,6 +268,7 @@ export const useDocStore = create<DocState>((set, get) => ({
           if (!page) return;
           page.annotations = saved.annotations ?? [];
           page.rotation = (((saved.rotation ?? 0) % 360 + 360) % 360) as DocumentPage["rotation"];
+          if (saved.cropBox) page.cropBox = saved.cropBox;
         });
       }
       const title = name.replace(/\.pdf$/i, "");
