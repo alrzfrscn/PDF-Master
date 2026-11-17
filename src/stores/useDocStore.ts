@@ -272,6 +272,16 @@ export const useDocStore = create<DocState>((set, get) => ({
         });
       }
       const title = name.replace(/\.pdf$/i, "");
+      // The sidecar carries outline entries across an export round-trip, including custom ones.
+      const bookmarks =
+        sidecar?.bookmarks && sidecar.bookmarks.length > 0
+          ? sidecar.bookmarks.map((entry) => ({ ...entry, id: entry.id || makeId("bm") }))
+          : info.bookmarks.map((entry) => ({
+              id: makeId("bm"),
+              title: entry.title,
+              pageIndex: entry.pageIndex,
+              depth: entry.depth,
+            }));
       const tab: DocumentTab = {
         id: makeId("doc"),
         title,
@@ -284,12 +294,7 @@ export const useDocStore = create<DocState>((set, get) => ({
           name,
           pageCount: pages.length,
           bytes: stored,
-          bookmarks: info.bookmarks.map((entry) => ({
-            id: makeId("bm"),
-            title: entry.title,
-            pageIndex: entry.pageIndex,
-            depth: entry.depth,
-          })),
+          bookmarks,
         },
       };
       set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, page: 1, fitMode: "page", zoom: 0.8 }));

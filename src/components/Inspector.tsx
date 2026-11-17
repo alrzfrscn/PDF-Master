@@ -465,7 +465,7 @@ export function Inspector() {
   const gridLabel = template.grid ? template.grid.deltaXMm ?? template.grid.deltaYMm ?? template.grid.deltaMm : null;
 
   return (
-    <aside className="glass m-2 ml-0 hidden w-[316px] shrink-0 flex-col overflow-hidden rounded-2xl lg:flex">
+    <aside className="inspector glass m-2 ml-0 hidden w-[316px] shrink-0 flex-col overflow-hidden rounded-2xl lg:flex">
       <div className="flex items-start gap-2.5 border-b border-[var(--border)] px-3 py-2.5">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
           <Icon size={18} strokeWidth={1.75} />

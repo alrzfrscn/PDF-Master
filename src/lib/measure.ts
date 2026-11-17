@@ -133,6 +133,8 @@ interface ScaleState {
   activeId: string;
   addCustom: (scale: MeasurementScale) => void;
   setActive: (id: string) => void;
+  /** Replaces calibrated scales from a workspace backup. */
+  restore: (custom: MeasurementScale[], activeId?: string) => void;
   all: () => MeasurementScale[];
   active: () => MeasurementScale;
 }
@@ -149,6 +151,15 @@ export const useScaleStore = create<ScaleState>((set, get) => ({
   setActive: (activeId) => {
     if (typeof localStorage !== "undefined") localStorage.setItem(ACTIVE_KEY, activeId);
     set({ activeId });
+  },
+  restore: (custom, activeId) => {
+    const valid = custom.filter((scale) => scale?.id && scale.denominator > 0);
+    if (typeof localStorage !== "undefined") localStorage.setItem(SCALES_KEY, JSON.stringify(valid));
+    const nextActive = activeId && [...PRESET_SCALES, ...valid].some((scale) => scale.id === activeId)
+      ? activeId
+      : PRESET_SCALES[0].id;
+    if (typeof localStorage !== "undefined") localStorage.setItem(ACTIVE_KEY, nextActive);
+    set({ custom: valid, activeId: nextActive });
   },
   all: () => [...PRESET_SCALES, ...get().custom],
   active: () => get().all().find((scale) => scale.id === get().activeId) ?? PRESET_SCALES[0],

@@ -19,7 +19,7 @@ export function SnapshotBar({ region, imageUrl, zoom, status, onCopy, onDownload
   const top = (region.y + region.height) * PX_PER_MM + 6;
   return (
     <div
-      className="absolute z-40"
+      className="snapshot-bar absolute z-40"
       style={{ left, top, transform: `scale(${1 / zoom})`, transformOrigin: "top left" }}
       onPointerDown={(event) => event.stopPropagation()}
     >

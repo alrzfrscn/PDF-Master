@@ -19,7 +19,7 @@ export function StatusLine() {
   const meta = TOOL_BY_ID.get(activeTool);
 
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3.5 right-3.5 z-10 flex items-end justify-between gap-3">
+    <div className="status-line pointer-events-none absolute bottom-3 left-3.5 right-3.5 z-10 flex items-end justify-between gap-3">
       <div className="glass flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-[10.5px] text-muted">
         <span className="font-medium text-fg">{page.pdf ? "PDF" : template.name}</span>
         <span className="h-3 w-px bg-[var(--border)]" />

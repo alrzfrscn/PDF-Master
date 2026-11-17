@@ -114,7 +114,7 @@ export function PaperViewport() {
   return (
     <div
       ref={viewportRef}
-      className="relative h-full w-full overflow-hidden"
+      className="viewport relative h-full w-full overflow-hidden"
       style={{ cursor }}
       onPointerDown={(event) => {
         if (!canPan && event.button !== 1) return;
@@ -161,13 +161,13 @@ export function PaperViewport() {
       }}
     >
       <div
-        className="absolute left-1/2 top-1/2 will-change-transform"
+        className="page-stage absolute left-1/2 top-1/2 will-change-transform"
         style={{
           transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
         }}
       >
         <div
-          className="relative"
+          className="page-paper relative"
           style={{
             width: widthPx,
             height: heightPx,

@@ -26,7 +26,7 @@ export function PresentationBar() {
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
 
   return (
-    <div className="glass-strong absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl px-2 py-1.5">
+    <div className="presentation-bar glass-strong absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl px-2 py-1.5">
       <button
         type="button"
         className="icon-btn"

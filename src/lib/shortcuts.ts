@@ -8,6 +8,7 @@ export type ShortcutAction =
   | "palette"
   | "save"
   | "open"
+  | "print"
   | "undo"
   | "redo"
   | "presentation"
@@ -19,6 +20,7 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   palette: "Command palette",
   save: "Save editable PDF",
   open: "Open PDF",
+  print: "Print page",
   undo: "Undo",
   redo: "Redo",
   presentation: "Presentation mode",
@@ -36,6 +38,7 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
   palette: "Ctrl+K",
   save: "Ctrl+S",
   open: "Ctrl+O",
+  print: "Ctrl+P",
   undo: "Ctrl+Z",
   redo: "Ctrl+Y",
   presentation: "Ctrl+Shift+P",
@@ -116,6 +119,8 @@ interface ShortcutState {
   map: Record<ShortcutAction, string>;
   bind: (action: ShortcutAction, binding: string) => void;
   reset: (action?: ShortcutAction) => void;
+  /** Replaces the whole table from a workspace backup, filling gaps with defaults. */
+  replace: (map: Partial<Record<ShortcutAction, string>>) => void;
   conflicts: () => ConflictMap;
   resolve: () => Map<string, ShortcutAction>;
 }
@@ -129,6 +134,15 @@ export const useShortcutStore = create<ShortcutState>((set, get) => ({
   },
   reset: (action) => {
     const map = action ? { ...get().map, [action]: DEFAULT_SHORTCUTS[action] } : { ...DEFAULT_SHORTCUTS };
+    if (typeof localStorage !== "undefined") localStorage.setItem(STORE_KEY, JSON.stringify(map));
+    set({ map });
+  },
+  replace: (incoming) => {
+    const map = { ...DEFAULT_SHORTCUTS };
+    for (const action of SHORTCUT_ACTIONS) {
+      const binding = incoming[action];
+      if (typeof binding === "string" && binding.trim()) map[action] = normalizeBinding(binding);
+    }
     if (typeof localStorage !== "undefined") localStorage.setItem(STORE_KEY, JSON.stringify(map));
     set({ map });
   },

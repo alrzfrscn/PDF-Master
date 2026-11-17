@@ -16,7 +16,8 @@ export function PdfBackground({ page, widthMm, heightMm, zoom }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    const quality = Math.min(4, Math.max(1, zoom * (window.devicePixelRatio || 1)));
+    // 2× floor keeps pages (and printouts) sharp when zoomed out.
+    const quality = Math.min(4, Math.max(2, zoom * (window.devicePixelRatio || 1)));
     const timer = window.setTimeout(() => {
       if (cancelled || !canvasRef.current) return;
       void renderPdfPage(page.url, page.pageNumber, canvasRef.current, widthMm * PX_PER_MM, heightMm * PX_PER_MM, quality);

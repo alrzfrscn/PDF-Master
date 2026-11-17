@@ -65,7 +65,7 @@ export function ToolBar() {
   };
 
   return (
-    <div className="absolute left-3.5 top-1/2 z-20 -translate-y-1/2">
+    <div className="tool-rail absolute left-3.5 top-1/2 z-20 -translate-y-1/2">
       <div className="glass relative flex flex-col items-center gap-1 rounded-[18px] p-1.5">
         {TOOLBAR.map((group, index) => (
           <div key={index} className="flex flex-col items-center gap-1">

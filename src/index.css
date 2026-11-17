@@ -474,3 +474,57 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- print: only the active sheet reaches paper ---------- */
+@media print {
+  @page {
+    margin: 6mm;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .app-bg {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .top-bar,
+  .sidebar,
+  .tool-rail,
+  .inspector,
+  .status-line,
+  .selection-chrome,
+  .snapshot-bar,
+  .crop-overlay,
+  .presentation-bar,
+  .fixed,
+  .tooltip > .tooltip-body {
+    display: none !important;
+  }
+
+  .viewport {
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .page-stage {
+    position: static !important;
+    transform: none !important;
+  }
+
+  .page-paper,
+  .paper-shadow {
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

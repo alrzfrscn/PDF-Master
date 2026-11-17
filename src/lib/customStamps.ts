@@ -36,6 +36,8 @@ interface CustomStampState {
   stamps: CustomStamp[];
   add: (stamp: Omit<CustomStamp, "id" | "createdAt">) => CustomStamp;
   remove: (id: string) => void;
+  /** Replaces the library from a workspace backup. */
+  restore: (stamps: CustomStamp[]) => void;
 }
 
 export const useCustomStampStore = create<CustomStampState>((set, get) => ({
@@ -55,5 +57,10 @@ export const useCustomStampStore = create<CustomStampState>((set, get) => ({
     const stamps = get().stamps.filter((stamp) => stamp.id !== id);
     persist(stamps);
     set({ stamps });
+  },
+  restore: (stamps) => {
+    const valid = stamps.filter((stamp) => stamp?.id && stamp.imageUrl && stamp.width > 0 && stamp.height > 0);
+    persist(valid);
+    set({ stamps: valid });
   },
 }));

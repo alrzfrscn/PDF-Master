@@ -173,7 +173,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="glass anim-in m-2 mr-0 flex w-[248px] shrink-0 flex-col overflow-hidden rounded-2xl">
+    <aside className="sidebar glass anim-in m-2 mr-0 flex w-[248px] shrink-0 flex-col overflow-hidden rounded-2xl">
       <div className="flex items-center gap-1 border-b border-[var(--border)] p-1.5">
         {TABS.map(({ id, label, Icon }) => (
           <button

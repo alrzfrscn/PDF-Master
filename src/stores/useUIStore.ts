@@ -55,8 +55,8 @@ export const useUIStore = create<UIState>((set) => ({
   eraserSplit: false,
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),
   setTheme: (theme) => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("pa.theme", theme);
+    if (typeof document !== "undefined") document.documentElement.dataset.theme = theme;
+    if (typeof localStorage !== "undefined") localStorage.setItem("pa.theme", theme);
     set({ theme });
   },
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
