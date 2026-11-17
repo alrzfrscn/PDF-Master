@@ -83,7 +83,8 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
   const width = Math.max(1, bounds.width * scale);
   const height = Math.max(1, bounds.height * scale);
   const size = 9 / zoom;
-  const rotateGap = (bounds.height * scale + 26) / scale;
+  const hit = 24 / zoom;
+  const rotateGap = 26 / scale;
   const handles = handlePoints(bounds, rotateGap);
 
   return (
@@ -100,13 +101,12 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
             key={handle}
             type="button"
             aria-label={isRotate ? "Rotate selection" : `Resize ${handle}`}
-            className="pointer-events-auto absolute rounded-full border border-[var(--accent)]"
+            className="pointer-events-auto absolute bg-transparent"
             style={{
-              left: x * scale - size / 2,
-              top: y * scale - size / 2,
-              width: isRotate ? size + 3 : size,
-              height: isRotate ? size + 3 : size,
-              background: isRotate ? "var(--glass-strong)" : "var(--paper)",
+              left: x * scale - hit / 2,
+              top: y * scale - hit / 2,
+              width: hit,
+              height: hit,
               cursor: isRotate ? "grab" : `${handle}-resize`,
               touchAction: "none",
             }}
@@ -114,18 +114,28 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
               event.stopPropagation();
               onHandleDown(handle, event);
             }}
-          />
+          >
+            <span
+              className="block rounded-full border border-[var(--accent)]"
+              style={{
+                width: isRotate ? size + 3 : size,
+                height: isRotate ? size + 3 : size,
+                margin: "auto",
+                background: isRotate ? "var(--glass-strong)" : "var(--paper)",
+              }}
+            />
+          </button>
         );
       })}
       <div
         className="absolute"
         style={{
           left: left + width / 2,
-          top: top - (rotateGap - bounds.height) * scale,
-          height: (rotateGap - bounds.height) * scale,
+          top: top - 26,
+          height: 26,
           width: 1 / zoom,
           background: "var(--accent)",
-          transform: "translateY(-100%)",
+          transform: "translateX(-50%)",
         }}
       />
       <div
@@ -142,6 +152,7 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
                 title={label}
                 aria-label={label}
                 style={action === "delete" ? { color: "var(--danger)" } : undefined}
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={() => onAction(action)}
               >
                 <Icon size={12.5} strokeWidth={1.9} />

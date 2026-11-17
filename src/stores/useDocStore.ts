@@ -2,8 +2,9 @@ import { create } from "zustand";
 import { DEFAULT_TEMPLATE_ID } from "../lib/data";
 import { clamp } from "../lib/paper";
 import { ZOOM_STEPS } from "../lib/tools";
-import type { DocumentPage, DocumentTab } from "../lib/types";
-import { inspectPdf, loadSidecar, type InspectedPdf } from "../lib/pdfEngine";
+import type { DocumentPage, DocumentTab, PdfBookmark } from "../lib/types";
+import { inspectPdf, loadSidecar, mergeSidecarPages, releasePdfDocument, type InspectedPdf } from "../lib/pdfEngine";
+import { remapBookmarksOnPageOp, type PageOp } from "../lib/bookmarks";
 
 const MILLIMETER_TEMPLATE_ID = "paper-103";
 
@@ -74,10 +75,24 @@ interface DocState {
   redo: (tabId?: string) => void;
 }
 
-const HISTORY_LIMIT = 60;
+const HISTORY_LIMIT = 40;
 
+/** Structural history stores page snapshots; every mutation replaces objects, so a shallow copy is enough. */
 function clonePages(pages: DocumentPage[]): DocumentPage[] {
-  return structuredClone(pages);
+  return pages.map((page) => ({ ...page, annotations: page.annotations.slice() }));
+}
+
+function releaseTab(tab: DocumentTab): void {
+  const urls = new Set<string>();
+  if (tab.pdf?.url) urls.add(tab.pdf.url);
+  for (const page of tab.pages) if (page.pdf?.url) urls.add(page.pdf.url);
+  for (const url of urls) releasePdfDocument(url);
+}
+
+/** Applies a page op to the tab's bookmarks, keeping `pageId` authoritative. */
+function withRemappedBookmarks(tab: DocumentTab, pages: DocumentPage[], op: PageOp): DocumentTab {
+  if (!tab.pdf?.bookmarks.length) return tab;
+  return { ...tab, pdf: { ...tab.pdf, bookmarks: remapBookmarksOnPageOp(tab.pdf.bookmarks, pages, op) } };
 }
 
 function withPageCount(tab: DocumentTab, pages: DocumentPage[]): DocumentTab {
@@ -123,6 +138,8 @@ export const useDocStore = create<DocState>((set, get) => ({
     const { tabs, activeId, history } = get();
     if (tabs.length === 1) return;
     const index = tabs.findIndex((tab) => tab.id === id);
+    const closing = tabs[index];
+    if (closing) releaseTab(closing);
     const next = tabs.filter((tab) => tab.id !== id);
     const nextHistory = { ...history };
     delete nextHistory[id];
@@ -180,7 +197,11 @@ export const useDocStore = create<DocState>((set, get) => ({
     const index = get().page;
     pages.splice(index, 0, page);
     set((state) => ({
-      tabs: state.tabs.map((item) => (item.id === tab.id ? withPageCount(item, pages) : item)),
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "add", index }), pages)
+          : item,
+      ),
       page: index + 1,
     }));
   },
@@ -197,7 +218,11 @@ export const useDocStore = create<DocState>((set, get) => ({
     const pages = [...tab.pages];
     pages.splice(sourceIndex + 1, 0, copy);
     set((state) => ({
-      tabs: state.tabs.map((item) => (item.id === tab.id ? withPageCount(item, pages) : item)),
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "duplicate", index: sourceIndex }), pages)
+          : item,
+      ),
       page: sourceIndex + 2,
     }));
   },
@@ -222,7 +247,11 @@ export const useDocStore = create<DocState>((set, get) => ({
     const [moved] = pages.splice(from, 1);
     pages.splice(to, 0, moved);
     set((state) => ({
-      tabs: state.tabs.map((item) => (item.id === tab.id ? withPageCount(item, pages) : item)),
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "reorder", from, to }), pages)
+          : item,
+      ),
       page: to + 1,
     }));
   },
@@ -234,7 +263,11 @@ export const useDocStore = create<DocState>((set, get) => ({
     get().pushHistory(tab.id);
     const pages = tab.pages.filter((_, pageIndex) => pageIndex !== target);
     set((state) => ({
-      tabs: state.tabs.map((item) => (item.id === tab.id ? withPageCount(item, pages) : item)),
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "delete", index: target }), pages)
+          : item,
+      ),
       page: clamp(get().page, 1, pages.length),
     }));
   },
@@ -258,30 +291,23 @@ export const useDocStore = create<DocState>((set, get) => ({
   openPdfBytes: async (bytes, name) => {
     const stored = bytes.slice();
     set({ lastError: null });
+    let url = "";
     try {
-      const url = URL.createObjectURL(new Blob([new Uint8Array(stored)], { type: "application/pdf" }));
+      url = URL.createObjectURL(new Blob([new Uint8Array(stored)], { type: "application/pdf" }));
       const [info, sidecar] = await Promise.all([inspectPdf(stored), loadSidecar(stored).catch(() => null)]);
-      const pages = pdfPages(info, url);
-      if (sidecar && sidecar.pages.length === pages.length) {
-        sidecar.pages.forEach((saved, index) => {
-          const page = pages[index];
-          if (!page) return;
-          page.annotations = saved.annotations ?? [];
-          page.rotation = (((saved.rotation ?? 0) % 360 + 360) % 360) as DocumentPage["rotation"];
-          if (saved.cropBox) page.cropBox = saved.cropBox;
-        });
-      }
+      const pages = mergeSidecarPages(pdfPages(info, url), sidecar);
       const title = name.replace(/\.pdf$/i, "");
       // The sidecar carries outline entries across an export round-trip, including custom ones.
-      const bookmarks =
-        sidecar?.bookmarks && sidecar.bookmarks.length > 0
-          ? sidecar.bookmarks.map((entry) => ({ ...entry, id: entry.id || makeId("bm") }))
+      const bookmarks: PdfBookmark[] = (
+        sidecar?.bookmarks?.length
+          ? sidecar.bookmarks
           : info.bookmarks.map((entry) => ({
               id: makeId("bm"),
               title: entry.title,
               pageIndex: entry.pageIndex,
               depth: entry.depth,
-            }));
+            }))
+      ).map((entry) => ({ ...entry, id: entry.id || makeId("bm"), pageId: pages[entry.pageIndex]?.id }));
       const tab: DocumentTab = {
         id: makeId("doc"),
         title,
@@ -299,6 +325,7 @@ export const useDocStore = create<DocState>((set, get) => ({
       };
       set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, page: 1, fitMode: "page", zoom: 0.8 }));
     } catch (error) {
+      if (url) URL.revokeObjectURL(url);
       set({ lastError: `Could not open ${name}: ${error instanceof Error ? error.message : String(error)}` });
     }
   },
@@ -320,7 +347,14 @@ export const useDocStore = create<DocState>((set, get) => ({
     const state = get();
     const tab = tabOf(state);
     if (!tab?.pdf) return;
-    const bookmark = { id: makeId("bm"), title, pageIndex: state.page - 1, depth: 0, custom: true };
+    const bookmark = {
+      id: makeId("bm"),
+      title,
+      pageIndex: state.page - 1,
+      depth: 0,
+      pageId: tab.pages[state.page - 1]?.id,
+      custom: true,
+    };
     set({
       tabs: state.tabs.map((item) =>
         item.id === tab.id && item.pdf ? { ...item, pdf: { ...item.pdf, bookmarks: [...item.pdf.bookmarks, bookmark] } } : item,
@@ -328,7 +362,8 @@ export const useDocStore = create<DocState>((set, get) => ({
     });
   },
 
-  restore: (tabs, activeId) => {    const restored = tabs.map((tab) => {
+  restore: (tabs, activeId) => {    const previousTabs = get().tabs;
+    const restored = tabs.map((tab) => {
       const pages = tab.pages?.length ? tab.pages : [newPage(tab.templateId)];
       if (!tab.pdf?.bytes) return { ...tab, pages, pageCount: pages.length };
       const url = URL.createObjectURL(new Blob([new Uint8Array(tab.pdf.bytes)], { type: "application/pdf" }));
@@ -339,6 +374,7 @@ export const useDocStore = create<DocState>((set, get) => ({
         pdf: { ...tab.pdf, url },
       };
     });
+    for (const tab of previousTabs) releaseTab(tab);
     set({
       tabs: restored,
       activeId: restored.some((tab) => tab.id === activeId) ? activeId : restored[0].id,

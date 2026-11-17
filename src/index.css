@@ -169,6 +169,16 @@ textarea {
   background: var(--paper);
 }
 
+/* A stylus must draw, not scroll or select text. */
+.viewport,
+.page-stage,
+.page-paper,
+.page-paper svg {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* ---------- controls ---------- */
 .icon-btn {
   display: inline-grid;

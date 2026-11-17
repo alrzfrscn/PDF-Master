@@ -13,8 +13,9 @@ import { TopBar } from "./components/TopBar";
 import { addImageStamp } from "./lib/images";
 import { parseBootArgs, resolvePaperTarget } from "./lib/bootArgs";
 import { paperTemplates } from "./lib/data";
-import { downloadPdf, exportInputFromTab, exportPdf } from "./lib/pdfEngine";
+import { loadMirroredStamps, useCustomStampStore } from "./lib/customStamps";
 import { readImageFile } from "./lib/raster";
+import { saveActiveDocument } from "./lib/save";
 import { bindingFromEvent, normalizeBinding, useShortcutStore } from "./lib/shortcuts";
 import { loadWorkspace, saveWorkspace } from "./lib/storage";
 import { TOOL_BY_ID } from "./lib/tools";
@@ -52,6 +53,10 @@ export default function App() {
     const boot = parseBootArgs(typeof window === "undefined" ? "" : window.location.search);
     void loadWorkspace().then((saved) => {
       if (saved) useDocStore.getState().restore(saved.tabs, saved.activeId);
+      // The IndexedDB mirror survives a cleared localStorage.
+      void loadMirroredStamps().then((mirrored) => {
+        if (mirrored) useCustomStampStore.getState().restore(mirrored);
+      });
       ready.current = true;
       // Desktop launch contract: a requested paper size, presentation, or print run.
       if (boot.newDoc) {
@@ -62,8 +67,14 @@ export default function App() {
       if (boot.print) window.setTimeout(() => window.print(), 500);
     });
     let timer = 0;
+    // Structural changes only: zoom, page and tool updates do not touch `tabs`.
+    let lastTabs = useDocStore.getState().tabs;
+    let lastActiveId = useDocStore.getState().activeId;
     const unsubscribe = useDocStore.subscribe((state) => {
       if (!ready.current) return;
+      if (state.tabs === lastTabs && state.activeId === lastActiveId) return;
+      lastTabs = state.tabs;
+      lastActiveId = state.activeId;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         void saveWorkspace(state.tabs, state.activeId).then((ok) => {
@@ -71,7 +82,7 @@ export default function App() {
           saveFailed.current = true;
           useUIStore.getState().setToast("Workspace autosave failed — storage may be full. Export a backup from Settings.");
         });
-      }, 700);
+      }, 1000);
     });
     return () => {
       unsubscribe();
@@ -105,98 +116,82 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTyping(event.target)) return;
-      const command = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
       const annotations = useAnnotationStore.getState();
       const pressed = bindingFromEvent(event);
       const action = pressed ? useShortcutStore.getState().resolve().get(normalizeBinding(pressed)) : undefined;
 
-      if (command) {
-        if (action === "palette") {
+      switch (action) {
+        case "palette":
           event.preventDefault();
           useUIStore.getState().setPaletteOpen(!useUIStore.getState().paletteOpen);
           return;
-        }
-        if (action === "settings") {
+        case "settings":
           event.preventDefault();
           useUIStore.getState().setSettingsOpen(true);
           return;
-        }
-        if (action === "presentation") {
+        case "presentation":
           event.preventDefault();
           setPresentation(true);
           return;
-        }
-        if (action === "open") {
+        case "open":
           event.preventDefault();
           fileRef.current?.click();
           return;
-        }
-        if (action === "save") {
+        case "save":
           event.preventDefault();
-          const tab = useDocStore.getState().tabs.find((item) => item.id === useDocStore.getState().activeId);
-          if (tab) {
-            void exportPdf(exportInputFromTab(tab, "editable")).then((bytes) => downloadPdf(bytes, tab.title));
-          }
+          void saveActiveDocument("editable");
           return;
-        }
-        if (action === "print") {
+        case "print":
           event.preventDefault();
           window.print();
           return;
-        }
-        if (action === "undo" || (key === "z" && !event.shiftKey)) {
+        case "undo":
           event.preventDefault();
           useDocStore.getState().undo();
           return;
-        }
-        if (action === "redo" || key === "y" || (key === "z" && event.shiftKey)) {
+        case "redo":
           event.preventDefault();
           useDocStore.getState().redo();
           return;
-        }
-        if (key === "c") {
+        case "copy":
           if (annotations.selection.length === 0) return;
           event.preventDefault();
           annotations.copySelection();
           return;
-        }
-        if (key === "x") {
+        case "cut":
           if (annotations.selection.length === 0) return;
           event.preventDefault();
           annotations.cutSelection();
           return;
-        }
-        if (key === "v") {
+        case "paste":
           if (annotations.clipboard.length === 0) return;
           event.preventDefault();
           annotations.paste();
           return;
-        }
-        if (key === "d") {
+        case "duplicate":
           event.preventDefault();
           annotations.duplicateSelection();
           return;
-        }
-        if (key === "a") {
+        case "select-all": {
           event.preventDefault();
           const state = useDocStore.getState();
           const tab = state.tabs.find((item) => item.id === state.activeId);
           const page = tab?.pages[state.page - 1];
           if (page) {
-            useAnnotationStore.getState().select(
+            annotations.select(
               page.annotations.filter((annotation) => !annotation.hidden && !annotation.locked).map((annotation) => annotation.id),
             );
           }
           return;
         }
-        if (key === "g") {
+        case "group":
           event.preventDefault();
-          if (event.shiftKey) annotations.ungroupSelection();
-          else annotations.groupSelection();
+          annotations.groupSelection();
           return;
-        }
-        return;
+        case "ungroup":
+          event.preventDefault();
+          annotations.ungroupSelection();
+          return;
       }
 
       if (event.key === "Escape") {

@@ -211,6 +211,8 @@ export interface PdfBookmark {
   /** 0-based page index. */
   pageIndex: number;
   depth: number;
+  /** Stable page identity; remaps the bookmark when pages move. */
+  pageId?: string;
   custom?: boolean;
 }
 

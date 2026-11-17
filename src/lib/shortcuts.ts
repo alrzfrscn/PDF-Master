@@ -11,6 +11,13 @@ export type ShortcutAction =
   | "print"
   | "undo"
   | "redo"
+  | "cut"
+  | "copy"
+  | "paste"
+  | "duplicate"
+  | "select-all"
+  | "group"
+  | "ungroup"
   | "presentation"
   | "fit-page";
 
@@ -23,6 +30,13 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   print: "Print page",
   undo: "Undo",
   redo: "Redo",
+  cut: "Cut selection",
+  copy: "Copy selection",
+  paste: "Paste",
+  duplicate: "Duplicate selection",
+  "select-all": "Select all annotations",
+  group: "Group selection",
+  ungroup: "Ungroup selection",
   presentation: "Presentation mode",
   "fit-page": "Fit page",
 };
@@ -41,6 +55,13 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
   print: "Ctrl+P",
   undo: "Ctrl+Z",
   redo: "Ctrl+Y",
+  cut: "Ctrl+X",
+  copy: "Ctrl+C",
+  paste: "Ctrl+V",
+  duplicate: "Ctrl+D",
+  "select-all": "Ctrl+A",
+  group: "Ctrl+G",
+  ungroup: "Ctrl+Shift+G",
   presentation: "Ctrl+Shift+P",
   "fit-page": "0",
 };

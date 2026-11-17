@@ -1,6 +1,5 @@
 import { Command, FileDown, FolderOpen, Grid3x3, PanelLeft, Play, Plus, Printer, Redo2, Save, Settings, Sparkles, Stamp, Undo2, X } from "lucide-react";
-import { useState } from "react";
-import { downloadPdf, exportInputFromTab, exportPdf, type PersistenceMode } from "../lib/pdfEngine";
+import { saveActiveDocument } from "../lib/save";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -21,19 +20,7 @@ export function TopBar() {
   const setNewDocOpen = useUIStore((state) => state.setNewDocOpen);
   const setPresentation = useUIStore((state) => state.setPresentation);
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
-  const [busy, setBusy] = useState(false);
-
-  const save = async (mode: PersistenceMode) => {
-    const tab = useDocStore.getState().tabs.find((item) => item.id === useDocStore.getState().activeId);
-    if (!tab || busy) return;
-    setBusy(true);
-    try {
-      const bytes = await exportPdf(exportInputFromTab(tab, mode));
-      downloadPdf(bytes, `${tab.title}${mode === "editable" ? "" : "-flattened"}`);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const saving = useUIStore((state) => state.saving);
 
   return (
     <header className="top-bar glass relative z-30 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
@@ -141,8 +128,8 @@ export function TopBar() {
         className="chip h-8"
         aria-label="Save editable PDF"
         title="Save as PDF with editable annotations (Ctrl+S)"
-        disabled={busy}
-        onClick={() => void save("editable")}
+        disabled={saving}
+        onClick={() => void saveActiveDocument("editable")}
       >
         <Save size={13} strokeWidth={1.75} /> Save
       </button>
@@ -151,8 +138,8 @@ export function TopBar() {
         className="chip hidden h-8 lg:inline-flex"
         aria-label="Export flattened PDF"
         title="Export flattened PDF"
-        disabled={busy}
-        onClick={() => void save("flattened")}
+        disabled={saving}
+        onClick={() => void saveActiveDocument("flattened")}
       >
         <FileDown size={13} strokeWidth={1.75} /> Flatten
       </button>

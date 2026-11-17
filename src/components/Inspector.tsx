@@ -1,4 +1,4 @@
-import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Crop, Eraser, Group, Lock, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Crop, Eraser, Group, Image as ImageIcon, Lock, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { paperTemplates, presets, stamps, userStamps } from "../lib/data";
 import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
@@ -502,6 +502,15 @@ export function Inspector() {
 
         {activeTool === "measure" && <MeasureInspector pageWidthMm={size.widthMm} />}
         {activeTool === "snapshot" && <SnapshotPanel />}
+        {activeTool === "image" && (
+          <button
+            type="button"
+            className="chip h-8 justify-center"
+            onClick={() => window.dispatchEvent(new Event("pm:pick-image"))}
+          >
+            <ImageIcon size={13} strokeWidth={1.75} /> Choose image…
+          </button>
+        )}
         {activeTool === "crop" && (
           <div className="flex flex-col gap-2 rounded-xl border border-[var(--border)] p-2.5">
             <div className="flex items-center gap-2 text-[12px] font-medium">

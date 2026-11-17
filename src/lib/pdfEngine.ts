@@ -1,5 +1,17 @@
-import { PDFDocument, PDFName, PDFString, StandardFonts, degrees, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
-import type { PaperTemplate, DocumentTab, PdfBookmark } from "./types";
+import {
+  PDFDocument,
+  PDFName,
+  PDFString,
+  StandardFonts,
+  degrees,
+  rgb,
+  type PDFDict,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  type PDFRef,
+} from "pdf-lib";
+import type { DocumentPage, PaperTemplate, DocumentTab, PdfBookmark } from "./types";
 import type { Annotation, FormulaAnnotation, Pt, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, formatDimension } from "./annotationGeometry";
 import { inkPath, polylinePath } from "./ink";
@@ -95,6 +107,16 @@ export function getPdfDocument(url: string) {
     documentCache.set(url, cached);
   }
   return cached;
+}
+
+/** Drop a cached document (and its worker memory) when its tab closes. */
+export function releasePdfDocument(url: string): void {
+  const cached = documentCache.get(url);
+  if (!cached) return;
+  documentCache.delete(url);
+  void cached
+    .then((doc) => (doc as unknown as { destroy?: () => Promise<void> }).destroy?.())
+    .catch(() => undefined);
 }
 
 /** Rasterise one page into a canvas at `quality` device pixels per CSS pixel. */
@@ -310,7 +332,11 @@ function rotatedLowerLeft(
   return toPdfPoint(rotateMm([box.xMm, box.yMm + box.heightMm], center, rotation), heightMm);
 }
 
+const STAMP_URL_PREFIXES = ["data:image/", "blob:", "/assets/"];
+
 async function embedStampImage(pdf: PDFDocument, imageUrl: string): Promise<PDFImage | null> {
+  // Only self-produced stamps may be fetched; anything else is ignored.
+  if (!STAMP_URL_PREFIXES.some((prefix) => imageUrl.startsWith(prefix))) return null;
   const embed = async (bytes: Uint8Array): Promise<PDFImage | null> => {
     const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
     return isJpeg ? pdf.embedJpg(bytes) : pdf.embedPng(bytes);
@@ -786,31 +812,95 @@ function serializedFromInput(
   };
 }
 
+/** Copies annotations and page settings from a sidecar back onto freshly opened pages. */
+export function mergeSidecarPages(pages: DocumentPage[], sidecar: SerializedDocument | null): DocumentPage[] {
+  if (!sidecar) return pages;
+  return pages.map((page, index) => {
+    const saved = sidecar.pages[index];
+    if (!saved) return page;
+    const merged: DocumentPage = {
+      ...page,
+      annotations: saved.annotations ?? [],
+      rotation: ((((saved.rotation ?? 0) % 360) + 360) % 360) as DocumentPage["rotation"],
+      ...(saved.cropBox ? { cropBox: saved.cropBox } : {}),
+    };
+    // No pdfPageIndex means the page was parametric when saved; show paper, not the copied raster.
+    if (!saved.pdfPageIndex) return { ...merged, templateId: saved.templateId || page.templateId, pdf: undefined };
+    return merged;
+  });
+}
+
+/** Writes a real outline tree so viewers list the bookmarks, not only the sidecar. */
+function writeOutlines(pdf: PDFDocument, bookmarks: PdfBookmark[] | undefined): void {
+  if (!bookmarks?.length) return;
+  const entries = bookmarks.filter(
+    (bookmark) => bookmark.pageIndex >= 0 && bookmark.pageIndex < pdf.getPageCount(),
+  );
+  if (!entries.length) return;
+  const context = pdf.context;
+  const rootRef = context.nextRef();
+  const root = context.obj({ Type: "Outlines", Count: entries.length });
+  context.assign(rootRef, root);
+  pdf.catalog.set(PDFName.of("Outlines"), rootRef);
+  pdf.catalog.set(PDFName.of("PageMode"), PDFName.of("UseOutlines"));
+
+  const parents: PDFRef[] = [rootRef];
+  const lastChild = new Map<PDFRef, PDFRef>();
+  for (const entry of entries) {
+    const depth = Math.min(Math.max(0, entry.depth), parents.length - 1);
+    parents.length = depth + 1;
+    const parentRef = parents[depth];
+    const ref = context.nextRef();
+    const dict = context.obj({
+      Title: PDFString.of(entry.title || "Untitled"),
+      Parent: parentRef,
+      Dest: context.obj([pdf.getPage(entry.pageIndex).ref, PDFName.of("Fit")]),
+    });
+    const previous = lastChild.get(parentRef);
+    if (previous) {
+      dict.set(PDFName.of("Prev"), previous);
+      (context.lookup(previous) as PDFDict).set(PDFName.of("Next"), ref);
+    }
+    context.assign(ref, dict);
+    const parent = context.lookup(parentRef) as PDFDict;
+    if (!previous) parent.set(PDFName.of("First"), ref);
+    parent.set(PDFName.of("Last"), ref);
+    lastChild.set(parentRef, ref);
+    parents.push(ref);
+  }
+}
+
 /**
  * Rebuilds the page tree from scratch: source pages are copied one by one in
- * tab order, paper pages are drawn fresh, then annotations, rotation and crop
- * are applied. Reordering, duplicating or deleting pages therefore survives an
- * export instead of silently keeping the source document's page order.
+ * tab order, paper pages are drawn fresh, then rotation and crop are applied.
+ * Reordering, duplicating or deleting pages therefore survives an export
+ * instead of silently keeping the source document's page order. Editable
+ * mode writes annotations only to the sidecar, so reopening never double-draws.
  */
 export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(input.title);
   pdf.setProducer("PDF Master");
 
+  const needsSource = input.pages.some((page) => page.pdfPageIndex !== undefined);
   let source: PDFDocument | null = null;
-  if (input.sourceBytes) {
+  if (needsSource) {
     try {
+      if (!input.sourceBytes) throw new Error("missing source bytes");
       source = await PDFDocument.load(input.sourceBytes, { updateMetadata: false });
     } catch {
-      source = null;
+      throw new Error("Source PDF bytes are unavailable or unreadable");
     }
   }
 
+  const flatten = input.mode === "flattened";
   const images = new Map<string, Promise<PDFImage | null>>();
-  for (const pageInput of input.pages) {
-    for (const annotation of pageInput.annotations) {
-      if (annotation.type === "stamp" && !images.has(annotation.imageUrl)) {
-        images.set(annotation.imageUrl, embedStampImage(pdf, annotation.imageUrl));
+  if (flatten) {
+    for (const pageInput of input.pages) {
+      for (const annotation of pageInput.annotations) {
+        if (annotation.type === "stamp" && !images.has(annotation.imageUrl)) {
+          images.set(annotation.imageUrl, embedStampImage(pdf, annotation.imageUrl));
+        }
       }
     }
   }
@@ -823,7 +913,10 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
     const sourceIndex = pageInput.pdfPageIndex;
     let page: PDFPage;
     let fromPdf = false;
-    if (source && sourceIndex !== undefined && sourceIndex >= 1 && sourceIndex <= source.getPageCount()) {
+    if (sourceIndex !== undefined) {
+      if (!source || sourceIndex < 1 || sourceIndex > source.getPageCount()) {
+        throw new Error("Source PDF bytes are unavailable or unreadable");
+      }
       const [copy] = await pdf.copyPages(source, [sourceIndex - 1]);
       page = pdf.addPage(copy);
       if (pageInput.rotation) {
@@ -848,6 +941,7 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
       );
     }
 
+    if (!flatten) continue;
     for (const annotation of pageInput.annotations) {
       await drawAnnotation(
         { pdf, page, widthMm: pageInput.widthMm, heightMm: pageInput.heightMm, fonts, images, formulas },
@@ -856,6 +950,7 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
     }
   }
 
+  writeOutlines(pdf, input.bookmarks);
   if (input.mode === "editable") {
     pdf.catalog.set(PDFName.of(SIDECAR_KEY), PDFString.of(encodeSidecar(serializedFromInput(input, copied))));
   }

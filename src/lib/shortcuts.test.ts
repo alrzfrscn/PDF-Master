@@ -5,6 +5,7 @@ import {
   bindingFromEvent,
   detectConflicts,
   normalizeBinding,
+  useShortcutStore,
   type ShortcutAction,
 } from "./shortcuts";
 
@@ -34,5 +35,20 @@ describe("shortcuts", () => {
     expect(conflicting.has("pen")).toBe(true);
     expect(conflicting.has("text")).toBe(true);
     expect(conflicting.has("select")).toBe(false);
+  });
+
+  it("exposes the clipboard and grouping actions", () => {
+    expect(DEFAULT_SHORTCUTS.copy).toBe("Ctrl+C");
+    expect(DEFAULT_SHORTCUTS["select-all"]).toBe("Ctrl+A");
+    expect(DEFAULT_SHORTCUTS.ungroup).toBe("Ctrl+Shift+G");
+  });
+
+  it("moves an action when its binding is changed", () => {
+    useShortcutStore.getState().bind("copy", "Ctrl+Shift+C");
+    const resolved = useShortcutStore.getState().resolve();
+    expect(resolved.get("Ctrl+Shift+C")).toBe("copy");
+    expect(resolved.get("Ctrl+C")).toBeUndefined();
+    useShortcutStore.getState().reset("copy");
+    expect(useShortcutStore.getState().resolve().get("Ctrl+C")).toBe("copy");
   });
 });

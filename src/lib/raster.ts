@@ -108,6 +108,25 @@ async function drawSvgElement(
 }
 
 /**
+ * Maps a crop region in page millimetres onto a canvas that covers the whole
+ * page. The vertical axis uses the page height, not the width.
+ */
+export function computeCanvasCropRect(
+  region: BBox,
+  canvasWidth: number,
+  canvasHeight: number,
+  pageWidthMm: number,
+  pageHeightMm: number,
+): { sx: number; sy: number; sw: number; sh: number } {
+  return {
+    sx: (region.x / pageWidthMm) * canvasWidth,
+    sy: (region.y / pageHeightMm) * canvasHeight,
+    sw: (region.width / pageWidthMm) * canvasWidth,
+    sh: (region.height / pageHeightMm) * canvasHeight,
+  };
+}
+
+/**
  * Snapshots a page region (paper or PDF background + annotations) at a chosen
  * DPI. Returns null when there is no live page DOM, as in unit tests.
  */
@@ -132,12 +151,10 @@ export async function captureRegion(
   const paper = pageElement.querySelector<SVGSVGElement>('svg[role="img"]');
   if (paper) await drawSvgElement(context, paper, region, widthPx, heightPx);
 
+  const pageWidthMm = (pageElement.clientWidth || 1) / PX_PER_MM;
+  const pageHeightMm = (pageElement.clientHeight || 1) / PX_PER_MM;
   for (const source of pageElement.querySelectorAll("canvas")) {
-    const pageWidthMm = (pageElement.clientWidth || 1) / PX_PER_MM;
-    const sx = (region.x / pageWidthMm) * source.width;
-    const sy = (region.y / pageWidthMm) * source.height;
-    const sw = (region.width / pageWidthMm) * source.width;
-    const sh = (region.height / pageWidthMm) * source.height;
+    const { sx, sy, sw, sh } = computeCanvasCropRect(region, source.width, source.height, pageWidthMm, pageHeightMm);
     try {
       context.drawImage(source, sx, sy, sw, sh, 0, 0, widthPx, heightPx);
     } catch {

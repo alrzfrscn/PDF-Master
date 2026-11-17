@@ -27,7 +27,7 @@ import {
   translateAnnotation,
 } from "../../lib/annotationGeometry";
 import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
-import { inkPath, polylinePath, pressureFromVelocity } from "../../lib/ink";
+import { inkPath, polylinePath, pointerPressure } from "../../lib/ink";
 import { PX_PER_MM } from "../../lib/paper";
 import { stampById, userStamps } from "../../lib/data";
 import { useCustomStampStore } from "../../lib/customStamps";
@@ -44,7 +44,7 @@ import { SelectionOverlay, handlePoints, type HandleId, type SelectionAction } f
 import { TextView } from "./TextView";
 import { FormulaView } from "./FormulaView";
 import { TextEditor } from "./TextEditor";
-import { FormulaEditor, type FormulaDraft } from "./FormulaEditor";
+import { FORMULA_PANEL, FormulaEditor, type FormulaDraft } from "./FormulaEditor";
 import { MeasureOverlay, measureSummary, type MeasureState } from "./MeasureOverlay";
 import { SnapshotBar } from "./SnapshotBar";
 
@@ -308,6 +308,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   const [snap, setSnap] = useState<SnapshotState | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const imagePoint = useRef<Pt | null>(null);
+  const pinching = useRef(false);
 
   const activeTool = useToolStore((state) => state.activeTool);
   const props = useToolStore((state) => state.props);
@@ -402,6 +403,61 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   useEffect(() => {
     setMeasure({ points: [], cursor: null, finished: false });
   }, [measureMode]);
+
+  // The toolbar's Image and Formula buttons act immediately, without a canvas click.
+  useEffect(() => {
+    const pickImage = () => imageInput.current?.click();
+    const cancelDraft = () => {
+      interaction.current = null;
+      setDraft(null);
+    };
+    const pinchStart = () => {
+      pinching.current = true;
+      cancelDraft();
+    };
+    const pinchEnd = () => {
+      pinching.current = false;
+    };
+    const openFormula = () => {
+      const toolPropsNow = useToolStore.getState().props.formula ?? useToolStore.getState().props.pen;
+      const annotation: FormulaAnnotation = {
+        id: makeId("a"),
+        type: "formula",
+        latex: "E = mc^2",
+        xMm: widthMm / 2 - 30,
+        yMm: heightMm / 2 - 12,
+        widthMm: 60,
+        heightMm: 24,
+        color: toolPropsNow.color,
+        fontSizePt: Math.max(10, toolPropsNow.fontSize || 14),
+        fillColor: toolPropsNow.fill ?? "#ffffff",
+        fillTransparent: toolPropsNow.fill === null,
+        rotation: 0,
+        opacity: toolPropsNow.opacity,
+      };
+      const rect = svgRef.current?.getBoundingClientRect();
+      // Centre the panel on the page, not its top-left corner.
+      const center = rect
+        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+        : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      setFormulaEdit({
+        annotation,
+        anchor: { x: center.x - FORMULA_PANEL.width / 2, y: center.y - FORMULA_PANEL.height / 2 },
+      });
+    };
+    window.addEventListener("pm:pick-image", pickImage);
+    window.addEventListener("pm:cancel-draft", cancelDraft);
+    window.addEventListener("pm:pinch-start", pinchStart);
+    window.addEventListener("pm:pinch-end", pinchEnd);
+    window.addEventListener("pm:open-formula", openFormula);
+    return () => {
+      window.removeEventListener("pm:pick-image", pickImage);
+      window.removeEventListener("pm:cancel-draft", cancelDraft);
+      window.removeEventListener("pm:pinch-start", pinchStart);
+      window.removeEventListener("pm:pinch-end", pinchEnd);
+      window.removeEventListener("pm:open-formula", openFormula);
+    };
+  }, [widthMm, heightMm]);
 
   const commitInk = (points: InkPoint[], tool: "pen" | "marker", shift: boolean) => {
     if (points.length < 2) return;
@@ -579,7 +635,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   };
 
   const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (panMode || event.button !== 0) return;
+    if (panMode || pinching.current || event.button !== 0) return;
     const point = toMm(event.clientX, event.clientY);
     const target = event.currentTarget;
     const begin = (next: Interaction | null) => {
@@ -590,7 +646,11 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     switch (activeTool) {
       case "pen":
       case "marker": {
-        const ink: InkPoint = [point[0], point[1], toolProps.pressureSensitive ? event.pressure || 0.5 : 0.5];
+        const ink: InkPoint = [
+          point[0],
+          point[1],
+          toolProps.pressureSensitive ? pointerPressure(event.pointerType, event.pressure, null, point, 0) : 0.5,
+        ];
         begin({ kind: "ink", points: [ink], tool: activeTool, start: point, last: point, lastTime: event.timeStamp });
         setDraft({ kind: "ink", points: [ink], tool: activeTool });
         return;
@@ -705,6 +765,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   };
 
   const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (pinching.current) return;
     const current = interaction.current;
     if (activeTool === "measure" && !measure.finished) {
       const point = toMm(event.clientX, event.clientY);
@@ -718,9 +779,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     if (current.kind === "ink") {
       if (distance(point, current.last) < 0.12) return;
       const pressure = toolProps.pressureSensitive
-        ? event.pointerType === "pen" && event.pressure > 0
-          ? event.pressure
-          : pressureFromVelocity(current.last, point, event.timeStamp - current.lastTime)
+        ? pointerPressure(event.pointerType, event.pressure, current.last, point, event.timeStamp - current.lastTime)
         : 0.5;
       const first = current.points[0];
       let points = [...current.points, [point[0], point[1], pressure] as InkPoint];
@@ -903,13 +962,16 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   const saveStampFrom = async (region: BBox, label: string) => {
     const image = await capture(region);
     if (!image) return false;
-    useCustomStampStore.getState().add({
+    const result = await useCustomStampStore.getState().add({
       name: label,
       imageUrl: image.dataUrl,
       width: image.width,
       height: image.height,
     });
-    setSnap({ region, image, status: "Saved to stamps" });
+    if (!result.ok) {
+      useUIStore.getState().setToast(`Stamp added for this session only: ${result.error ?? "storage failed"}`);
+    }
+    setSnap({ region, image, status: result.ok ? "Saved to stamps" : "Saved for this session" });
     return true;
   };
 
@@ -1260,12 +1322,25 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         {activeTool === "measure" && <MeasureOverlay mode={measureMode} state={measure} />}
       </svg>
 
+      {(activeTool === "snapshot" || activeTool === "measure") && (
+        <div
+          className="pointer-events-none absolute left-1/2 top-3 z-20"
+          style={{ transform: `translateX(-50%) scale(${1 / zoom})`, transformOrigin: "top center" }}
+        >
+          <div className="glass-strong rounded-lg px-2.5 py-1 text-[11px] shadow-lg">
+            {activeTool === "snapshot"
+              ? "Drag a region, then copy it, download the PNG or save it as a stamp."
+              : "Click to place points. Commit turns the measurement into an annotation; Escape clears it."}
+          </div>
+        </div>
+      )}
+
       {activeTool === "measure" && measureText && (
         <div
           className="pointer-events-none absolute bottom-3 left-1/2 z-20"
           style={{ transform: `translateX(-50%) scale(${1 / zoom})`, transformOrigin: "bottom center" }}
         >
-          <div className="glass-strong pointer-events-auto flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] shadow-lg">
+          <div className="glass-strong pointer-events-auto flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] shadow-lg" onPointerDown={(event) => event.stopPropagation()}>
             <span className="whitespace-nowrap font-medium tabular-nums">{measureText}</span>
             <button type="button" className="chip h-6 px-2" disabled={!canCommitMeasure} onClick={commitMeasure}>
               Commit

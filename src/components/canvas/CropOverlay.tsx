@@ -28,6 +28,10 @@ const HANDLES: { mode: Mode; x: number; y: number; cursor: string }[] = [
 
 const fullPage = (widthMm: number, heightMm: number): CropBox => ({ xMm: 0, yMm: 0, widthMm, heightMm });
 
+/** A 10 mm inset gives the frame something to grab the moment Crop opens. */
+const insetPage = (widthMm: number, heightMm: number): CropBox =>
+  clampBox({ xMm: 10, yMm: 10, widthMm: widthMm - 20, heightMm: heightMm - 20 }, widthMm, heightMm);
+
 function clampBox(box: CropBox, widthMm: number, heightMm: number): CropBox {
   const width = Math.max(MIN_MM, Math.min(box.widthMm, widthMm));
   const height = Math.max(MIN_MM, Math.min(box.heightMm, heightMm));
@@ -41,9 +45,11 @@ function clampBox(box: CropBox, widthMm: number, heightMm: number): CropBox {
 
 /** Interactive crop frame drawn over the page, in page-local millimetres. */
 export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props) {
-  const [box, setBox] = useState<CropBox>(() => cropBox ?? fullPage(widthMm, heightMm));
+  const [box, setBox] = useState<CropBox>(() => cropBox ?? insetPage(widthMm, heightMm));
   const drag = useRef<{ mode: Mode; startX: number; startY: number; box: CropBox } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hit = 24 / zoom;
+  const dot = 12 / zoom;
 
   const toMm = (event: React.PointerEvent) => {
     // The handles capture pointers, so page-local coordinates always come from the container.
@@ -137,14 +143,22 @@ export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props
             key={handle.mode}
             type="button"
             aria-label={`Crop ${handle.mode}`}
-            className="absolute h-3 w-3 rounded-sm border border-[var(--accent)] bg-white"
+            className="absolute grid place-items-center bg-transparent"
             style={{
-              left: `calc(${handle.x * 100}% - 6px)`,
-              top: `calc(${handle.y * 100}% - 6px)`,
+              left: `calc(${handle.x * 100}% - ${hit / 2}px)`,
+              top: `calc(${handle.y * 100}% - ${hit / 2}px)`,
+              width: hit,
+              height: hit,
               cursor: handle.cursor,
+              touchAction: "none",
             }}
             onPointerDown={begin(handle.mode)}
-          />
+          >
+            <span
+              className="rounded-sm border border-[var(--accent)] bg-white"
+              style={{ width: dot, height: dot }}
+            />
+          </button>
         ))}
       </div>
 

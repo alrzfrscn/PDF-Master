@@ -24,60 +24,108 @@ export interface SavedWorkspace {
 }
 
 /** Version 1 files (before stores were included) still import. */
-interface LegacyWorkspace {
-  version: 1;
+const DB_NAME = "pdf-master";
+const STORE_NAME = "workspace";
+const BLOB_STORE = "pdf-blobs";
+const KEY = "current";
+const THEMES: ThemeName[] = ["light", "dark", "sepia"];
+
+export interface SavedWorkspaceRecord {
+  version: 1 | 2;
   savedAt: string;
   activeId: string;
   tabs: DocumentTab[];
 }
 
-const DB_NAME = "pdf-master";
-const STORE_NAME = "workspace";
-const KEY = "current";
-const THEMES: ThemeName[] = ["light", "dark", "sepia"];
-
 function openDb(): Promise<IDBDatabase | null> {
   if (typeof indexedDB === "undefined") return Promise.resolve(null);
   return new Promise((resolve) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(DB_NAME, 2);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+      if (!db.objectStoreNames.contains(BLOB_STORE)) db.createObjectStore(BLOB_STORE);
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => resolve(null);
   });
 }
 
+/**
+ * Structural data and PDF bytes live in separate stores: re-saving after an
+ * annotation edit no longer rewrites every page of every document.
+ */
+const savedBlobs = new Map<string, Uint8Array>();
+
 export async function saveWorkspace(tabs: DocumentTab[], activeId: string): Promise<boolean> {
   const db = await openDb();
   if (!db) return false;
+  const blobs = new Map<string, Uint8Array>();
+  const stripped = tabs.map((tab) => {
+    if (!tab.pdf?.bytes) return tab;
+    blobs.set(tab.id, tab.pdf.bytes);
+    return { ...tab, pdf: { ...tab.pdf, bytes: undefined } };
+  });
   const ok = await new Promise<boolean>((resolve) => {
-    const transaction = db.transaction(STORE_NAME, "readwrite");
+    const transaction = db.transaction([STORE_NAME, BLOB_STORE], "readwrite");
     transaction.objectStore(STORE_NAME).put(
-      { version: 1, savedAt: new Date().toISOString(), activeId, tabs } satisfies LegacyWorkspace,
+      { version: 2, savedAt: new Date().toISOString(), activeId, tabs: stripped } satisfies SavedWorkspaceRecord,
       KEY,
     );
+    const blobStore = transaction.objectStore(BLOB_STORE);
+    for (const [id, bytes] of blobs) {
+      if (savedBlobs.get(id) === bytes) continue;
+      blobStore.put(bytes, id);
+    }
     transaction.oncomplete = () => resolve(true);
     transaction.onerror = () => resolve(false);
     transaction.onabort = () => resolve(false);
   });
   db.close();
+  if (ok) for (const [id, bytes] of blobs) savedBlobs.set(id, bytes);
   return ok;
 }
 
-export async function loadWorkspace(): Promise<LegacyWorkspace | null> {
+export async function loadWorkspace(): Promise<SavedWorkspaceRecord | null> {
   const db = await openDb();
   if (!db) return null;
-  const result = await new Promise<LegacyWorkspace | null>((resolve) => {
-    const transaction = db.transaction(STORE_NAME, "readonly");
+  const blobs = new Map<string, Uint8Array>();
+  const saved = await new Promise<SavedWorkspaceRecord | null>((resolve) => {
+    const transaction = db.transaction([STORE_NAME, BLOB_STORE], "readonly");
+    const blobStore = transaction.objectStore(BLOB_STORE);
+    let record: SavedWorkspaceRecord | null = null;
+    transaction.oncomplete = () => resolve(record);
+    transaction.onabort = () => resolve(null);
     const request = transaction.objectStore(STORE_NAME).get(KEY);
-    request.onsuccess = () => resolve((request.result as LegacyWorkspace | undefined) ?? null);
-    request.onerror = () => resolve(null);
+    request.onsuccess = () => {
+      record = (request.result as SavedWorkspaceRecord | undefined) ?? null;
+      if (!record) return;
+      for (const tab of record.tabs) {
+        if (!tab.pdf || tab.pdf.bytes) continue;
+        const blobRequest = blobStore.get(tab.id);
+        blobRequest.onsuccess = () => {
+          if (blobRequest.result instanceof Uint8Array) blobs.set(tab.id, blobRequest.result);
+        };
+      }
+    };
   });
   db.close();
-  if (!result || result.version !== 1 || !Array.isArray(result.tabs) || result.tabs.length === 0) return null;
-  return result;
+  if (!saved || !Array.isArray(saved.tabs) || saved.tabs.length === 0) return null;
+  saved.tabs = saved.tabs.map((tab) => {
+    const bytes = blobs.get(tab.id) ?? tab.pdf?.bytes;
+    if (!bytes) return tab;
+    return {
+      ...tab,
+      pdf: {
+        url: tab.pdf?.url ?? "",
+        name: tab.pdf?.name ?? tab.title,
+        pageCount: tab.pdf?.pageCount ?? tab.pages.length,
+        bookmarks: tab.pdf?.bookmarks ?? [],
+        bytes,
+      },
+    };
+  });
+  return saved;
 }
 
 /** Browser-quota figures for the autosave store; null where the API is missing. */

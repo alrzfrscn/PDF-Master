@@ -53,6 +53,8 @@ export function ToolBar() {
           onClick={() => {
             setTool(entry);
             setShapesOpen(false);
+            if (entry === "image") window.dispatchEvent(new Event("pm:pick-image"));
+            if (entry === "formula") window.dispatchEvent(new Event("pm:open-formula"));
           }}
         >
           <Icon size={18} strokeWidth={1.75} />

@@ -25,6 +25,7 @@ interface UIState {
   settingsOpen: boolean;
   measureMode: MeasureModeUi;
   toast: string | null;
+  saving: boolean;
   eraserSplit: boolean;
   setEraserSplit: (split: boolean) => void;
   setTheme: (theme: ThemeName) => void;
@@ -38,6 +39,7 @@ interface UIState {
   setSettingsOpen: (open: boolean) => void;
   setMeasureMode: (mode: MeasureModeUi) => void;
   setToast: (toast: string | null) => void;
+  setSaving: (saving: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -52,8 +54,10 @@ export const useUIStore = create<UIState>((set) => ({
   settingsOpen: false,
   measureMode: "distance",
   toast: null,
+  saving: false,
   eraserSplit: false,
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),
+  setSaving: (saving) => set({ saving }),
   setTheme: (theme) => {
     if (typeof document !== "undefined") document.documentElement.dataset.theme = theme;
     if (typeof localStorage !== "undefined") localStorage.setItem("pa.theme", theme);

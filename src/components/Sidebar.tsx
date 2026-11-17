@@ -1,5 +1,5 @@
 import { Bookmark, BookmarkPlus, FileText, Highlighter, MessageSquareText, PenLine, Plus, RotateCw, Sigma, Square, Stamp, Star, Trash2, CopyPlus, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Type } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { paperTemplates, stampById, stamps, userStamps } from "../lib/data";
 import { PX_PER_MM } from "../lib/paper";
 import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
@@ -42,11 +42,36 @@ function PageThumb({ tab, page, active, index, onClick }: { tab: DocumentTab; pa
   const boxHeight = 62;
   const scale = Math.min(boxWidth / (width * PX_PER_MM), boxHeight / (height * PX_PER_MM));
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const holderRef = useRef<HTMLSpanElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  // Rendering 100+ PDF pages must wait until a thumbnail is close to the viewport.
+  useEffect(() => {
+    const node = holderRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      { rootMargin: "160px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const crop = page.cropBox;
+  const viewWidthMm = crop?.widthMm ?? size.widthMm;
+  const viewHeightMm = crop?.heightMm ?? size.heightMm;
 
   useEffect(() => {
-    if (!page.pdf || !canvasRef.current) return;
+    if (!visible || !page.pdf || !canvasRef.current) return;
     void renderPdfPage(page.pdf.url, page.pdf.pageNumber, canvasRef.current, 96, 96 * (height / width), 1);
-  }, [page.pdf, width, height]);
+  }, [visible, page.pdf, width, height]);
 
   return (
     <button
@@ -57,11 +82,22 @@ function PageThumb({ tab, page, active, index, onClick }: { tab: DocumentTab; pa
       onClick={onClick}
     >
       <span
+        ref={holderRef}
         className="relative grid place-items-center overflow-hidden rounded-[3px] bg-[var(--paper)]"
         style={{ width: boxWidth, height: boxHeight, boxShadow: "var(--shadow-soft)" }}
       >
         {page.pdf ? (
-          <canvas ref={canvasRef} className="h-full w-full object-cover" />
+          <span
+            className="absolute block"
+            style={{
+              left: `${-((crop?.xMm ?? 0) / viewWidthMm) * 100}%`,
+              top: `${-((crop?.yMm ?? 0) / viewHeightMm) * 100}%`,
+              width: `${(size.widthMm / viewWidthMm) * 100}%`,
+              height: `${(size.heightMm / viewHeightMm) * 100}%`,
+            }}
+          >
+            <canvas ref={canvasRef} className="block h-full w-full" />
+          </span>
         ) : (
           <span style={{ display: "block", transform: `scale(${scale})`, transformOrigin: "center" }}>
             <PaperSheet template={pageTemplate(page)} landscape={tab.landscape} />

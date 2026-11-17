@@ -64,6 +64,9 @@ const PALETTES: { name: string; items: { label: string; insert: string }[] }[] =
   },
 ];
 
+/** Panel size, so a caller can centre the editor on a point. */
+export const FORMULA_PANEL = { width: 360, height: 520 };
+
 interface Props {
   initial: FormulaDraft;
   anchor: { x: number; y: number };
@@ -91,9 +94,8 @@ export function FormulaEditor({ initial, anchor, onSave, onClose }: Props) {
   }, [draft.latex]);
 
   const position = useMemo(() => {
+    const { width, height } = FORMULA_PANEL;
     if (typeof window === "undefined") return { left: anchor.x, top: anchor.y };
-    const width = 360;
-    const height = 520;
     return {
       left: Math.max(8, Math.min(anchor.x, window.innerWidth - width - 8)),
       top: Math.max(8, Math.min(anchor.y, window.innerHeight - height - 8)),

@@ -64,12 +64,14 @@ export function SettingsModal() {
     const state = useDocStore.getState();
     const blob = workspaceBackup(state.tabs, state.activeId);
     const anchor = document.createElement("a");
-    anchor.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    anchor.href = url;
     anchor.download = `pdf-master-${new Date().toISOString().slice(0, 10)}.pmbackup.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(anchor.href);
+    // Revoking immediately can cancel the download in some browsers.
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
     setToast("Workspace backup downloaded");
   };
 

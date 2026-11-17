@@ -34,8 +34,71 @@ export function PaperViewport() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panRef = useRef(pan);
+  panRef.current = pan;
   const [spaceDown, setSpaceDown] = useState(false);
   const [dropActive, setDropActive] = useState(false);
+
+  // Two-finger pinch pans and zooms around the midpoint; one finger cancels any draft.
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) return;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinch: { distance: number; zoom: number; center: { x: number; y: number }; pan: { x: number; y: number } } | null = null;
+    const midpoint = (): { x: number; y: number } => {
+      const rect = element.getBoundingClientRect();
+      const points = [...pointers.values()];
+      const x = (points[0].x + points[1].x) / 2 - rect.left - rect.width / 2;
+      const y = (points[0].y + points[1].y) / 2 - rect.top - rect.height / 2;
+      return { x, y };
+    };
+    const onDown = (event: PointerEvent) => {
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size !== 2) return;
+      window.dispatchEvent(new Event("pm:cancel-draft"));
+      window.dispatchEvent(new Event("pm:pinch-start"));
+      drag.current = null;
+      const points = [...pointers.values()];
+      pinch = {
+        distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1,
+        zoom: useDocStore.getState().zoom,
+        center: midpoint(),
+        pan: { ...panRef.current },
+      };
+    };
+    const onMove = (event: PointerEvent) => {
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (!pinch || pointers.size < 2) return;
+      event.preventDefault();
+      const points = [...pointers.values()];
+      const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
+      const zoom = clamp(pinch.zoom * (distance / pinch.distance), 0.1, 6);
+      const ratio = zoom / pinch.zoom;
+      const center = midpoint();
+      setPan({
+        x: center.x - (pinch.center.x - pinch.pan.x) * ratio,
+        y: center.y - (pinch.center.y - pinch.pan.y) * ratio,
+      });
+      useDocStore.setState({ zoom, fitMode: null });
+    };
+    const onUp = (event: PointerEvent) => {
+      pointers.delete(event.pointerId);
+      if (pointers.size >= 2) return;
+      if (pinch) window.dispatchEvent(new Event("pm:pinch-end"));
+      pinch = null;
+    };
+    element.addEventListener("pointerdown", onDown);
+    element.addEventListener("pointermove", onMove, { passive: false });
+    element.addEventListener("pointerup", onUp);
+    element.addEventListener("pointercancel", onUp);
+    return () => {
+      element.removeEventListener("pointerdown", onDown);
+      element.removeEventListener("pointermove", onMove);
+      element.removeEventListener("pointerup", onUp);
+      element.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
 
   // Fit to the viewport whenever that fit was requested, or the page/rotation changes.
   useLayoutEffect(() => {

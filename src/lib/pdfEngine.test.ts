@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { PDFDocument } from "pdf-lib";
-import { decodeSidecar, encodeSidecar, exportPdf, loadSidecar, type PdfExportInput } from "./pdfEngine";
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFString } from "pdf-lib";
+import {
+  decodeSidecar,
+  encodeSidecar,
+  exportPdf,
+  loadSidecar,
+  mergeSidecarPages,
+  type PdfExportInput,
+} from "./pdfEngine";
 import type { FormulaAnnotation, ShapeAnnotation, StampAnnotation, TextAnnotation } from "./annotationTypes";
+import type { DocumentPage } from "./types";
 
 const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -141,11 +149,11 @@ describe("PDF engine", () => {
     expect(pdf.getPageCount()).toBe(1);
   });
 
-  it("mirrors flipped stamps in the exported content", async () => {
+  it("mirrors flipped stamps in the flattened content", async () => {
     const flipped: StampAnnotation = { ...stamp, flipH: true, flipV: true, rotation: 30 };
     const bytes = await exportPdf({
-      ...input("editable"),
-      pages: [{ ...input("editable").pages[0], annotations: [flipped] }],
+      ...input("flattened"),
+      pages: [{ ...input("flattened").pages[0], annotations: [flipped] }],
     });
     const pdf = await PDFDocument.load(bytes);
     const page = pdf.getPage(0);
@@ -158,7 +166,79 @@ describe("PDF engine", () => {
     const operators = await new Response(decoded).text();
     const scales = [...operators.matchAll(/(-?[\d.]+) 0 0 (-?[\d.]+) /g)].map((match) => [Number(match[1]), Number(match[2])]);
     expect(scales.some(([width, height]) => width < 0 && height < 0)).toBe(true);
-    expect((await loadSidecar(bytes))?.pages[0].annotations[0]).toMatchObject({ flipH: true, flipV: true });
+    expect(await loadSidecar(bytes)).toBeNull();
+  });
+
+  it("never bakes annotations into an editable export", async () => {
+    const imageObjects = (pdf: PDFDocument) => {
+      const xobjects = pdf.getPage(0).node.Resources()?.lookup(PDFName.of("XObject"));
+      return xobjects instanceof PDFDict ? xobjects.keys().length : 0;
+    };
+    expect(imageObjects(await PDFDocument.load(await exportPdf(input("editable"))))).toBe(0);
+    expect(imageObjects(await PDFDocument.load(await exportPdf(input("flattened"))))).toBeGreaterThan(0);
+    expect((await loadSidecar(await exportPdf(input("editable"))))?.pages[0].annotations).toHaveLength(2);
+  });
+
+  it("refuses to export a page whose source PDF is unavailable", async () => {
+    const page = { ...input("flattened").pages[0], pdfPageIndex: 1 };
+    await expect(
+      exportPdf({ title: "Missing", mode: "flattened", pages: [page] }),
+    ).rejects.toThrow("Source PDF bytes are unavailable or unreadable");
+    await expect(
+      exportPdf({ title: "Broken", mode: "flattened", sourceBytes: new Uint8Array([1, 2, 3]), pages: [page] }),
+    ).rejects.toThrow("Source PDF bytes are unavailable or unreadable");
+  });
+
+  it("writes a real outline tree for the bookmarks", async () => {
+    const bookmarks = [
+      { id: "bm-1", title: "Chapter 1", pageIndex: 0, depth: 0 },
+      { id: "bm-2", title: "Section", pageIndex: 0, depth: 1 },
+    ];
+    const pdf = await PDFDocument.load(await exportPdf({ ...input("flattened"), bookmarks }));
+    const outlines = pdf.catalog.lookup(PDFName.of("Outlines"));
+    expect(outlines).toBeInstanceOf(PDFDict);
+    const first = (outlines as PDFDict).lookup(PDFName.of("First"));
+    expect(first).toBeInstanceOf(PDFDict);
+    expect(((first as PDFDict).lookup(PDFName.of("Title")) as PDFString).decodeText()).toBe("Chapter 1");
+    expect((first as PDFDict).lookup(PDFName.of("Dest"))).toBeInstanceOf(PDFArray);
+    const child = (first as PDFDict).lookup(PDFName.of("First"));
+    expect(((child as PDFDict).lookup(PDFName.of("Title")) as PDFString).decodeText()).toBe("Section");
+  });
+
+  it("merges a sidecar so paper pages reopen without a PDF source", () => {
+    const source: DocumentPage = {
+      id: "p1",
+      templateId: "paper-000",
+      rotation: 0,
+      annotations: [],
+      pdf: { url: "blob:x", pageNumber: 1, widthMm: 210, heightMm: 297 },
+    };
+    const sidecar = {
+      version: 1 as const,
+      title: "Paper",
+      savedAt: new Date().toISOString(),
+      pages: [
+        {
+          templateId: "paper-103",
+          landscape: false,
+          rotation: 90,
+          widthMm: 210,
+          heightMm: 297,
+          annotations: [rectangle],
+        },
+      ],
+    };
+    const [paper] = mergeSidecarPages([source], sidecar);
+    expect(paper.pdf).toBeUndefined();
+    expect(paper.templateId).toBe("paper-103");
+    expect(paper.rotation).toBe(90);
+    expect(paper.annotations).toHaveLength(1);
+
+    const [fromPdf] = mergeSidecarPages([source], {
+      ...sidecar,
+      pages: [{ ...sidecar.pages[0], pdfPageIndex: 1 }],
+    });
+    expect(fromPdf.pdf).toEqual(source.pdf);
   });
 
   it("re-exports PDF-backed pages without duplicating them", async () => {

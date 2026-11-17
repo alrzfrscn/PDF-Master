@@ -57,3 +57,18 @@ export function pressureFromVelocity(previous: Pt | null, next: Pt, elapsedMs: n
   const speed = Math.hypot(next[0] - previous[0], next[1] - previous[1]) / elapsedMs;
   return Math.min(1, Math.max(0.2, 1 - speed * 0.55));
 }
+
+/**
+ * Real pressure only exists on pens. Mice report 0 or 0.5 while idle, so those
+ * fall back to velocity instead of flattening the stroke.
+ */
+export function pointerPressure(
+  pointerType: string,
+  pressure: number,
+  previous: Pt | null,
+  next: Pt,
+  elapsedMs: number,
+): number {
+  if (pointerType === "pen" && pressure > 0 && pressure !== 0.5) return Math.min(1, pressure);
+  return pressureFromVelocity(previous, next, elapsedMs);
+}
