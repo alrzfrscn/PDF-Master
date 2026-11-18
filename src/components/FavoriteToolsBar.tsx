@@ -69,6 +69,7 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
 
 export function FavoriteToolsBar() {
   const open = useUIStore((state) => state.favoritesOpen);
+  const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const favorites = useFavoritesStore((state) => state.favorites);
   const remove = useFavoritesStore((state) => state.remove);
   const [editing, setEditing] = useState(false);
@@ -83,7 +84,7 @@ export function FavoriteToolsBar() {
   };
 
   return (
-    <div className="favorite-dock absolute left-14 top-1/2 z-30 -translate-y-1/2">
+    <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2 transition-[left] duration-200"style={{ left: sidebarOpen ? 316 : 56 }}>
       <div className="glass scroll-thin flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-y-auto rounded-full px-0 py-1.5">
         <span className="grid h-8 w-8 place-items-center text-muted" aria-hidden="true">
           <Heart size={14} strokeWidth={1.75} />

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ShapeAnnotation, ShapeType } from "../lib/annotationTypes";
+import type { PenAnnotation, ShapeAnnotation, ShapeType } from "../lib/annotationTypes";
 import { annotationBounds } from "../lib/annotationGeometry";
 import { useAnnotationStore } from "./useAnnotationStore";
 import { newPage, useDocStore } from "./useDocStore";
@@ -23,6 +23,19 @@ function shape(id: string, x = 10, y = 10, shapeType: ShapeType = "rectangle"): 
     arrowTail: 0,
     dimensionUnit: "mm",
     dimensionScale: 1,
+  };
+}
+
+function pen(id: string, y: number): PenAnnotation {
+  return {
+    id,
+    type: "pen",
+    points: [[10, y, 0.5], [30, y, 0.5]],
+    color: "#101114",
+    thicknessMm: 1,
+    opacity: 1,
+    sensitivity: true,
+    smoothed: false,
   };
 }
 
@@ -130,5 +143,31 @@ describe("annotation store", () => {
     const runs = annotations();
     expect(runs.length).toBe(2);
     expect(runs.every((annotation) => annotation.type === "pen")).toBe(true);
+  });
+
+  it("records one history entry for a whole erase gesture", () => {
+    useAnnotationStore.getState().addMany([pen("ink-1", 10), pen("ink-2", 20)]);
+    useAnnotationStore.getState().eraseAt([20, 10], false, 3, true);
+    useAnnotationStore.getState().eraseAt([20, 20], false, 3, false);
+    expect(annotations()).toHaveLength(0);
+
+    useDocStore.getState().undo();
+    expect(annotations().map((annotation) => annotation.id)).toEqual(["ink-1", "ink-2"]);
+  });
+
+  it("gives duplicated groups a fresh group id", () => {
+    useAnnotationStore.getState().addMany([shape("a1"), shape("a2")]);
+    useAnnotationStore.getState().select(["a1", "a2"]);
+    useAnnotationStore.getState().groupSelection();
+    useAnnotationStore.getState().duplicateSelection();
+
+    const all = annotations();
+    expect(all).toHaveLength(4);
+    const original = all[0].groupId;
+    const copies = all.slice(2);
+    expect(original).toBeTruthy();
+    expect(copies[0].groupId).toBeTruthy();
+    expect(copies[0].groupId).toBe(copies[1].groupId);
+    expect(copies[0].groupId).not.toBe(original);
   });
 });

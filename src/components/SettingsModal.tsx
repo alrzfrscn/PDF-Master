@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Command, Download, RotateCcw, Upload, X } from "lucide-react";
 import { MEASURE_UNITS, type MeasureUnit } from "../lib/measure";
-import { usePrefsStore, type SnapshotDpi } from "../lib/prefs";
+import { usePrefsStore } from "../lib/prefs";
 import {
   DEFAULT_SHORTCUTS,
   SHORTCUT_ACTIONS,
@@ -13,15 +13,11 @@ import {
 } from "../lib/shortcuts";
 import { applyWorkspaceStores, parseWorkspaceBackup, storageEstimate, workspaceBackup } from "../lib/storage";
 import { useDocStore } from "../stores/useDocStore";
+import { useToolStore } from "../stores/useToolStore";
 import { useUIStore } from "../stores/useUIStore";
 import { SectionTitle, Segmented, ToggleRow } from "./ui/controls";
 
 const UNITS = MEASURE_UNITS.map((unit) => ({ value: unit.value as MeasureUnit, label: unit.label }));
-const DPI: { value: string; label: string }[] = [
-  { value: "72", label: "72 DPI" },
-  { value: "150", label: "150 DPI" },
-  { value: "300", label: "300 DPI" },
-];
 
 function megabytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -39,8 +35,9 @@ export function SettingsModal() {
   const reset = useShortcutStore((state) => state.reset);
   const scratchOut = usePrefsStore((state) => state.scratchOut);
   const measureUnit = usePrefsStore((state) => state.measureUnit);
-  const snapshotDpi = usePrefsStore((state) => state.snapshotDpi);
   const setPrefs = usePrefsStore((state) => state.set);
+  const sync = useToolStore((state) => state.sync);
+  const setSync = useToolStore((state) => state.setSync);
   const [recording, setRecording] = useState<ShortcutAction | null>(null);
   const [estimate, setEstimate] = useState<{ usage: number; quota: number } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
@@ -194,11 +191,14 @@ export function SettingsModal() {
               <Segmented value={measureUnit} options={UNITS} onChange={(value) => setPrefs({ measureUnit: value })} />
             </div>
             <div className="field">
-              <span className="field-label">Snapshot resolution</span>
+              <span className="field-label">Tool properties</span>
               <Segmented
-                value={String(snapshotDpi)}
-                options={DPI}
-                onChange={(value) => setPrefs({ snapshotDpi: Number(value) as SnapshotDpi })}
+                value={sync ? "sync" : "separate"}
+                options={[
+                  { value: "separate", label: "Separate" },
+                  { value: "sync", label: "Synchronous" },
+                ]}
+                onChange={(value) => setSync(value === "sync")}
               />
             </div>
           </section>

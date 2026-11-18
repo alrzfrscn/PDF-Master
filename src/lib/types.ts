@@ -1,4 +1,4 @@
-import type { Annotation, PenStyle } from "./annotationTypes";
+import type { Annotation, DimensionUnit, PenStyle, TextAlign } from "./annotationTypes";
 
 export type ThemeName = "light" | "dark" | "sepia";
 
@@ -148,6 +148,10 @@ export interface ToolProps {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  strikeOut: boolean;
+  textAlign: TextAlign;
+  /** Unit printed by the Dimension tool. */
+  dimensionUnit: DimensionUnit;
   pressureSensitive: boolean;
   smoothing: boolean;
   penStyle: PenStyle;
@@ -226,20 +230,4 @@ export interface PdfSource {
   /** Kept so a reopened workspace can recreate the object URL. */
   bytes?: Uint8Array;
   bookmarks: PdfBookmark[];
-}
-
-export interface MigrationManifest {
-  generatedAt: string;
-  counts: {
-    groups: number;
-    presets: number;
-    presetsByFamily: Record<PresetFamily, number>;
-    stamps: number;
-    stampArt: Record<string, number>;
-    paperTemplates: number;
-    userStamps: number;
-    pdfTemplates: number;
-  };
-  allPassed: boolean;
-  warnings: string[];
 }

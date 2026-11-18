@@ -77,4 +77,33 @@ describe("workspace backup", () => {
   it("ignores absent stores on import", () => {
     expect(() => applyWorkspaceStores(undefined)).not.toThrow();
   });
+
+  it("round-trips PDF bytes as base64", async () => {
+    const bytes = new Uint8Array([37, 80, 68, 70, 45, 49]);
+    const withPdf: DocumentTab[] = [
+      { ...tabs[0], id: "doc-pdf", pdf: { url: "", name: "source.pdf", pageCount: 1, bookmarks: [], bytes } },
+    ];
+    const text = await workspaceBackup(withPdf, "doc-pdf", stores).text();
+
+    expect(text).toContain("bytesBase64");
+    const parsed = parseWorkspaceBackup(text);
+    expect(parsed?.tabs[0].pdf?.bytes).toEqual(bytes);
+  });
+
+  it("reads bytes from a legacy numeric-key object", () => {
+    const legacy = JSON.stringify({
+      version: 2,
+      savedAt: "2025-01-01",
+      activeId: "doc-pdf",
+      tabs: [
+        {
+          ...tabs[0],
+          id: "doc-pdf",
+          pdf: { url: "", name: "source.pdf", pageCount: 1, bookmarks: [], bytes: { 0: 37, 1: 80, 2: 68 } },
+        },
+      ],
+    });
+
+    expect(parseWorkspaceBackup(legacy)?.tabs[0].pdf?.bytes).toEqual(new Uint8Array([37, 80, 68]));
+  });
 });

@@ -20,6 +20,7 @@ export function PaperViewport() {
   const fitMode = useDocStore((state) => state.fitMode);
   const pageIndex = useDocStore((state) => state.page);
   const activeTool = useToolStore((state) => state.activeTool);
+  const measureMode = useUIStore((state) => state.measureMode);
   const auxLines = useUIStore((state) => state.auxLines);
   const lastError = useDocStore((state) => state.lastError);
 
@@ -257,6 +258,7 @@ export function PaperViewport() {
           </div>
           {activeTool === "crop" && (
             <CropOverlay
+              key={`${tab.id}:${page.id}:${page.cropBox ? `${page.cropBox.xMm},${page.cropBox.yMm},${page.cropBox.widthMm},${page.cropBox.heightMm}` : "full"}`}
               widthMm={size.widthMm}
               heightMm={size.heightMm}
               cropBox={page.cropBox}
@@ -267,6 +269,7 @@ export function PaperViewport() {
                 doc.updatePage(tab.id, pageNumber - 1, { cropBox: box ?? undefined });
                 useToolStore.getState().setTool("select");
               }}
+              onCancel={() => useToolStore.getState().setTool("select")}
             />
           )}
         </div>
@@ -281,11 +284,25 @@ export function PaperViewport() {
       )}
 
       {lastError && (
-        <div className="glass pointer-events-auto absolute left-1/2 top-4 z-30 flex max-w-[80%] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[11.5px]">
+        <div className="glass pointer-events-auto absolute left-1/2 top-14 z-30 flex max-w-[80%] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[11.5px]">
           <span style={{ color: "var(--danger)" }}>{lastError}</span>
           <button type="button" className="chip h-6" onClick={() => useDocStore.setState({ lastError: null })}>
             Dismiss
           </button>
+        </div>
+      )}
+
+      {(activeTool === "measure" || activeTool === "snapshot") && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-20 max-w-[80%] -translate-x-1/2">
+          <div className="glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted">
+            {activeTool === "snapshot"
+              ? "Drag a region to copy, download, or save it as a stamp."
+              : measureMode === "angle"
+                ? "Click the vertex, then one point on each arm."
+                : measureMode === "distance"
+                  ? "Drag a line, then Enter or Commit."
+                  : "Click each corner; Enter closes the shape."}
+          </div>
         </div>
       )}
 
