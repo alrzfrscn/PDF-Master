@@ -12,7 +12,7 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
   const color = item.props.color ?? "#101114";
   const style = item.penStyle ?? item.props.penStyle ?? "pro";
   const level = item.props.pressureLevel ?? 55;
-  const width = Math.max(1.4, Math.min(9, (item.props.thicknessMm ?? 1) * 3));
+  const width = Math.min(3, 1.4 + Math.sqrt(item.props.thicknessMm ?? 1) * 0.4);
   const opacity = item.props.opacity ?? 1;
 
   const wave = useMemo(() => {
@@ -84,8 +84,13 @@ export function FavoriteToolsBar() {
   };
 
   return (
+<<<<<<< Updated upstream
     <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2" style={{ left: sidebarOpen ? 316 : 56 }}>
       <div className="glass scroll-thin flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-y-auto rounded-full px-0 py-1.5">
+=======
+    <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2" style={{ left: sidebarOpen ? 348 : 68 }}>
+      <div className="glass no-scrollbar flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-y-auto overflow-x-hidden rounded-full px-0 py-1.5">
+>>>>>>> Stashed changes
         <span className="grid h-8 w-8 place-items-center text-muted" aria-hidden="true">
           <Heart size={14} strokeWidth={1.75} />
         </span>

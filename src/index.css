@@ -340,9 +340,10 @@ textarea {
 }
 
 .swatch {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 7px;
   border: 1px solid rgba(16, 24, 40, 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: transform 120ms ease;
@@ -462,6 +463,17 @@ textarea {
 .scroll-thin::-webkit-scrollbar-thumb:hover {
   background: var(--active);
   background-clip: content-box;
+}
+
+/* Rails, capsules and popovers scroll, but never show a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .divider {

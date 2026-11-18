@@ -6,7 +6,6 @@ import {
   FileDown,
   FilePlus,
   FolderOpen,
-  PanelLeft,
   Play,
   Plus,
   Printer,
@@ -85,8 +84,6 @@ export function TopBar() {
   const activeId = useDocStore((state) => state.activeId);
   const setActive = useDocStore((state) => state.setActive);
   const closeTab = useDocStore((state) => state.closeTab);
-  const sidebarOpen = useUIStore((state) => state.sidebarOpen);
-  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const setNewDocOpen = useUIStore((state) => state.setNewDocOpen);
   const setPresentation = useUIStore((state) => state.setPresentation);
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
@@ -154,16 +151,6 @@ export function TopBar() {
   return (
     <>
       <header className="top-bar glass relative z-40 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Toggle sidebar"
-          aria-pressed={sidebarOpen}
-          onClick={toggleSidebar}
-        >
-          <PanelLeft size={17} strokeWidth={1.75} />
-        </button>
-
         <div ref={filesRef} className="relative">
           <button
             type="button"
@@ -251,7 +238,7 @@ export function TopBar() {
 
         <div className="mx-0.5 h-7 w-px shrink-0 bg-[var(--border)]" />
 
-        <div className="scroll-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
+        <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
           {tabs.map((tab) => {
             const selected = tab.id === activeId;
             return (

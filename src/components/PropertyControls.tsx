@@ -1,6 +1,10 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { SHAPE_LABEL, type DimensionUnit, type TextAlign } from "../lib/annotationTypes";
+<<<<<<< Updated upstream
 import { ARROW_HEADS } from "../lib/presets";
+=======
+import { ARROW_HEADS, INK_COLORS } from "../lib/presets";
+>>>>>>> Stashed changes
 import { inkPath, penStyleOptions } from "../lib/ink";
 import type { InkPoint, PenStyle } from "../lib/annotationTypes";
 import { isShapeTool, SHAPE_TOOLS } from "../lib/tools";
@@ -11,7 +15,6 @@ import { ColorRow, Segmented } from "./ui/controls";
 
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Courier New", "Verdana", "Calibri", "Trebuchet MS"];
 
-const INK_COLORS = ["#EF4444", "#2563EB", "#000000", "#10B981", "#8B5CF6", "#F97316", "#FACC15", "#EC4899", "#06B6D4"];
 const THICKNESS_PRESETS = [0.5, 0.7, 1, 1.5, 2, 2.5, 3, 5, 8, 12, 16];
 const THICKNESS_TICKS = [
   { value: 0.5, label: "1" },
@@ -74,11 +77,18 @@ function strokePreview(style: PenStyle, level: number, thickness: number) {
   });
 }
 
+/** Compressed stroke width so a wide nib stays refined inside the preview card. */
+function previewStrokePx(tool: ToolId, thicknessMm: number) {
+  return tool === "marker"
+    ? Math.min(12, 3 + Math.sqrt(thicknessMm) * 1.5)
+    : Math.min(9, 1.5 + Math.sqrt(thicknessMm) * 1.4);
+}
+
 /** Live ink preview: colour, nib, opacity and stroke style update as you type. */
-function WavePreview({ props }: { props: ToolProps }) {
+function WavePreview({ props, tool }: { props: ToolProps; tool: ToolId }) {
   const path = useMemo(
-    () => strokePreview(props.penStyle, props.pressureLevel, props.thicknessMm * 2.2),
-    [props],
+    () => strokePreview(props.penStyle, props.pressureLevel, previewStrokePx(tool, props.thicknessMm)),
+    [props, tool],
   );
   return (
     <div
@@ -221,7 +231,7 @@ function ColorGrid({ value, onChange }: { value: string; onChange: (value: strin
         <span>Colour</span>
         <span className="field-value">{value.toUpperCase()}</span>
       </span>
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {INK_COLORS.map((color) => {
           const active = selected === color;
           return (
@@ -231,7 +241,7 @@ function ColorGrid({ value, onChange }: { value: string; onChange: (value: strin
               aria-label={`Ink ${color}`}
               aria-pressed={active}
               onClick={() => onChange(color)}
-              className="h-[22px] w-[22px] rounded-[7px] border border-black/15"
+              className="h-6 w-6 shrink-0 rounded-[7px] border border-black/15"
               style={{
                 background: color,
                 outline: active ? "2px solid #fff" : undefined,
@@ -243,7 +253,7 @@ function ColorGrid({ value, onChange }: { value: string; onChange: (value: strin
         })}
         <button
           type="button"
-          className="grid h-[22px] w-[22px] place-items-center rounded-[7px] border border-[var(--border)] text-[10px] font-semibold text-muted"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] border border-[var(--border)] text-[10px] font-semibold text-muted"
           aria-label="Custom colour"
           aria-pressed={customOpen}
           onClick={() => setCustomOpen((open) => !open)}
@@ -279,7 +289,7 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
 
   return (
     <div className="flex flex-col gap-3">
-      {isInk && <WavePreview props={props} />}
+      {isInk && <WavePreview props={props} tool={tool} />}
 
       {tool === "pen" && (
         <div className="grid grid-cols-3 gap-1.5">
