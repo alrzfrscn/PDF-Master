@@ -86,13 +86,8 @@ export const ARROW_HEADS = [
   { value: 10, label: "Solid" },
 ];
 
-<<<<<<< Updated upstream
 export const SWATCHES = [
   "#101114", "#5b5f68", "#a3a7b0", "#ffffff",
   "#ff3b30", "#ff9500", "#ffcc00", "#34c759",
   "#0a84ff", "#5e5ce6", "#ff2d55", "#a2845e",
 ];
-=======
-/** The nine curated ink colours, shared by every colour picker in the app. */
-export const INK_COLORS = ["#EF4444", "#2563EB", "#000000", "#10B981", "#8B5CF6", "#F97316", "#FACC15", "#EC4899", "#06B6D4"];
->>>>>>> Stashed changes

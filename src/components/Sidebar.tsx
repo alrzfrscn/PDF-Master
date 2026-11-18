@@ -213,7 +213,7 @@ export function Sidebar() {
 
   return (
     <div ref={railRef} className="sidebar relative z-40 w-[52px] shrink-0">
-      <div className="glass my-2 ml-3 mr-0 flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
+      <div className="glass my-2 ml-2 mr-0 flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -243,11 +243,7 @@ export function Sidebar() {
       {sidebarOpen && (
         <aside
           ref={drawerRef}
-<<<<<<< Updated upstream
           className="glass-strong anim-in absolute left-[52px] top-2 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
-=======
-          className="glass-strong anim-in absolute left-[68px] top-2 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
->>>>>>> Stashed changes
           style={{ maxHeight: "calc(100vh - 120px)", height: "auto" }}
           aria-label={TAB_TITLES[sidebarTab]}
         >
@@ -274,7 +270,7 @@ export function Sidebar() {
             </button>
           </div>
 
-          <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+          <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
         {sidebarTab === "pages" && (
           <>
             <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pages.length} pages</span>}>Pages</SectionTitle>
@@ -291,21 +287,20 @@ export function Sidebar() {
               ))}
             </div>
 
-            <div className="grid grid-cols-4 gap-1">
-              <button type="button" className="chip h-7 min-w-0 justify-center gap-1 px-1 text-[10px]" title="Add page" onClick={() => addPage()}>
+            <div className="flex items-center gap-1">
+              <button type="button" className="chip h-7 flex-1 justify-center" title="Add page" onClick={() => addPage()}>
                 <Plus size={12} /> Add
               </button>
-              <button type="button" className="chip h-7 min-w-0 justify-center gap-1 px-1 text-[10px]" title="Duplicate page" onClick={() => duplicatePage()}>
+              <button type="button" className="chip h-7 flex-1 justify-center" title="Duplicate page" onClick={() => duplicatePage()}>
                 <CopyPlus size={12} /> Copy
               </button>
-              <button type="button" className="chip h-7 min-w-0 justify-center gap-1 px-1 text-[10px]" title="Rotate page 90°" onClick={() => rotatePage()}>
+              <button type="button" className="chip h-7 flex-1 justify-center" title="Rotate page 90°" onClick={() => rotatePage()}>
                 <RotateCw size={12} /> Rotate
               </button>
               <button
                 type="button"
-                className="chip h-7 min-w-0 justify-center px-1 text-[10px]"
+                className="chip h-7 justify-center px-2"
                 title="Delete page"
-                aria-label="Delete page"
                 disabled={tab.pages.length <= 1}
                 onClick={() => deletePage()}
               >

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { INK_COLORS } from "../../lib/presets";
+import { SWATCHES } from "../../lib/presets";
 
 export function Segmented<T extends string>({
   value,
@@ -145,8 +145,8 @@ export function ColorRow({
         <span>{label}</span>
         <span className="field-value">{value ?? "None"}</span>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
-        {INK_COLORS.map((swatch) => (
+      <div className="flex items-center gap-1.5">
+        {SWATCHES.map((swatch) => (
           <button
             key={swatch}
             type="button"
@@ -158,10 +158,15 @@ export function ColorRow({
           />
         ))}
         <label
-          className="relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-[7px] border border-[var(--border)] text-[10px] font-semibold text-muted"
+          className="relative grid h-[22px] w-[22px] shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--border)]"
           title="Custom colour"
+          style={{
+            backgroundColor: value ?? "transparent",
+            backgroundImage: value
+              ? undefined
+              : "conic-gradient(#ff3b30, #ffcc00, #34c759, #0a84ff, #5e5ce6, #ff2d55, #ff3b30)",
+          }}
         >
-          <span aria-hidden="true">...</span>
           <input
             type="color"
             value={value ?? "#101114"}
@@ -173,7 +178,7 @@ export function ColorRow({
         {allowNone && (
           <button
             type="button"
-            className="chip h-6 px-2 text-[10px]"
+            className="chip h-[22px] px-2 text-[10px]"
             aria-pressed={value === null}
             onClick={() => onChange(null)}
           >

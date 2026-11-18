@@ -41,10 +41,7 @@ export default function App() {
   const setPaletteOpen = useUIStore((state) => state.setPaletteOpen);
   const toast = useUIStore((state) => state.toast);
   const toastAction = useUIStore((state) => state.toastAction);
-<<<<<<< Updated upstream
   const selection = useAnnotationStore((state) => state.selection);
-=======
->>>>>>> Stashed changes
   const setTool = useToolStore((state) => state.setTool);
   const zoomBy = useDocStore((state) => state.zoomBy);
   const setFit = useDocStore((state) => state.setFit);
@@ -117,7 +114,12 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // An unpinned tool popover collapses as soon as the next stroke starts.
+  // Selecting ink or a stamp brings its properties up; an unpinned popover
+  // collapses as soon as the next stroke starts.
+  useEffect(() => {
+    if (selection.length > 0) useUIStore.getState().openToolPopover();
+  }, [selection]);
+
   useEffect(() => {
     const onStrokeBegin = () => {
       const ui = useUIStore.getState();

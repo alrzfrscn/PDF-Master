@@ -10,6 +10,9 @@ export function ZoomPill() {
 
   return (
     <div className="pill">
+      <button type="button" className="icon-btn h-7 w-7" aria-label="Zoom out" onClick={() => zoomBy(-1)}>
+        <Minus size={14} strokeWidth={1.75} />
+      </button>
       <button
         type="button"
         className="icon-btn h-7 w-7"
@@ -37,9 +40,6 @@ export function ZoomPill() {
         onClick={() => setZoom(1)}
       >
         {Math.round(zoom * 100)}%
-      </button>
-      <button type="button" className="icon-btn h-7 w-7" aria-label="Zoom out" onClick={() => zoomBy(-1)}>
-        <Minus size={14} strokeWidth={1.75} />
       </button>
       <button type="button" className="icon-btn h-7 w-7" aria-label="Zoom in" onClick={() => zoomBy(1)}>
         <Plus size={14} strokeWidth={1.75} />

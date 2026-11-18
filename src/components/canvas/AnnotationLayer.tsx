@@ -310,7 +310,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   const imageInput = useRef<HTMLInputElement>(null);
   const imagePoint = useRef<Pt | null>(null);
   const pinching = useRef(false);
-  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null);
 
   const activeTool = useToolStore((state) => state.activeTool);
   const props = useToolStore((state) => state.props);
@@ -396,19 +395,11 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     };
   };
 
-  const cancelLongPress = () => {
-    if (longPress.current) window.clearTimeout(longPress.current.timer);
-    longPress.current = null;
-  };
-
   useEffect(() => {
     interaction.current = null;
     setDraft(null);
     setMeasure({ points: [], cursor: null, finished: false });
     setSnap(null);
-    return cancelLongPress;
-    // cancelLongPress is stable enough: it only reads a ref.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool]);
 
   useEffect(() => {
@@ -514,7 +505,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
             tipStyle: (toolProps as { tipStyle?: MarkerTip }).tipStyle ?? "vertical",
           };
     useAnnotationStore.getState().add(annotation);
-    useAnnotationStore.getState().clearSelection();
   };
 
   const commitShape = (shapeType: ShapeType, start: Pt, end: Pt, points: Pt[] = []) => {
@@ -522,7 +512,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     const shape = shapeProps(shapeType, start, shapeType === "polygon" ? points[points.length - 1] : end);
     shape.points = points;
     useAnnotationStore.getState().add(shape);
-    useAnnotationStore.getState().clearSelection();
   };
 
   const commitStamp = (start: Pt, end: Pt) => {
@@ -552,7 +541,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       opacity: 1,
     };
     useAnnotationStore.getState().add(stamp);
-    useAnnotationStore.getState().clearSelection();
   };
 
   useEffect(() => {
@@ -585,14 +573,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [activeTool, draft, measure, measureMode]);
-
-  const annotationAt = (point: Pt): Annotation | null => {
-    for (let index = page.annotations.length - 1; index >= 0; index -= 1) {
-      const annotation = page.annotations[index];
-      if (!annotation.hidden && !annotation.locked && hitTest(annotation, point)) return annotation;
-    }
-    return null;
-  };
 
   const selectAt = (point: Pt, additive: boolean): Annotation | null => {
     const list = page.annotations;
@@ -668,26 +648,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       if (next) interaction.current = next;
       target.setPointerCapture(event.pointerId);
     };
-
-    if (activeTool !== "select" && activeTool !== "hand") useAnnotationStore.getState().clearSelection();
-    // A 320 ms hold on an annotation selects it even while a drawing tool is active.
-    const held = !["select", "hand", "eraser", "measure", "snapshot", "image", "crop"].includes(activeTool)
-      ? annotationAt(point)
-      : null;
-    if (held) {
-      cancelLongPress();
-      const additive = event.shiftKey;
-      longPress.current = {
-        x: event.clientX,
-        y: event.clientY,
-        timer: window.setTimeout(() => {
-          longPress.current = null;
-          interaction.current = null;
-          setDraft(null);
-          selectAt(point, additive);
-        }, 320),
-      };
-    }
 
     switch (activeTool) {
       case "pen":
@@ -813,9 +773,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
 
   const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
     if (pinching.current) return;
-    if (longPress.current && Math.hypot(event.clientX - longPress.current.x, event.clientY - longPress.current.y) > 4) {
-      cancelLongPress();
-    }
     const current = interaction.current;
     if (activeTool === "measure" && !measure.finished) {
       const point = toMm(event.clientX, event.clientY);
@@ -960,7 +917,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   };
 
   const onPointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
-    cancelLongPress();
     const current = interaction.current;
     interaction.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1038,7 +994,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   const onAction = (action: SelectionAction) => {
     const store = useAnnotationStore.getState();
     const center: Pt = bounds ? [bounds.x + bounds.width / 2, bounds.y + bounds.height / 2] : [0, 0];
-    if (action === "style") useUIStore.getState().openToolPopover();
     if (action === "duplicate") store.duplicateSelection();
     if (action === "delete") store.deleteSelection();
     if (action === "group") store.groupSelection();
@@ -1114,7 +1069,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       };
       store.add(text);
     }
-    useAnnotationStore.getState().clearSelection();
     setMeasure({ points: [], cursor: null, finished: false });
   };
 
@@ -1129,7 +1083,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     }
     if (edit.isNew) {
       useAnnotationStore.getState().add(draftValue);
-      useAnnotationStore.getState().clearSelection();
       return;
     }
     useAnnotationStore.getState().update([draftValue.id], {
@@ -1182,7 +1135,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       });
     } else {
       store.add(base);
-      useAnnotationStore.getState().clearSelection();
     }
   };
 
@@ -1247,7 +1199,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={() => {
-          cancelLongPress();
           interaction.current = null;
           setDraft(null);
         }}

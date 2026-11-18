@@ -7,7 +7,6 @@ import {
   Lock,
   RotateCw,
   SendToBack,
-  SlidersHorizontal,
   Stamp,
   Trash2,
   Ungroup,
@@ -39,7 +38,6 @@ export function handlePoints(box: BBox, rotateGapMm: number): Record<HandleId, P
 }
 
 export type SelectionAction =
-  | "style"
   | "duplicate"
   | "rotate"
   | "flip-h"
@@ -53,7 +51,6 @@ export type SelectionAction =
   | "delete";
 
 const BUTTONS: { action: SelectionAction; label: string; Icon: typeof Copy }[] = [
-  { action: "style", label: "Style / Properties", Icon: SlidersHorizontal },
   { action: "duplicate", label: "Duplicate (Ctrl+D)", Icon: Copy },
   { action: "rotate", label: "Rotate 90°", Icon: RotateCw },
   { action: "flip-h", label: "Flip horizontal", Icon: FlipHorizontal2 },
@@ -89,10 +86,6 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
   const hit = 24 / zoom;
   const rotateGap = 26 / scale;
   const handles = handlePoints(bounds, rotateGap);
-  // 22 screen px clear of the rotate handle; flips below the box near the page top.
-  // shortcut: clamps against the page, not the viewport, upgrade if panned pages need it
-  const barGap = 26 + 22 / zoom;
-  const barAbove = top - barGap > 0;
 
   return (
     <div className="selection-chrome pointer-events-none absolute inset-0 z-20">
@@ -147,14 +140,9 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
       />
       <div
         className="absolute"
-        style={{
-          left: left + width / 2,
-          top: barAbove ? top - barGap : top + height + 22 / zoom,
-          transform: `translate(-50%, ${barAbove ? "-100%" : "0"})`,
-          transformOrigin: barAbove ? "bottom center" : "top center",
-        }}
+        style={{ left: left + width / 2, top, transform: "translate(-50%, -100%)", transformOrigin: "bottom center" }}
       >
-        <div style={{ transform: `scale(${1 / zoom})`, transformOrigin: barAbove ? "bottom center" : "top center" }}>
+        <div style={{ transform: `scale(${1 / zoom})`, transformOrigin: "bottom center", paddingBottom: 10 }}>
           <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-lg px-1 py-0.5 shadow-lg">
             {BUTTONS.map(({ action, label, Icon }) => (
               <button
