@@ -71,7 +71,7 @@ interface AnnotationState {
   align: (mode: AlignMode) => void;
   distribute: (axis: "x" | "y") => void;
   nudge: (dxMm: number, dyMm: number) => void;
-  eraseAt: (point: Pt, split: boolean, radiusMm?: number, recordHistory?: boolean) => boolean;
+  eraseAt: (point: Pt, split: boolean, radiusMm?: number) => void;
   scratchOut: (box: BBox) => void;
 }
 
@@ -307,9 +307,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     );
   },
 
-  eraseAt: (point, split, radiusMm = 2.5, recordHistory = true) => {
+  eraseAt: (point, split, radiusMm = 2.5) => {
     const ctx = activeContext();
-    if (!ctx) return false;
+    if (!ctx) return;
     let changed = false;
     const next: Annotation[] = [];
     for (const annotation of ctx.page.annotations) {
@@ -329,8 +329,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         next.push(copy);
       }
     }
-    if (changed) get().mutate(() => next, recordHistory);
-    return changed;
+    if (changed) get().mutate(() => next);
   },
 
   scratchOut: (box) => {

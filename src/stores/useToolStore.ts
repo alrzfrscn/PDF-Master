@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { presets, stamps } from "../lib/data";
 import { BASE_PROPS, presetPatch, presetsFor } from "../lib/presets";
 import { applyToolPatch } from "../lib/sync";
-import { isShapeTool, TOOLS } from "../lib/tools";
-import type { Preset, ShapeTool, ToolId, ToolProps } from "../lib/types";
+import { TOOLS } from "../lib/tools";
+import type { Preset, ToolId, ToolProps } from "../lib/types";
 
 function initialProps(): Record<ToolId, ToolProps> {
   const map = {} as Record<ToolId, ToolProps>;
@@ -21,8 +21,6 @@ function stampPresetId(preset: Preset): string | null {
 
 interface ToolState {
   activeTool: ToolId;
-  /** The shape the Shapes rail button reopens; remembers the last one picked. */
-  lastShapeTool: ShapeTool;
   props: Record<ToolId, ToolProps>;
   sync: boolean;
   activePreset: Partial<Record<ToolId, string>>;
@@ -37,14 +35,12 @@ interface ToolState {
 
 export const useToolStore = create<ToolState>((set, get) => ({
   activeTool: "pen",
-  lastShapeTool: "rectangle",
   props: initialProps(),
   sync: false,
   activePreset: {},
   selectedStampId: stamps[0]?.id ?? null,
   recentStamps: [],
-  setTool: (activeTool) =>
-    set(isShapeTool(activeTool) ? { activeTool, lastShapeTool: activeTool } : { activeTool }),
+  setTool: (activeTool) => set({ activeTool }),
   setProps: (patch) => {
     const { props, activeTool, sync } = get();
     set({ props: applyToolPatch(props, activeTool, patch, sync), activePreset: { ...get().activePreset, [activeTool]: "" } });

@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronLeft, ChevronRight, CopyPlus, Eye, EyeOff, FileText, Heart, Highlighter, MessageSquareText, PenLine, Pin, Plus, RotateCw, Sigma, Square, Stamp, Star, Trash2, Type, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { stampById, stamps, userStamps } from "../lib/data";
+import { paperTemplates, stampById, stamps, userStamps } from "../lib/data";
 import { PX_PER_MM } from "../lib/paper";
 import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
 import { renderPdfPage } from "../lib/pdfEngine";
@@ -206,6 +206,9 @@ export function Sidebar() {
     .map((id) => stamps.find((stamp) => stamp.id === id) ?? userStamps.find((stamp) => stamp.id === id))
     .filter((stamp): stamp is NonNullable<typeof stamp> => Boolean(stamp));
 
+  const styleCounts = new Map<string, number>();
+  for (const recipe of paperTemplates) styleCounts.set(recipe.styleLabel, (styleCounts.get(recipe.styleLabel) ?? 0) + 1);
+
   const jumpTo = (pageNumber: number, annotationId?: string) => {
     setPage(pageNumber);
     if (annotationId) select([annotationId]);
@@ -243,8 +246,7 @@ export function Sidebar() {
       {sidebarOpen && (
         <aside
           ref={drawerRef}
-          className="glass-strong anim-in absolute left-[52px] top-2 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
-          style={{ maxHeight: "calc(100vh - 120px)", height: "auto" }}
+          className="glass-strong anim-in absolute bottom-2 left-[52px] top-2 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
           aria-label={TAB_TITLES[sidebarTab]}
         >
           <div className="flex items-center gap-1 border-b border-[var(--border)] px-3 py-2">
@@ -363,13 +365,27 @@ export function Sidebar() {
             <button type="button" className="chip h-8 justify-center" onClick={() => setNewDocOpen(true)}>
               <Plus size={13} strokeWidth={1.75} /> Change template…
             </button>
+
+            <div className="divider" />
+            <SectionTitle aside={<span className="text-[10px] text-muted">{paperTemplates.length} recipes</span>}>Paper styles</SectionTitle>
+            <div className="flex flex-wrap gap-1">
+              {[...styleCounts.entries()].map(([label, count]) => (
+                <button key={label} type="button" className="chip" onClick={() => setNewDocOpen(true)}>
+                  {label} <span className="opacity-60">{count}</span>
+                </button>
+              ))}
+            </div>
           </>
         )}
 
         {sidebarTab === "bookmarks" && (
           <>
             <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pdf?.bookmarks.length ?? 0}</span>}>Bookmarks</SectionTitle>
-            {tab.pdf && (
+            {!tab.pdf ? (
+              <p className="rounded-lg px-2.5 py-2 text-[10.5px] leading-relaxed text-muted" style={{ background: "var(--track)" }}>
+                Open a PDF to import its outline. Parametric pages keep their own page list here.
+              </p>
+            ) : (
               <button type="button" className="chip h-8 justify-center" onClick={() => addBookmark(`Page ${pageIndex}`)}>
                 <BookmarkPlus size={13} /> Bookmark page {pageIndex}
               </button>
@@ -493,6 +509,11 @@ export function Sidebar() {
                 })}
               </div>
             )}
+            <div className="divider" />
+            <p className="text-[10.5px] leading-relaxed text-muted">
+              {stamps.length} factory stamps and {userStamps.length} of your own stay available through the stamp library at
+              any time.
+            </p>
           </>
         )}
           </div>
