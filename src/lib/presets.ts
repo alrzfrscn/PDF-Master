@@ -51,7 +51,6 @@ export function presetPatch(preset: Preset): Partial<ToolProps> {
   if (props.bold !== undefined) patch.bold = props.bold;
   if (props.italic !== undefined) patch.italic = props.italic;
   if (props.underline !== undefined) patch.underline = props.underline;
-  if (props.strikeOut !== undefined) patch.strikeOut = props.strikeOut;
   if (props.pressureSensitive !== undefined) patch.pressureSensitive = props.pressureSensitive;
   return patch;
 }
@@ -69,9 +68,6 @@ export const BASE_PROPS: ToolProps = {
   bold: false,
   italic: false,
   underline: false,
-  strikeOut: false,
-  textAlign: "left",
-  dimensionUnit: "mm",
   pressureSensitive: true,
   smoothing: false,
   penStyle: "pro",
@@ -92,7 +88,14 @@ export const SWATCHES = [
   "#ff3b30", "#ff9500", "#ffcc00", "#34c759",
   "#0a84ff", "#5e5ce6", "#ff2d55", "#a2845e",
 ];
+<<<<<<< HEAD
 =======
 /** The nine curated ink colours, shared by every colour picker in the app. */
 export const INK_COLORS = ["#EF4444", "#2563EB", "#000000", "#10B981", "#8B5CF6", "#F97316", "#FACC15", "#EC4899", "#06B6D4"];
 >>>>>>> Stashed changes
+=======
+
+export function formatMm(value: number): string {
+  return `${Number(value.toFixed(2))} mm`;
+}
+>>>>>>> parent of 1ba6b41 (feat(phase-8): minimalist popovers, shapes studio fix, on-canvas crop bar, and 15 ponytail audit fixes)

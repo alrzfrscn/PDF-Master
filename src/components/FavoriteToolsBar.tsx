@@ -69,7 +69,6 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
 
 export function FavoriteToolsBar() {
   const open = useUIStore((state) => state.favoritesOpen);
-  const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const favorites = useFavoritesStore((state) => state.favorites);
   const remove = useFavoritesStore((state) => state.remove);
   const [editing, setEditing] = useState(false);
@@ -84,8 +83,12 @@ export function FavoriteToolsBar() {
   };
 
   return (
+<<<<<<< HEAD
 <<<<<<< Updated upstream
     <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2" style={{ left: sidebarOpen ? 316 : 56 }}>
+=======
+    <div className="favorite-dock absolute left-14 top-1/2 z-30 -translate-y-1/2">
+>>>>>>> parent of 1ba6b41 (feat(phase-8): minimalist popovers, shapes studio fix, on-canvas crop bar, and 15 ponytail audit fixes)
       <div className="glass scroll-thin flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-y-auto rounded-full px-0 py-1.5">
 =======
     <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2" style={{ left: sidebarOpen ? 348 : 68 }}>

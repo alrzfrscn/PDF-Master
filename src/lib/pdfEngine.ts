@@ -1,7 +1,6 @@
 import {
   PDFDocument,
   PDFName,
-  PDFNumber,
   PDFString,
   StandardFonts,
   degrees,
@@ -64,21 +63,13 @@ export async function inspectPdf(bytes: Uint8Array): Promise<InspectedPdf> {
   const doc = await pdfjs.getDocument({ data: copyBytes(bytes) }).promise;
   try {
     const pages: InspectedPdf["pages"] = [];
-    // Bounded batches keep 500-page documents snappy without flooding the worker.
-    const BATCH = 16;
-    for (let start = 0; start < doc.numPages; start += BATCH) {
-      const end = Math.min(doc.numPages, start + BATCH);
-      await Promise.all(
-        Array.from({ length: end - start }, async (_, offset) => {
-          const index = start + offset;
-          const page = await doc.getPage(index + 1);
-          const viewport = page.getViewport({ scale: 1 });
-          pages[index] = {
-            widthMm: (viewport.width * 25.4) / 72,
-            heightMm: (viewport.height * 25.4) / 72,
-          };
-        }),
-      );
+    for (let index = 1; index <= doc.numPages; index += 1) {
+      const page = await doc.getPage(index);
+      const viewport = page.getViewport({ scale: 1 });
+      pages.push({
+        widthMm: (viewport.width * 25.4) / 72,
+        heightMm: (viewport.height * 25.4) / 72,
+      });
     }
     const bookmarks: PdfOutlineEntry[] = [];
     const outline = await doc.getOutline();
@@ -849,14 +840,13 @@ function writeOutlines(pdf: PDFDocument, bookmarks: PdfBookmark[] | undefined): 
   if (!entries.length) return;
   const context = pdf.context;
   const rootRef = context.nextRef();
-  const root = context.obj({ Type: "Outlines" });
+  const root = context.obj({ Type: "Outlines", Count: entries.length });
   context.assign(rootRef, root);
   pdf.catalog.set(PDFName.of("Outlines"), rootRef);
   pdf.catalog.set(PDFName.of("PageMode"), PDFName.of("UseOutlines"));
 
   const parents: PDFRef[] = [rootRef];
   const lastChild = new Map<PDFRef, PDFRef>();
-  const descendants = new Map<PDFRef, number>();
   for (const entry of entries) {
     const depth = Math.min(Math.max(0, entry.depth), parents.length - 1);
     parents.length = depth + 1;
@@ -877,12 +867,7 @@ function writeOutlines(pdf: PDFDocument, bookmarks: PdfBookmark[] | undefined): 
     if (!previous) parent.set(PDFName.of("First"), ref);
     parent.set(PDFName.of("Last"), ref);
     lastChild.set(parentRef, ref);
-    // Every enclosing node counts this entry, so /Count matches the open subtree.
-    for (const ancestor of parents) descendants.set(ancestor, (descendants.get(ancestor) ?? 0) + 1);
     parents.push(ref);
-  }
-  for (const [ref, count] of descendants) {
-    (context.lookup(ref) as PDFDict).set(PDFName.of("Count"), PDFNumber.of(count));
   }
 }
 

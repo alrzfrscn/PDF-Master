@@ -60,50 +60,6 @@ function openDb(): Promise<IDBDatabase | null> {
  */
 const savedBlobs = new Map<string, Uint8Array>();
 
-/** PDF bytes cannot survive `JSON.stringify`, so a backup carries base64 text. */
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(text: string): Uint8Array {
-  const binary = atob(text);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
-}
-
-/** Frees a closed tab's blob and any orphan key no open tab owns. */
-export async function deleteWorkspaceBlob(tabId: string, keepIds?: string[]): Promise<void> {
-  savedBlobs.delete(tabId);
-  const db = await openDb();
-  if (!db) return;
-  await new Promise<void>((resolve) => {
-    const transaction = db.transaction(BLOB_STORE, "readwrite");
-    const store = transaction.objectStore(BLOB_STORE);
-    store.delete(tabId);
-    if (keepIds) {
-      const keys = store.getAllKeys();
-      keys.onsuccess = () => {
-        for (const key of keys.result) {
-          if (typeof key === "string" && !keepIds.includes(key)) {
-            store.delete(key);
-            savedBlobs.delete(key);
-          }
-        }
-      };
-    }
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => resolve();
-    transaction.onabort = () => resolve();
-  });
-  db.close();
-}
-
 export async function saveWorkspace(tabs: DocumentTab[], activeId: string): Promise<boolean> {
   const db = await openDb();
   if (!db) return false;
@@ -214,16 +170,11 @@ export function workspaceBackup(
   activeId: string,
   stores: WorkspaceStores = collectWorkspaceStores(),
 ): Blob {
-  const serialized = tabs.map((tab) => {
-    if (!tab.pdf?.bytes) return tab;
-    const { bytes, ...pdf } = tab.pdf;
-    return { ...tab, pdf: { ...pdf, bytesBase64: bytesToBase64(bytes) } };
-  });
   const payload: SavedWorkspace = {
     version: 2,
     savedAt: new Date().toISOString(),
     activeId,
-    tabs: serialized as DocumentTab[],
+    tabs,
     stores,
   };
   return new Blob([JSON.stringify(payload)], { type: "application/json" });
@@ -236,29 +187,7 @@ export function parseWorkspaceBackup(text: string): SavedWorkspace | null {
     if ((parsed?.version !== 1 && parsed?.version !== 2) || !Array.isArray(parsed.tabs) || parsed.tabs.length === 0) {
       return null;
     }
-    const tabs = parsed.tabs.map((tab) => {
-      const pdf = tab.pdf as
-        | (NonNullable<DocumentTab["pdf"]> & { bytesBase64?: string; bytes?: unknown })
-        | undefined;
-      if (!pdf) return tab;
-      const { bytesBase64, bytes, ...rest } = pdf;
-      let decoded: Uint8Array | undefined;
-      if (typeof bytesBase64 === "string" && bytesBase64) {
-        try {
-          decoded = base64ToBytes(bytesBase64);
-        } catch {
-          decoded = undefined;
-        }
-      } else if (bytes instanceof Uint8Array) {
-        decoded = bytes;
-      } else if (bytes && typeof bytes === "object") {
-        // Legacy backups stringified the typed array into {"0":37,"1":80,...}.
-        const values = Object.values(bytes as Record<string, number>);
-        if (values.every((value) => typeof value === "number")) decoded = new Uint8Array(values);
-      }
-      return { ...tab, pdf: { ...rest, ...(decoded ? { bytes: decoded } : {}) } } as DocumentTab;
-    });
-    return { ...parsed, tabs } as SavedWorkspace;
+    return parsed as SavedWorkspace;
   } catch {
     return null;
   }
