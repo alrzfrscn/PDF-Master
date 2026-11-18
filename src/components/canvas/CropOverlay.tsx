@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
-import { Check, RotateCcw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, RotateCcw, X } from "lucide-react";
 import type { DocumentPage } from "../../lib/types";
 import { PX_PER_MM } from "../../lib/paper";
 
 type CropBox = NonNullable<DocumentPage["cropBox"]>;
 type Mode = "move" | "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+type RatioId = "free" | "a4" | "16:9" | "1:1";
 
 interface Props {
   widthMm: number;
@@ -12,6 +13,7 @@ interface Props {
   cropBox?: CropBox;
   zoom: number;
   onApply: (box: CropBox | null) => void;
+  onCancel: () => void;
 }
 
 const MIN_MM = 10;
@@ -24,6 +26,13 @@ const HANDLES: { mode: Mode; x: number; y: number; cursor: string }[] = [
   { mode: "s", x: 0.5, y: 1, cursor: "ns-resize" },
   { mode: "sw", x: 0, y: 1, cursor: "nesw-resize" },
   { mode: "w", x: 0, y: 0.5, cursor: "ew-resize" },
+];
+
+const RATIOS: { id: RatioId; label: string; ratio: number | null }[] = [
+  { id: "free", label: "Free", ratio: null },
+  { id: "a4", label: "A4", ratio: 210 / 297 },
+  { id: "16:9", label: "16:9", ratio: 16 / 9 },
+  { id: "1:1", label: "1:1", ratio: 1 },
 ];
 
 const fullPage = (widthMm: number, heightMm: number): CropBox => ({ xMm: 0, yMm: 0, widthMm, heightMm });
@@ -43,13 +52,34 @@ function clampBox(box: CropBox, widthMm: number, heightMm: number): CropBox {
   };
 }
 
+function centeredRatio(widthMm: number, heightMm: number, ratio: number): CropBox {
+  let width = widthMm;
+  let height = width / ratio;
+  if (height > heightMm) {
+    height = heightMm;
+    width = height * ratio;
+  }
+  return { xMm: (widthMm - width) / 2, yMm: (heightMm - height) / 2, widthMm: width, heightMm: height };
+}
+
 /** Interactive crop frame drawn over the page, in page-local millimetres. */
-export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props) {
+export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply, onCancel }: Props) {
   const [box, setBox] = useState<CropBox>(() => cropBox ?? insetPage(widthMm, heightMm));
+  const [ratio, setRatio] = useState<RatioId>("free");
   const drag = useRef<{ mode: Mode; startX: number; startY: number; box: CropBox } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hit = 24 / zoom;
   const dot = 12 / zoom;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [onCancel]);
 
   const toMm = (event: React.PointerEvent) => {
     // The handles capture pointers, so page-local coordinates always come from the container.
@@ -101,6 +131,7 @@ export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props
         if (mode.includes("n")) next.yMm = base.yMm + base.heightMm - MIN_MM;
       }
     }
+    setRatio("free");
     setBox(clampBox(next, widthMm, heightMm));
   };
 
@@ -113,6 +144,16 @@ export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props
   const top = px(box.yMm);
   const width = px(box.widthMm);
   const height = px(box.heightMm);
+  const pageWidthPx = px(widthMm);
+
+  // Keep the bar inside the page box even when the crop sits at an edge.
+  const barHalf = 200 / zoom;
+  const barLeft =
+    pageWidthPx < barHalf * 2
+      ? pageWidthPx / 2
+      : Math.max(barHalf, Math.min(pageWidthPx - barHalf, left + width / 2));
+
+  const isFullPage = box.xMm <= 0.5 && box.yMm <= 0.5 && box.widthMm >= widthMm - 0.5 && box.heightMm >= heightMm - 0.5;
 
   return (
     <div
@@ -163,25 +204,45 @@ export function CropOverlay({ widthMm, heightMm, cropBox, zoom, onApply }: Props
       </div>
 
       <div
-        className="absolute left-1/2 z-40"
-        style={{ top: Math.max(6, top - 44), transform: `translateX(-50%) scale(${1 / zoom})`, transformOrigin: "top center" }}
+        className="absolute z-40"
+        style={{
+          left: barLeft,
+          top: Math.max(6, top - 44),
+          transform: `translateX(-50%) scale(${1 / zoom})`,
+          transformOrigin: "top center",
+        }}
       >
-        <div className="glass-strong flex items-center gap-2 rounded-xl px-2.5 py-1.5 shadow-lg">
-          <span className="text-[11px] font-medium tabular-nums">
+        <div className="glass-strong flex items-center gap-1.5 rounded-xl px-2 py-1.5 shadow-lg">
+          <span className="whitespace-nowrap text-[11px] font-medium tabular-nums">
             {box.widthMm.toFixed(1)} × {box.heightMm.toFixed(1)} mm
           </span>
-          <button type="button" className="chip h-6 px-2" onClick={() => onApply(clampBox(box, widthMm, heightMm))}>
-            <Check size={11} /> Apply crop
+          <div className="seg">
+            {RATIOS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={ratio === option.id}
+                onClick={() => {
+                  setRatio(option.id);
+                  if (option.ratio !== null) setBox(centeredRatio(widthMm, heightMm, option.ratio));
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="chip h-6 px-2" onClick={() => { setRatio("free"); setBox(fullPage(widthMm, heightMm)); }}>
+            <RotateCcw size={11} /> Reset
+          </button>
+          <button type="button" className="chip h-6 px-2" onClick={onCancel}>
+            <X size={11} /> Cancel
           </button>
           <button
             type="button"
             className="chip h-6 px-2"
-            onClick={() => {
-              setBox(fullPage(widthMm, heightMm));
-              onApply(null);
-            }}
+            onClick={() => onApply(isFullPage ? null : clampBox(box, widthMm, heightMm))}
           >
-            <RotateCcw size={11} /> Reset full page
+            <Check size={11} /> Apply
           </button>
         </div>
       </div>

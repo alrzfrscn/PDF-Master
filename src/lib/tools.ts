@@ -47,11 +47,7 @@ export const TOOLBAR: ToolbarEntry[][] = [
   ["measure", "formula", "crop", "snapshot", "image"],
 ];
 
-export const SIDEBAR_TABS = [
-  { id: "pages", label: "Pages" },
-  { id: "bookmarks", label: "Bookmarks" },
-  { id: "annotations", label: "Annotations" },
-  { id: "stamps", label: "Stamps" },
-] as const;
+/** Tools that act or draw directly; only a selection may raise their popover. */
+export const NO_POPOVER_TOOLS: ToolId[] = ["hand", "select", "lasso", "image", "snapshot", "crop", "formula"];
 
 export const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4];

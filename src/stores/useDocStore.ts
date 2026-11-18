@@ -1,6 +1,8 @@
 import { create } from "zustand";
-import { DEFAULT_TEMPLATE_ID } from "../lib/data";
+import { DEFAULT_TEMPLATE_ID, paperById } from "../lib/data";
+import { scaleAnnotation } from "../lib/annotationGeometry";
 import { clamp } from "../lib/paper";
+import { deleteWorkspaceBlob } from "../lib/storage";
 import { ZOOM_STEPS } from "../lib/tools";
 import type { DocumentPage, DocumentTab, PdfBookmark } from "../lib/types";
 import { inspectPdf, loadSidecar, mergeSidecarPages, releasePdfDocument, type InspectedPdf } from "../lib/pdfEngine";
@@ -49,9 +51,12 @@ interface DocState {
   page: number;
   history: Record<string, HistoryEntry>;
   lastError: string | null;
+  /** The tab closed most recently; kept for 15 s so Undo can put it back. */
+  lastClosedTab: { tab: DocumentTab; index: number } | null;
   setActive: (id: string) => void;
   newTab: (templateId: string, title: string, landscape?: boolean) => void;
   closeTab: (id: string) => void;
+  undoCloseTab: () => void;
   applyTemplate: (templateId: string, title: string, landscape?: boolean) => void;
   setLandscape: (landscape: boolean) => void;
   setZoom: (zoom: number) => void;
@@ -89,6 +94,14 @@ function releaseTab(tab: DocumentTab): void {
   for (const url of urls) releasePdfDocument(url);
 }
 
+/** Permanent close: free the rendered document and its autosaved blob. */
+function disposeTab(tab: DocumentTab, keepIds: string[]): void {
+  releaseTab(tab);
+  void deleteWorkspaceBlob(tab.id, keepIds);
+}
+
+let closeTimer = 0;
+
 /** Applies a page op to the tab's bookmarks, keeping `pageId` authoritative. */
 function withRemappedBookmarks(tab: DocumentTab, pages: DocumentPage[], op: PageOp): DocumentTab {
   if (!tab.pdf?.bookmarks.length) return tab;
@@ -121,6 +134,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   page: 1,
   history: {},
   lastError: null,
+  lastClosedTab: null,
 
   setActive: (activeId) => set({ activeId, fitMode: "page", zoom: 0.8, page: 1 }),
   newTab: (templateId, title, landscape = false) => {
@@ -135,11 +149,13 @@ export const useDocStore = create<DocState>((set, get) => ({
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, fitMode: "page", page: 1 }));
   },
   closeTab: (id) => {
-    const { tabs, activeId, history } = get();
+    const { tabs, activeId, history, lastClosedTab } = get();
     if (tabs.length === 1) return;
     const index = tabs.findIndex((tab) => tab.id === id);
     const closing = tabs[index];
-    if (closing) releaseTab(closing);
+    if (!closing) return;
+    // The previous closed tab is now beyond undo: free its document and blob.
+    if (lastClosedTab) disposeTab(lastClosedTab.tab, tabs.filter((tab) => tab.id !== lastClosedTab.tab.id).map((tab) => tab.id));
     const next = tabs.filter((tab) => tab.id !== id);
     const nextHistory = { ...history };
     delete nextHistory[id];
@@ -148,17 +164,52 @@ export const useDocStore = create<DocState>((set, get) => ({
       history: nextHistory,
       activeId: activeId === id ? next[Math.max(0, index - 1)].id : activeId,
       page: 1,
+      lastClosedTab: { tab: closing, index },
     });
+    if (closeTimer) globalThis.clearTimeout(closeTimer);
+    closeTimer = globalThis.setTimeout(() => {
+      closeTimer = 0;
+      const state = get();
+      if (state.lastClosedTab?.tab.id !== id) return;
+      disposeTab(state.lastClosedTab.tab, state.tabs.map((tab) => tab.id));
+      set({ lastClosedTab: null });
+    }, 15000);
+  },
+  undoCloseTab: () => {
+    const closed = get().lastClosedTab;
+    if (!closed) return;
+    if (closeTimer) {
+      globalThis.clearTimeout(closeTimer);
+      closeTimer = 0;
+    }
+    const tabs = [...get().tabs];
+    tabs.splice(Math.min(closed.index, tabs.length), 0, closed.tab);
+    set({ tabs, activeId: closed.tab.id, page: 1, lastClosedTab: null });
   },
   applyTemplate: (templateId, title, landscape = false) => {
     const state = get();
     const tab = tabOf(state);
     if (!tab) return;
     state.pushHistory(tab.id);
-    const pages = tab.pages.map((page) => (page.pdf ? page : { ...page, templateId }));
+    const nextTemplate = paperById.get(templateId);
+    const pages = tab.pages.map((page) => {
+      if (page.pdf) return page;
+      const previous = paperById.get(page.templateId);
+      if (!nextTemplate || !previous) return { ...page, templateId };
+      const scale = Math.min(
+        1,
+        nextTemplate.page.widthMm / previous.page.widthMm,
+        nextTemplate.page.heightMm / previous.page.heightMm,
+      );
+      const annotations =
+        scale < 1 ? page.annotations.map((annotation) => scaleAnnotation(annotation, [0, 0], scale, scale)) : page.annotations;
+      return { ...page, templateId, annotations };
+    });
     set((current) => ({
       tabs: current.tabs.map((item) =>
-        item.id === tab.id ? withPageCount({ ...item, templateId, title, landscape }, pages) : item,
+        item.id === tab.id
+          ? withPageCount({ ...item, templateId, title: item.pdf ? item.title : title, landscape }, pages)
+          : item,
       ),
       fitMode: "page",
     }));
@@ -214,7 +265,16 @@ export const useDocStore = create<DocState>((set, get) => ({
     get().pushHistory(tab.id);
     const copy = structuredClone(source);
     copy.id = makeId("page");
-    copy.annotations = copy.annotations.map((annotation) => ({ ...annotation, id: makeId("a") }));
+    const groups = new Map<string, string>();
+    copy.annotations = copy.annotations.map((annotation) => {
+      const next = { ...annotation, id: makeId("a") };
+      if (annotation.groupId) {
+        const groupId = groups.get(annotation.groupId) ?? makeId("g");
+        groups.set(annotation.groupId, groupId);
+        next.groupId = groupId;
+      }
+      return next;
+    });
     const pages = [...tab.pages];
     pages.splice(sourceIndex + 1, 0, copy);
     set((state) => ({
@@ -381,6 +441,7 @@ export const useDocStore = create<DocState>((set, get) => ({
       page: 1,
       fitMode: "page",
       zoom: 0.8,
+      lastClosedTab: null,
     });
   },
 

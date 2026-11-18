@@ -1,34 +1,29 @@
-import { useState } from "react";
 import { Shapes } from "lucide-react";
-import { isShapeTool, SHAPE_TOOLS, TOOLBAR, TOOL_BY_ID } from "../lib/tools";
+import { isShapeTool, NO_POPOVER_TOOLS, TOOLBAR, TOOL_BY_ID } from "../lib/tools";
 import type { ToolId } from "../lib/types";
+import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useToolStore } from "../stores/useToolStore";
 import { useUIStore } from "../stores/useUIStore";
 import { TOOL_ICONS } from "./toolIcons";
 
-const SHAPE_NOTE: Record<string, string> = {
-  line: "Straight line",
-  arrow: "Arrow",
-  rectangle: "Rectangle",
-  ellipse: "Ellipse",
-  polygon: "Polygon",
-  dimension: "Dimension",
-};
-
 export function ToolBar() {
   const activeTool = useToolStore((state) => state.activeTool);
   const setTool = useToolStore((state) => state.setTool);
-  const [shapesOpen, setShapesOpen] = useState(false);
-
   const shapeActive = isShapeTool(activeTool);
   const ShapeIcon = shapeActive ? TOOL_ICONS[activeTool] : Shapes;
 
-  // Clicking the active tool again toggles its floating property popover.
   const pickTool = (tool: ToolId) => {
     const ui = useUIStore.getState();
-    if (useToolStore.getState().activeTool === tool) ui.toggleToolPopover();
-    else {
-      setTool(tool);
+    const selection = useAnnotationStore.getState().selection;
+    if (useToolStore.getState().activeTool === tool) {
+      if (!NO_POPOVER_TOOLS.includes(tool)) ui.toggleToolPopover();
+      return;
+    }
+    setTool(tool);
+    if (NO_POPOVER_TOOLS.includes(tool)) {
+      if (tool === "select" && selection.length > 0) ui.openToolPopover();
+      else ui.closeToolPopover();
+    } else {
       ui.openToolPopover();
     }
     if (tool === "image") window.dispatchEvent(new Event("pm:pick-image"));
@@ -37,22 +32,23 @@ export function ToolBar() {
 
   const renderButton = (entry: ToolId | "shapes") => {
     if (entry === "shapes") {
-      const meta = shapeActive ? TOOL_BY_ID.get(activeTool) : null;
       return (
         <div key="shapes" className="tooltip tooltip-left">
           <button
             type="button"
             className="tool-btn"
-            aria-pressed={shapesOpen || shapeActive}
-            aria-label={meta?.name ?? "Shapes"}
+            aria-pressed={shapeActive}
+            aria-label="Shapes"
             onClick={() => {
-              setShapesOpen((open) => !open);
-              if (shapeActive) useUIStore.getState().toggleToolPopover();
+              const tools = useToolStore.getState();
+              const ui = useUIStore.getState();
+              if (!isShapeTool(tools.activeTool)) tools.setTool(tools.lastShapeTool);
+              ui.openToolPopover();
             }}
           >
             <ShapeIcon size={18} strokeWidth={1.75} />
           </button>
-          <span className="tooltip-body">{meta ? `${meta.name} (${meta.shortcut})` : "Shapes"}</span>
+          <span className="tooltip-body">{shapeActive ? `${TOOL_BY_ID.get(activeTool)?.name}` : "Shapes"}</span>
         </div>
       );
     }
@@ -66,10 +62,7 @@ export function ToolBar() {
           className="tool-btn"
           aria-pressed={activeTool === entry}
           aria-label={meta.name}
-          onClick={() => {
-            pickTool(entry);
-            setShapesOpen(false);
-          }}
+          onClick={() => pickTool(entry)}
         >
           <Icon size={18} strokeWidth={1.75} />
         </button>
@@ -89,37 +82,6 @@ export function ToolBar() {
             {group.map(renderButton)}
           </div>
         ))}
-
-        {shapesOpen && (
-          <div className="glass-strong anim-in absolute right-[calc(100%+10px)] top-[76px] w-[168px] rounded-xl p-1">
-            {SHAPE_TOOLS.map((shape) => {
-              const meta = TOOL_BY_ID.get(shape);
-              const Icon = TOOL_ICONS[shape];
-              if (!meta) return null;
-              return (
-                <button
-                  key={shape}
-                  type="button"
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-[var(--hover)]"
-                  aria-pressed={activeTool === shape}
-                  style={
-                    activeTool === shape
-                      ? { background: "var(--accent-soft)", color: "var(--accent)" }
-                      : undefined
-                  }
-                  onClick={() => {
-                    pickTool(shape);
-                    setShapesOpen(false);
-                  }}
-                >
-                  <Icon size={16} strokeWidth={1.75} />
-                  <span className="flex-1 text-[12px] font-medium">{SHAPE_NOTE[shape]}</span>
-                  <span className="text-[10px] text-muted">{meta.shortcut}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

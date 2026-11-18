@@ -13,7 +13,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # type-check + production bundle in dist/
 npm run preview    # serve dist/ on http://localhost:4173
-npm test           # 47 unit tests
+npm test           # 79 unit tests
 ```
 
 Requires Node 20+ (developed on Node 26, Windows 11).
@@ -228,6 +228,7 @@ public/                    manifest.webmanifest, icon.svg, stamp assets
 | Layer | Key / file | Holds |
 |---|---|---|
 | IndexedDB `pdf-master/workspace/current` | `current` | tabs, pages, annotations, active tab |
+| IndexedDB `pdf-master/pdf-blobs` | tab id | imported PDF bytes, kept out of the structural save |
 | `localStorage` | `pm.customStamps`, `pm.measure.scales`, `pm.measure.active`, `pm.shortcuts`, `pm.prefs`, `pa.theme` | studio preferences |
 | PDF sidecar | `/PDFMasterAnnotations` info key, `pm1:` + base64 JSON | page map, annotations, bookmarks |
 | Workspace backup | `*.pmbackup.json` (version 2) | everything above |
@@ -241,7 +242,7 @@ Version 1 backups (tabs only) still import; missing stores are left untouched.
 | Check | Command | Result |
 |---|---|---|
 | Type-check | `npx tsc -b` | clean |
-| Unit tests | `npm test` | 8 files, 47 tests passing |
+| Unit tests | `npm test` | 14 files, 79 tests passing |
 | Production build | `npm run build` | clean, no warnings, 997 ms |
 | Tauri shell | `cargo check` (in `src-tauri`) | `Finished dev profile` |
 | Headless E2E | Chromium via Playwright | 28/28 checks, 0 console/page errors |
@@ -274,6 +275,9 @@ Unit coverage includes annotation geometry, text layout, ink paths, measurement 
 | [`PHASE_3_REPORT.md`](./PHASE_3_REPORT.md) | Core editor: canvas, ink, shapes, selection, zoom, export |
 | [`PHASE_4_REPORT.md`](./PHASE_4_REPORT.md) | Text, formulas, measurement, snapshot, images, crop, export rebuild |
 | [`PHASE_5_FINAL_REPORT.md`](./PHASE_5_FINAL_REPORT.md) | Gap closure, desktop packaging, design system, final verification |
+| [`PHASE_6_AUDIT_FIX_REPORT.md`](./PHASE_6_AUDIT_FIX_REPORT.md) | Audit fixes, persistence hardening, export correctness |
+| [`PHASE_7_UI_OVERHAUL_REPORT.md`](./PHASE_7_UI_OVERHAUL_REPORT.md) | Tool rail, popovers, drawers, favorites dock, ink studio |
+| [`PHASE_8_REPORT.md`](./PHASE_8_REPORT.md) | Popover polish, shapes studio, crop bar, 15 audit fixes |
 | [`.impeccable.md`](./.impeccable.md) | Design direction, tokens, component grammar, anti-patterns |
 | [`src/data/migration_manifest.json`](./src/data/migration_manifest.json) | Provenance and checksums for every migrated asset |
 

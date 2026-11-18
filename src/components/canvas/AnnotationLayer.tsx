@@ -74,10 +74,10 @@ type Interaction =
   | { kind: "move"; last: Pt; pushed: boolean }
   | { kind: "marquee"; start: Pt; additive: boolean }
   | { kind: "lasso"; points: Pt[] }
-  | { kind: "scale"; handle: HandleId; box: BBox; initial: Annotation[] }
-  | { kind: "rotate"; center: Pt; startAngle: number; initial: Annotation[] }
+  | { kind: "scale"; handle: HandleId; box: BBox; initial: Annotation[]; pushed: boolean }
+  | { kind: "rotate"; center: Pt; startAngle: number; initial: Annotation[]; pushed: boolean }
   | { kind: "stamp"; start: Pt }
-  | { kind: "erase"; last: Pt; split: boolean }
+  | { kind: "erase"; last: Pt; split: boolean; pushed: boolean }
   | { kind: "text"; start: Pt }
   | { kind: "snapshot"; start: Pt }
   | { kind: "measure"; start: Pt }
@@ -95,7 +95,6 @@ interface SnapshotState {
 }
 
 const EPSILON = 0.001;
-const ERASER_MM = 2.6;
 
 function distance(a: Pt, b: Pt): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -318,6 +317,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   const selectedStampId = useToolStore((state) => state.selectedStampId);
   const selection = useAnnotationStore((state) => state.selection);
   const eraserSplit = useUIStore((state) => state.eraserSplit);
+  const eraserSizeMm = useUIStore((state) => state.eraserSizeMm);
   const measureMode = useUIStore((state) => state.measureMode);
   const scaleId = useScaleStore((state) => state.activeId);
   const customScales = useScaleStore((state) => state.custom);
@@ -362,7 +362,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     opacity: toolProps.opacity,
     arrowHead: toolProps.arrowHead || 5,
     arrowTail: toolProps.arrowTail,
-    dimensionUnit: "mm",
+    dimensionUnit: toolProps.dimensionUnit,
     dimensionScale: 1,
   });
 
@@ -382,14 +382,14 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       bold: toolProps.bold,
       italic: toolProps.italic,
       underline: toolProps.underline,
-      strikeOut: false,
-      align: "left",
+      strikeOut: toolProps.strikeOut,
+      align: toolProps.textAlign,
       script: "normal",
       boxFillColor: toolProps.fill ?? "#ffffff",
       boxFillTransparent: toolProps.fill === null,
       frameType: 0,
       frameColor: toolProps.color,
-      lineWidthMm: 0.4,
+      lineWidthMm: Math.max(0.2, toolProps.thicknessMm),
       autoFit: false,
       rotation: 0,
       opacity: toolProps.opacity,
@@ -737,8 +737,9 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         return;
       }
       case "eraser": {
-        begin({ kind: "erase", last: point, split: eraserSplit || event.altKey });
-        useAnnotationStore.getState().eraseAt(point, eraserSplit || event.altKey, ERASER_MM);
+        const split = eraserSplit || event.altKey;
+        const pushed = useAnnotationStore.getState().eraseAt(point, split, eraserSizeMm);
+        begin({ kind: "erase", last: point, split, pushed });
         return;
       }
       case "select": {
@@ -865,7 +866,9 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     if (current.kind === "erase") {
       if (distance(point, current.last) < 0.8) return;
       current.last = point;
-      useAnnotationStore.getState().eraseAt(point, current.split, ERASER_MM);
+      // One history entry per gesture: eraseAt only snapshots once something actually changes.
+      const changed = useAnnotationStore.getState().eraseAt(point, current.split, eraserSizeMm, !current.pushed);
+      if (changed) current.pushed = true;
       return;
     }
     if (current.kind === "marquee") {
@@ -912,6 +915,10 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         sx = factor;
         sy = factor;
       }
+      if (!current.pushed && (Math.abs(sx - 1) > 0.001 || Math.abs(sy - 1) > 0.001)) {
+        useDocStore.getState().pushHistory(tab.id);
+        current.pushed = true;
+      }
       const initial = new Map(current.initial.map((annotation) => [annotation.id, annotation]));
       useAnnotationStore.getState().mutate(
         (annotations) =>
@@ -927,6 +934,10 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
       const angle = (Math.atan2(point[1] - current.center[1], point[0] - current.center[0]) * 180) / Math.PI;
       let delta = angle - current.startAngle;
       if (event.shiftKey) delta = Math.round(delta / 15) * 15;
+      if (!current.pushed && Math.abs(delta) > 0.01) {
+        useDocStore.getState().pushHistory(tab.id);
+        current.pushed = true;
+      }
       const initial = current.initial;
       useAnnotationStore.getState().mutate(
         (annotations) => {
@@ -999,13 +1010,12 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     const point = toMm(event.clientX, event.clientY);
     const svg = svgRef.current;
     svg?.setPointerCapture(event.pointerId);
-    useDocStore.getState().pushHistory(tab.id);
     if (handle === "rotate") {
       const center: Pt = [bounds.x + bounds.width / 2, bounds.y + bounds.height / 2];
       const angle = (Math.atan2(point[1] - center[1], point[0] - center[0]) * 180) / Math.PI;
-      interaction.current = { kind: "rotate", center, startAngle: angle, initial: structuredClone(chosen) };
+      interaction.current = { kind: "rotate", center, startAngle: angle, initial: structuredClone(chosen), pushed: false };
     } else {
-      interaction.current = { kind: "scale", handle, box: bounds, initial: structuredClone(chosen) };
+      interaction.current = { kind: "scale", handle, box: bounds, initial: structuredClone(chosen), pushed: false };
     }
   };
 
@@ -1376,19 +1386,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
           })()}
         {activeTool === "measure" && <MeasureOverlay mode={measureMode} state={measure} />}
       </svg>
-
-      {(activeTool === "snapshot" || activeTool === "measure") && (
-        <div
-          className="pointer-events-none absolute left-1/2 top-3 z-20"
-          style={{ transform: `translateX(-50%) scale(${1 / zoom})`, transformOrigin: "top center" }}
-        >
-          <div className="glass-strong rounded-lg px-2.5 py-1 text-[11px] shadow-lg">
-            {activeTool === "snapshot"
-              ? "Drag a region, then copy it, download the PNG or save it as a stamp."
-              : "Click to place points. Commit turns the measurement into an annotation; Escape clears it."}
-          </div>
-        </div>
-      )}
 
       {activeTool === "measure" && measureText && (
         <div

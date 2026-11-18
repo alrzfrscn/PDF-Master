@@ -40,11 +40,8 @@ export default function App() {
   const setPresentation = useUIStore((state) => state.setPresentation);
   const setPaletteOpen = useUIStore((state) => state.setPaletteOpen);
   const toast = useUIStore((state) => state.toast);
-<<<<<<< HEAD
   const toastAction = useUIStore((state) => state.toastAction);
 <<<<<<< Updated upstream
-=======
->>>>>>> parent of 1ba6b41 (feat(phase-8): minimalist popovers, shapes studio fix, on-canvas crop bar, and 15 ponytail audit fixes)
   const selection = useAnnotationStore((state) => state.selection);
 =======
 >>>>>>> Stashed changes
@@ -75,26 +72,42 @@ export default function App() {
       if (boot.print) window.setTimeout(() => window.print(), 500);
     });
     let timer = 0;
+    let pending: { tabs: import("./lib/types").DocumentTab[]; activeId: string } | null = null;
     // Structural changes only: zoom, page and tool updates do not touch `tabs`.
     let lastTabs = useDocStore.getState().tabs;
     let lastActiveId = useDocStore.getState().activeId;
+    const flush = () => {
+      window.clearTimeout(timer);
+      timer = 0;
+      const value = pending;
+      pending = null;
+      if (!value) return;
+      void saveWorkspace(value.tabs, value.activeId).then((ok) => {
+        if (ok || saveFailed.current) return;
+        saveFailed.current = true;
+        useUIStore.getState().setToast("Workspace autosave failed — storage may be full. Export a backup from Settings.");
+      });
+    };
     const unsubscribe = useDocStore.subscribe((state) => {
       if (!ready.current) return;
       if (state.tabs === lastTabs && state.activeId === lastActiveId) return;
       lastTabs = state.tabs;
       lastActiveId = state.activeId;
+      pending = { tabs: state.tabs, activeId: state.activeId };
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        void saveWorkspace(state.tabs, state.activeId).then((ok) => {
-          if (ok || saveFailed.current) return;
-          saveFailed.current = true;
-          useUIStore.getState().setToast("Workspace autosave failed — storage may be full. Export a backup from Settings.");
-        });
-      }, 1000);
+      timer = window.setTimeout(flush, 1000);
     });
+    // A hidden page or a closed window must not lose the last second of edits.
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
     return () => {
       unsubscribe();
       window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
     };
   }, []);
 
@@ -309,8 +322,22 @@ export default function App() {
         </>
       )}
       {toast && (
-        <div className="pointer-events-none fixed bottom-5 left-1/2 z-[60] -translate-x-1/2">
-          <div className="glass-strong rounded-xl px-3.5 py-2 text-[11.5px] shadow-lg">{toast}</div>
+        <div className={`fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 ${toastAction ? "pointer-events-auto" : "pointer-events-none"}`}>
+          <div className="glass-strong flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11.5px] shadow-lg">
+            <span>{toast}</span>
+            {toastAction && (
+              <button
+                type="button"
+                className="chip h-6 px-2"
+                onClick={() => {
+                  toastAction();
+                  useUIStore.getState().setToast(null);
+                }}
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
