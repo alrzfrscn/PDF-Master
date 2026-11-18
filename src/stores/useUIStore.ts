@@ -29,9 +29,13 @@ interface UIState {
   settingsOpen: boolean;
   measureMode: MeasureModeUi;
   toast: string | null;
+  /** Optional action rendered as an Undo button inside the toast. */
+  toastAction: (() => void) | null;
   saving: boolean;
   eraserSplit: boolean;
+  eraserSizeMm: number;
   setEraserSplit: (split: boolean) => void;
+  setEraserSize: (sizeMm: number) => void;
   setTheme: (theme: ThemeName) => void;
   toggleSidebar: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
@@ -50,7 +54,7 @@ interface UIState {
   setPresentation: (on: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setMeasureMode: (mode: MeasureModeUi) => void;
-  setToast: (toast: string | null) => void;
+  setToast: (toast: string | null, action?: (() => void) | null) => void;
   setSaving: (saving: boolean) => void;
 }
 
@@ -70,9 +74,12 @@ export const useUIStore = create<UIState>((set) => ({
   settingsOpen: false,
   measureMode: "distance",
   toast: null,
+  toastAction: null,
   saving: false,
   eraserSplit: false,
+  eraserSizeMm: 5.2,
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),
+  setEraserSize: (eraserSizeMm) => set({ eraserSizeMm }),
   setSaving: (saving) => set({ saving }),
   setTheme: (theme) => {
     if (typeof document !== "undefined") document.documentElement.dataset.theme = theme;
@@ -100,5 +107,5 @@ export const useUIStore = create<UIState>((set) => ({
   setPresentation: (presentation) => set({ presentation }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setMeasureMode: (measureMode) => set({ measureMode }),
-  setToast: (toast) => set({ toast }),
+  setToast: (toast, action = null) => set({ toast, toastAction: toast ? action : null }),
 }));

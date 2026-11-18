@@ -1,19 +1,14 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { SHAPE_LABEL, type DimensionUnit, type TextAlign } from "../lib/annotationTypes";
 import { ARROW_HEADS } from "../lib/presets";
 import { inkPath, penStyleOptions } from "../lib/ink";
 import type { InkPoint, PenStyle } from "../lib/annotationTypes";
-import type { LineStyleName, ToolId, ToolProps } from "../lib/types";
+import { isShapeTool, SHAPE_TOOLS } from "../lib/tools";
+import type { LineStyleName, ShapeTool, ToolId, ToolProps } from "../lib/types";
 import { useToolStore } from "../stores/useToolStore";
-import { ColorRow, SectionTitle, Segmented, ToggleRow } from "./ui/controls";
+import { TOOL_ICONS } from "./toolIcons";
+import { ColorRow, Segmented } from "./ui/controls";
 
-const COLOR_TOOLS: ToolId[] = [
-  "pen", "marker", "text", "formula", "line", "arrow", "rectangle", "ellipse", "polygon", "dimension",
-];
-const THICKNESS_TOOLS: ToolId[] = [
-  "pen", "marker", "text", "formula", "line", "arrow", "rectangle", "ellipse", "polygon", "dimension",
-];
-const OPACITY_TOOLS: ToolId[] = ["pen", "marker", "text", "rectangle", "ellipse", "polygon"];
-const FONT_TOOLS: ToolId[] = ["text", "formula"];
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Courier New", "Verdana", "Calibri", "Trebuchet MS"];
 
 const INK_COLORS = ["#EF4444", "#2563EB", "#000000", "#10B981", "#8B5CF6", "#F97316", "#FACC15", "#EC4899", "#06B6D4"];
@@ -31,6 +26,7 @@ const OPACITY_TICKS = [
   { value: 50, label: "50" },
   { value: 75, label: "75" },
 ];
+const FONT_SIZES = [8, 10, 12, 14, 18, 24, 32, 48, 64, 72];
 
 const LINE_STYLES: { value: LineStyleName; label: string }[] = [
   { value: "solid", label: "Solid" },
@@ -39,11 +35,26 @@ const LINE_STYLES: { value: LineStyleName; label: string }[] = [
   { value: "dash-dot", label: "Dash-dot" },
 ];
 
+const DIMENSION_UNITS: { value: DimensionUnit; label: string }[] = [
+  { value: "mm", label: "mm" },
+  { value: "cm", label: "cm" },
+  { value: "m", label: "m" },
+  { value: "in", label: "in" },
+  { value: "ft", label: "ft" },
+];
+
 const STROKE_STYLES: { value: PenStyle; label: string; hint: string; patch: Partial<ToolProps> }[] = [
   { value: "basic", label: "Basic", hint: "Fixed width", patch: { penStyle: "basic", pressureLevel: 0, pressureSensitive: false, smoothing: false } },
   { value: "pro", label: "Pro", hint: "Variable width", patch: { penStyle: "pro", pressureLevel: 55, pressureSensitive: true, smoothing: false } },
   { value: "calligraphy", label: "Calligraphy", hint: "Dynamic width", patch: { penStyle: "calligraphy", pressureLevel: 85, pressureSensitive: true, smoothing: true } },
 ];
+
+const DASH: Record<LineStyleName, string | undefined> = {
+  solid: undefined,
+  dash: "10 6",
+  dot: "1.5 5",
+  "dash-dot": "10 5 1.5 5",
+};
 
 function wavePoints(): InkPoint[] {
   const points: InkPoint[] = [];
@@ -293,7 +304,7 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
       )}
 
       <TickSlider
-        label={tool === "marker" ? "Marker width" : tool === "text" || tool === "formula" ? "Frame width" : "Ink width"}
+        label={tool === "marker" ? "Marker width" : tool === "pen" ? "Ink width" : "Stroke"}
         value={props.thicknessMm}
         min={tool === "marker" ? 2 : 0.2}
         max={tool === "marker" ? 32 : 16}
@@ -306,7 +317,7 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
       <ColorGrid value={props.color} onChange={(color) => setProps({ color })} />
 
       <TickSlider
-        label={tool === "text" ? "Box opacity" : "Opacity"}
+        label="Opacity"
         value={percent}
         min={5}
         max={100}
@@ -317,7 +328,7 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
         aside={<ValuePill value={percent} options={[10, 25, 50, 70, 80, 100]} unit="%" onChange={(value) => setProps({ opacity: value / 100 })} />}
       />
 
-      {(tool === "pen" || tool === "marker") && (
+      {isInk && (
         <details className="rounded-xl border border-[var(--border)] px-2.5 py-2">
           <summary className="cursor-pointer text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
             Smart inking
@@ -335,21 +346,196 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
                 <ValuePill value={props.pressureLevel} options={[0, 25, 55, 85, 100]} unit="%" onChange={(pressureLevel) => setProps({ pressureLevel, pressureSensitive: pressureLevel > 0 })} />
               }
             />
-            <ToggleRow
-              label="Ink to line / auto-smooth"
-              hint="Smooths jitter and snaps held strokes to straight lines."
-              checked={props.smoothing}
-              onChange={(smoothing) => setProps({ smoothing })}
-            />
+            <button
+              type="button"
+              className="chip h-7 justify-center"
+              aria-pressed={props.smoothing}
+              onClick={() => setProps({ smoothing: !props.smoothing })}
+            >
+              Auto-smooth
+            </button>
           </div>
         </details>
       )}
+    </div>
+  );
+}
 
-      {tool === "dimension" && (
-        <p className="rounded-lg px-2 py-1.5 text-[10.5px] leading-relaxed text-muted" style={{ background: "var(--track)" }}>
-          Distances are calibrated per page at 144 dpi; the factory recipes carry metric and imperial units.
-        </p>
-      )}
+function TextStudio({ props, setProps }: { props: ToolProps; setProps: (patch: Partial<ToolProps>) => void }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="field">
+        <span className="field-label">Font</span>
+        <select className="text-input" value={props.fontName} onChange={(event) => setProps({ fontName: event.target.value })}>
+          {FONTS.map((font) => (
+            <option key={font} value={font}>
+              {font}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <TickSlider
+        label="Size"
+        value={props.fontSize}
+        min={6}
+        max={72}
+        step={1}
+        ticks={[{ value: 6, label: "6" }, { value: 24, label: "24" }, { value: 48, label: "48" }, { value: 72, label: "72" }]}
+        onChange={(fontSize) => setProps({ fontSize })}
+        aside={<ValuePill value={props.fontSize} options={FONT_SIZES} unit="pt" onChange={(fontSize) => setProps({ fontSize })} />}
+      />
+
+      <div className="seg">
+        <button type="button" aria-pressed={props.bold} onClick={() => setProps({ bold: !props.bold })} style={{ fontWeight: 700 }}>
+          B
+        </button>
+        <button type="button" aria-pressed={props.italic} onClick={() => setProps({ italic: !props.italic })} style={{ fontStyle: "italic" }}>
+          I
+        </button>
+        <button type="button" aria-pressed={props.underline} onClick={() => setProps({ underline: !props.underline })} style={{ textDecoration: "underline" }}>
+          U
+        </button>
+        <button type="button" aria-pressed={props.strikeOut} onClick={() => setProps({ strikeOut: !props.strikeOut })} style={{ textDecoration: "line-through" }}>
+          S
+        </button>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Align</span>
+        <Segmented<TextAlign>
+          value={props.textAlign}
+          options={[
+            { value: "left", label: "Left" },
+            { value: "center", label: "Centre" },
+            { value: "right", label: "Right" },
+          ]}
+          onChange={(textAlign) => setProps({ textAlign })}
+        />
+      </div>
+
+      <ColorGrid value={props.color} onChange={(color) => setProps({ color })} />
+
+      <details className="rounded-xl border border-[var(--border)] px-2.5 py-2">
+        <summary className="cursor-pointer text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
+          Box frame &amp; fill
+        </summary>
+        <div className="flex flex-col gap-3 pt-2.5">
+          <TickSlider
+            label="Frame width"
+            value={props.thicknessMm}
+            min={0.2}
+            max={4}
+            step={0.1}
+            ticks={[{ value: 0.2, label: "0.2" }, { value: 1, label: "1" }, { value: 2, label: "2" }, { value: 4, label: "4" }]}
+            onChange={(thicknessMm) => setProps({ thicknessMm })}
+          />
+          <ColorRow label="Box fill" value={props.fill} allowNone onChange={(fill) => setProps({ fill })} />
+          <TickSlider
+            label="Box opacity"
+            value={Math.round(props.opacity * 100)}
+            min={5}
+            max={100}
+            step={1}
+            ticks={OPACITY_TICKS}
+            onChange={(value) => setProps({ opacity: value / 100 })}
+          />
+        </div>
+      </details>
+    </div>
+  );
+}
+
+const PREVIEW_STROKE = 2;
+
+function arrowTip(x: number, y: number, direction: 1 | -1, code: number, stroke: string) {
+  if (!code) return null;
+  const size = 10;
+  if (code === 3) {
+    return (
+      <path
+        d={`M${x + direction * size} ${y - 6} L${x} ${y} L${x + direction * size} ${y + 6}`}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={PREVIEW_STROKE}
+        strokeLinecap="round"
+      />
+    );
+  }
+  return (
+    <path
+      d={`M${x + direction * size} ${y - 6} L${x} ${y} L${x + direction * size} ${y + 6} Z`}
+      fill={code === 7 ? "none" : stroke}
+      stroke={stroke}
+      strokeWidth={PREVIEW_STROKE}
+    />
+  );
+}
+
+/** Live SVG preview of the active shape's stroke, fill, dash and arrowheads. */
+function ShapePreview({ tool, props }: { tool: ShapeTool; props: ToolProps }) {
+  const stroke = props.color;
+  const fill = props.fill ?? "none";
+  const common = {
+    stroke,
+    fill,
+    opacity: props.opacity,
+    strokeWidth: PREVIEW_STROKE,
+    strokeDasharray: DASH[props.lineStyle],
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  const flat = { ...common, fill: "none" };
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-xl border border-[var(--border)]"
+      style={{ height: 86, background: "linear-gradient(180deg, var(--glass-strong), var(--panel))" }}
+    >
+      <svg viewBox="0 0 320 86" className="h-full w-full" aria-hidden="true">
+        {tool === "line" && <line x1="30" y1="62" x2="290" y2="24" {...flat} />}
+        {tool === "arrow" && (
+          <g {...flat}>
+            <line x1="30" y1="62" x2="290" y2="24" />
+            {arrowTip(30, 62, -1, props.arrowTail, stroke)}
+            {arrowTip(290, 24, 1, props.arrowHead || 5, stroke)}
+          </g>
+        )}
+        {tool === "rectangle" && <rect x="76" y="22" width="168" height="44" rx="3" {...common} />}
+        {tool === "ellipse" && <ellipse cx="160" cy="44" rx="84" ry="22" {...common} />}
+        {tool === "polygon" && <path d="M160 18 L238 32 L258 62 L160 76 L62 62 L82 32 Z" {...common} />}
+        {tool === "dimension" && (
+          <g {...flat}>
+            <line x1="46" y1="44" x2="274" y2="44" />
+            <path d="M46 44l12-6M46 44l12 6M274 44l-12-6M274 44l-12 6" />
+          </g>
+        )}
+      </svg>
+      <span className="absolute bottom-1.5 right-2 text-[9.5px] font-medium text-muted">Live preview</span>
+    </div>
+  );
+}
+
+function ShapeGrid({ tool }: { tool: ShapeTool }) {
+  const setTool = useToolStore((state) => state.setTool);
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {SHAPE_TOOLS.map((shape) => {
+        const Icon = TOOL_ICONS[shape];
+        return (
+          <button
+            key={shape}
+            type="button"
+            className="tile flex flex-col items-center gap-0.5 px-1 py-1.5 text-[10px] font-medium"
+            aria-pressed={shape === tool}
+            aria-label={SHAPE_LABEL[shape]}
+            onClick={() => setTool(shape)}
+          >
+            <Icon size={15} strokeWidth={1.75} />
+            {SHAPE_LABEL[shape]}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -357,144 +543,60 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
 export function PropertyControls({ tool }: { tool: ToolId }) {
   const props = useToolStore((state) => state.props[tool]);
   const setProps = useToolStore((state) => state.setProps);
+  const shape = isShapeTool(tool) ? tool : null;
 
-  const hasColor = COLOR_TOOLS.includes(tool);
-  const hasThickness = THICKNESS_TOOLS.includes(tool);
-  const hasOpacity = OPACITY_TOOLS.includes(tool);
-  const hasFont = FONT_TOOLS.includes(tool);
-  const hasFill = ["rectangle", "ellipse", "polygon"].includes(tool);
-  const hasLine = tool === "line" || tool === "arrow";
-  const studio = tool === "pen" || tool === "marker" || hasFill || hasLine;
-
-  return (
-    <div className="flex flex-col gap-3.5">
-      <SectionTitle>{studio ? "Ink studio" : "Ink"}</SectionTitle>
-
-      {studio ? (
+  if (shape) {
+    return (
+      <div className="flex flex-col gap-3">
+        <ShapeGrid tool={shape} />
+        <ShapePreview tool={shape} props={props} />
         <StudioInk tool={tool} props={props} setProps={setProps} />
-      ) : (
-        <>
-          {hasColor && (
-            <ColorRow label={hasFont ? "Ink colour" : "Colour"} value={props.color} onChange={(color) => color && setProps({ color })} />
-          )}
-          {hasThickness && (
-            <div className="field">
-              <span className="field-label">
-                <span>{hasFont ? "Frame width" : "Ink width"}</span>
-                <span className="field-value">{Number(props.thicknessMm.toFixed(2))} mm</span>
-              </span>
-              <input
-                type="range"
-                className="range"
-                min={0.2}
-                max={10}
-                step={0.1}
-                value={props.thicknessMm}
-                onChange={(event) => setProps({ thicknessMm: Number(event.target.value) })}
-                style={{ "--fill": `${Math.min(100, (props.thicknessMm / 10) * 100)}%` } as CSSProperties}
-              />
-            </div>
-          )}
-          {hasOpacity && (
-            <div className="field">
-              <span className="field-label">
-                <span>Ink opacity</span>
-                <span className="field-value">{Math.round(props.opacity * 100)} %</span>
-              </span>
-              <input
-                type="range"
-                className="range"
-                min={5}
-                max={100}
-                step={1}
-                value={Math.round(props.opacity * 100)}
-                onChange={(event) => setProps({ opacity: Number(event.target.value) / 100 })}
-                style={{ "--fill": `${Math.round(props.opacity * 100)}%` } as CSSProperties}
-              />
-            </div>
-          )}
-        </>
-      )}
 
-      {hasFill && (
-        <ColorRow label="Fill" value={props.fill} allowNone onChange={(fill) => setProps({ fill })} />
-      )}
+        {shape !== "line" && shape !== "arrow" && shape !== "dimension" && (
+          <ColorRow label="Fill" value={props.fill} allowNone onChange={(fill) => setProps({ fill })} />
+        )}
 
-      {hasLine && (
         <div className="field">
           <span className="field-label">Line style</span>
           <Segmented value={props.lineStyle} options={LINE_STYLES} onChange={(lineStyle) => setProps({ lineStyle })} />
         </div>
-      )}
 
-      {tool === "arrow" && (
-        <div className="grid grid-cols-2 gap-2">
-          <label className="field">
-            <span className="field-label">Head</span>
-            <select className="text-input" value={props.arrowHead} onChange={(event) => setProps({ arrowHead: Number(event.target.value) })}>
-              {ARROW_HEADS.map((head) => (
-                <option key={head.value} value={head.value}>
-                  {head.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Tail</span>
-            <select className="text-input" value={props.arrowTail} onChange={(event) => setProps({ arrowTail: Number(event.target.value) })}>
-              {ARROW_HEADS.map((head) => (
-                <option key={head.value} value={head.value}>
-                  {head.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
+        {shape === "arrow" && (
+          <div className="grid grid-cols-2 gap-2">
+            <label className="field">
+              <span className="field-label">Head</span>
+              <select className="text-input" value={props.arrowHead} onChange={(event) => setProps({ arrowHead: Number(event.target.value) })}>
+                {ARROW_HEADS.map((head) => (
+                  <option key={head.value} value={head.value}>
+                    {head.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Tail</span>
+              <select className="text-input" value={props.arrowTail} onChange={(event) => setProps({ arrowTail: Number(event.target.value) })}>
+                {ARROW_HEADS.map((head) => (
+                  <option key={head.value} value={head.value}>
+                    {head.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
 
-      {hasFont && (
-        <>
-          <SectionTitle>Type</SectionTitle>
-          <label className="field">
-            <span className="field-label">Font</span>
-            <select className="text-input" value={props.fontName} onChange={(event) => setProps({ fontName: event.target.value })}>
-              {FONTS.map((font) => (
-                <option key={font} value={font}>
-                  {font}
-                </option>
-              ))}
-            </select>
-          </label>
+        {shape === "dimension" && (
           <div className="field">
-            <span className="field-label">
-              <span>Size</span>
-              <span className="field-value">{props.fontSize} pt</span>
-            </span>
-            <input
-              type="range"
-              className="range"
-              min={6}
-              max={72}
-              step={1}
-              value={props.fontSize}
-              onChange={(event) => setProps({ fontSize: Number(event.target.value) })}
-              style={{ "--fill": `${((props.fontSize - 6) / 66) * 100}%` } as CSSProperties}
-            />
+            <span className="field-label">Unit</span>
+            <Segmented value={props.dimensionUnit} options={DIMENSION_UNITS} onChange={(dimensionUnit) => setProps({ dimensionUnit })} />
           </div>
-          <div className="seg">
-            <button type="button" aria-pressed={props.bold} onClick={() => setProps({ bold: !props.bold })} style={{ fontWeight: 700 }}>
-              Bold
-            </button>
-            <button type="button" aria-pressed={props.italic} onClick={() => setProps({ italic: !props.italic })} style={{ fontStyle: "italic" }}>
-              Italic
-            </button>
-            <button type="button" aria-pressed={props.underline} onClick={() => setProps({ underline: !props.underline })} style={{ textDecoration: "underline" }}>
-              Underline
-            </button>
-          </div>
-        </>
-      )}
+        )}
+      </div>
+    );
+  }
 
-    </div>
-  );
+  if (tool === "text") return <TextStudio props={props} setProps={setProps} />;
+  if (tool === "pen" || tool === "marker") return <StudioInk tool={tool} props={props} setProps={setProps} />;
+  return null;
 }

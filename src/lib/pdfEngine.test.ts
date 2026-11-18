@@ -4,13 +4,14 @@ import {
   combinePdfs,
   decodeSidecar,
   encodeSidecar,
+  exportInputFromTab,
   exportPdf,
   loadSidecar,
   mergeSidecarPages,
   type PdfExportInput,
 } from "./pdfEngine";
 import type { FormulaAnnotation, ShapeAnnotation, StampAnnotation, TextAnnotation } from "./annotationTypes";
-import type { DocumentPage } from "./types";
+import type { DocumentPage, DocumentTab } from "./types";
 
 const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -300,6 +301,47 @@ describe("PDF engine", () => {
     expect((await loadSidecar(await exportPdf({ ...input("flattened"), bookmarks })))?.bookmarks).toBeUndefined();
   });
 
+  it("maps a tab to export input, keeping crop boxes and PDF page indices", () => {
+    const tab: DocumentTab = {
+      id: "doc-tab",
+      title: "Tab",
+      templateId: "paper-000",
+      landscape: true,
+      pageCount: 2,
+      pages: [
+        {
+          id: "page-paper",
+          templateId: "paper-000",
+          rotation: 90,
+          annotations: [rectangle],
+          cropBox: { xMm: 5, yMm: 6, widthMm: 200, heightMm: 280 },
+        },
+        {
+          id: "page-pdf",
+          templateId: "paper-000",
+          rotation: 0,
+          annotations: [],
+          pdf: { url: "blob:x", pageNumber: 3, widthMm: 100, heightMm: 200 },
+        },
+      ],
+    };
+
+    const result = exportInputFromTab(tab, "editable");
+
+    expect(result.title).toBe("Tab");
+    expect(result.sourceBytes).toBeUndefined();
+    expect(result.pages[0]).toEqual({
+      templateId: "paper-000",
+      landscape: true,
+      rotation: 90,
+      widthMm: 210,
+      heightMm: 297,
+      cropBox: { xMm: 5, yMm: 6, widthMm: 200, heightMm: 280 },
+      annotations: [rectangle],
+    });
+    expect(result.pages[1]).toMatchObject({ pdfPageIndex: 3, widthMm: 100, heightMm: 200 });
+  });
+
   it("rebuilds the page tree in tab order, count and size", async () => {
     const pt = 72 / 25.4;
     const base = await exportPdf({
@@ -347,6 +389,17 @@ describe("combinePdfs", () => {
     expect(merged.getPage(0).getWidth()).toBeCloseTo(595.28, 0);
     expect(merged.getPage(2).getWidth()).toBeCloseTo(283.46, 0);
     expect(merged.getPage(2).getHeight()).toBeCloseTo(566.93, 0);
+  });
+
+  it("combines annotated flattened exports", async () => {
+    const first = await exportPdf(input("flattened"));
+    const second = await exportPdf({ ...input("flattened"), pages: [{ ...input("flattened").pages[0], annotations: [rectangle] }] });
+
+    const bytes = await combinePdfs([first, second]);
+    const merged = await PDFDocument.load(bytes);
+
+    expect(merged.getPageCount()).toBe(2);
+    expect(await loadSidecar(bytes)).toBeNull();
   });
 
   it("needs at least two documents", async () => {

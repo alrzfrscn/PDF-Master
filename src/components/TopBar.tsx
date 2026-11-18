@@ -16,7 +16,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { combinePdfs } from "../lib/pdfEngine";
+import { combinePdfs, exportInputFromTab, exportPdf } from "../lib/pdfEngine";
 import { printActiveDocument, saveActiveDocument } from "../lib/save";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
@@ -100,7 +100,7 @@ export function TopBar() {
   const filesRef = useRef<HTMLDivElement>(null);
   const combineRef = useRef<HTMLInputElement>(null);
 
-  const pdfTabs = tabs.filter((tab) => tab.pdf?.bytes);
+  const pdfTabs = tabs;
 
   useEffect(() => {
     if (!filesOpen) return;
@@ -122,22 +122,32 @@ export function TopBar() {
 
   const combine = async () => {
     const parts: Uint8Array[] = [];
-    for (const id of selectedTabIds) {
-      const bytes = tabs.find((tab) => tab.id === id)?.pdf?.bytes;
-      if (bytes) parts.push(bytes);
-    }
-    for (const file of combineFiles) parts.push(new Uint8Array(await file.arrayBuffer()));
-    if (parts.length < 2) {
-      setToast("Choose at least two documents to combine");
-      return;
-    }
     try {
+      for (const id of selectedTabIds) {
+        const tab = tabs.find((item) => item.id === id);
+        // Export each tab so annotations, crops, page order and paper pages survive.
+        if (tab) parts.push(await exportPdf(exportInputFromTab(tab, "flattened")));
+      }
+      for (const file of combineFiles) parts.push(new Uint8Array(await file.arrayBuffer()));
+      if (parts.length < 2) {
+        setToast("Choose at least two documents to combine");
+        return;
+      }
       const bytes = await combinePdfs(parts);
       await useDocStore.getState().openPdfBytes(bytes, `Combined ${parts.length} documents`);
       setCombineOpen(false);
       setToast(`Combined ${parts.length} documents`);
     } catch (error) {
       setToast(`Could not combine: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const closeWithUndo = (id: string) => {
+    const tab = tabs.find((item) => item.id === id);
+    if (!tab) return;
+    closeTab(id);
+    if (useDocStore.getState().lastClosedTab?.tab.id === id) {
+      setToast(`Closed "${tab.title}"`, () => useDocStore.getState().undoCloseTab());
     }
   };
 
@@ -264,7 +274,7 @@ export function TopBar() {
                   type="button"
                   className="grid h-5 w-5 place-items-center rounded-md text-muted opacity-0 transition-opacity hover:bg-[var(--active)] hover:text-fg group-hover:opacity-100"
                   aria-label={`Close ${tab.title}`}
-                  onClick={() => closeTab(tab.id)}
+                  onClick={() => closeWithUndo(tab.id)}
                 >
                   <X size={12} strokeWidth={2} />
                 </button>
@@ -358,9 +368,9 @@ export function TopBar() {
               </button>
             </div>
             <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-4 py-3">
-              <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">Open PDF tabs</span>
+              <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">Open tabs</span>
               {pdfTabs.length === 0 ? (
-                <p className="text-[11px] text-muted">No PDF tabs are open. Choose files below.</p>
+                <p className="text-[11px] text-muted">No tabs are open. Choose files below.</p>
               ) : (
                 pdfTabs.map((tab) => (
                   <label key={tab.id} className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-[11.5px] hover:bg-[var(--hover)]">

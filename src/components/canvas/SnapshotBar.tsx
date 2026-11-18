@@ -1,6 +1,14 @@
 import { Check, Copy, Download, Stamp, X } from "lucide-react";
 import type { BBox } from "../../lib/annotationTypes";
 import { PX_PER_MM } from "../../lib/paper";
+import { usePrefsStore, type SnapshotDpi } from "../../lib/prefs";
+import { Segmented } from "../ui/controls";
+
+const DPI: { value: string; label: string }[] = [
+  { value: "72", label: "72" },
+  { value: "150", label: "150" },
+  { value: "300", label: "300" },
+];
 
 interface Props {
   region: BBox;
@@ -15,6 +23,8 @@ interface Props {
 
 /** Floating action bar for a snapshot region, in page millimetres. */
 export function SnapshotBar({ region, imageUrl, zoom, status, onCopy, onDownload, onSaveStamp, onClose }: Props) {
+  const snapshotDpi = usePrefsStore((state) => state.snapshotDpi);
+  const setPrefs = usePrefsStore((state) => state.set);
   const left = (region.x + region.width) * PX_PER_MM;
   const top = (region.y + region.height) * PX_PER_MM + 6;
   return (
@@ -27,6 +37,13 @@ export function SnapshotBar({ region, imageUrl, zoom, status, onCopy, onDownload
         {imageUrl && (
           <img src={imageUrl} alt="Snapshot preview" className="checker h-8 w-8 rounded-md object-contain" />
         )}
+        <span title="Snapshot resolution">
+          <Segmented
+            value={String(snapshotDpi)}
+            options={DPI}
+            onChange={(value) => setPrefs({ snapshotDpi: Number(value) as SnapshotDpi })}
+          />
+        </span>
         <button type="button" className="chip h-7 px-2" onClick={onCopy} aria-label="Copy snapshot PNG">
           <Copy size={12} /> Copy
         </button>
