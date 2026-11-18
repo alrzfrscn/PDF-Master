@@ -3,6 +3,7 @@ import { Shapes } from "lucide-react";
 import { isShapeTool, SHAPE_TOOLS, TOOLBAR, TOOL_BY_ID } from "../lib/tools";
 import type { ToolId } from "../lib/types";
 import { useToolStore } from "../stores/useToolStore";
+import { useUIStore } from "../stores/useUIStore";
 import { TOOL_ICONS } from "./toolIcons";
 
 const SHAPE_NOTE: Record<string, string> = {
@@ -22,17 +23,32 @@ export function ToolBar() {
   const shapeActive = isShapeTool(activeTool);
   const ShapeIcon = shapeActive ? TOOL_ICONS[activeTool] : Shapes;
 
+  // Clicking the active tool again toggles its floating property popover.
+  const pickTool = (tool: ToolId) => {
+    const ui = useUIStore.getState();
+    if (useToolStore.getState().activeTool === tool) ui.toggleToolPopover();
+    else {
+      setTool(tool);
+      ui.openToolPopover();
+    }
+    if (tool === "image") window.dispatchEvent(new Event("pm:pick-image"));
+    if (tool === "formula") window.dispatchEvent(new Event("pm:open-formula"));
+  };
+
   const renderButton = (entry: ToolId | "shapes") => {
     if (entry === "shapes") {
       const meta = shapeActive ? TOOL_BY_ID.get(activeTool) : null;
       return (
-        <div key="shapes" className="tooltip">
+        <div key="shapes" className="tooltip tooltip-left">
           <button
             type="button"
             className="tool-btn"
             aria-pressed={shapesOpen || shapeActive}
             aria-label={meta?.name ?? "Shapes"}
-            onClick={() => setShapesOpen((open) => !open)}
+            onClick={() => {
+              setShapesOpen((open) => !open);
+              if (shapeActive) useUIStore.getState().toggleToolPopover();
+            }}
           >
             <ShapeIcon size={18} strokeWidth={1.75} />
           </button>
@@ -44,17 +60,15 @@ export function ToolBar() {
     const Icon = TOOL_ICONS[entry];
     if (!meta) return null;
     return (
-      <div key={entry} className="tooltip">
+      <div key={entry} className="tooltip tooltip-left">
         <button
           type="button"
           className="tool-btn"
           aria-pressed={activeTool === entry}
           aria-label={meta.name}
           onClick={() => {
-            setTool(entry);
+            pickTool(entry);
             setShapesOpen(false);
-            if (entry === "image") window.dispatchEvent(new Event("pm:pick-image"));
-            if (entry === "formula") window.dispatchEvent(new Event("pm:open-formula"));
           }}
         >
           <Icon size={18} strokeWidth={1.75} />
@@ -67,8 +81,8 @@ export function ToolBar() {
   };
 
   return (
-    <div className="tool-rail absolute left-3.5 top-1/2 z-20 -translate-y-1/2">
-      <div className="glass relative flex flex-col items-center gap-1 rounded-[18px] p-1.5">
+    <div className="tool-rail absolute right-3.5 top-1/2 z-30 -translate-y-1/2">
+      <div className="glass scroll-thin relative flex max-h-[calc(100vh-120px)] flex-col items-center gap-1 overflow-y-auto rounded-[18px] p-1.5">
         {TOOLBAR.map((group, index) => (
           <div key={index} className="flex flex-col items-center gap-1">
             {index > 0 && <div className="my-0.5 h-px w-6 bg-[var(--border)]" />}
@@ -77,7 +91,7 @@ export function ToolBar() {
         ))}
 
         {shapesOpen && (
-          <div className="glass-strong anim-in absolute left-[calc(100%+10px)] top-[76px] w-[168px] rounded-xl p-1">
+          <div className="glass-strong anim-in absolute right-[calc(100%+10px)] top-[76px] w-[168px] rounded-xl p-1">
             {SHAPE_TOOLS.map((shape) => {
               const meta = TOOL_BY_ID.get(shape);
               const Icon = TOOL_ICONS[shape];
@@ -94,7 +108,7 @@ export function ToolBar() {
                       : undefined
                   }
                   onClick={() => {
-                    setTool(shape);
+                    pickTool(shape);
                     setShapesOpen(false);
                   }}
                 >

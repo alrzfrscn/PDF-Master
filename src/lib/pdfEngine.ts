@@ -14,7 +14,7 @@ import {
 import type { DocumentPage, PaperTemplate, DocumentTab, PdfBookmark } from "./types";
 import type { Annotation, FormulaAnnotation, Pt, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, formatDimension } from "./annotationGeometry";
-import { inkPath, polylinePath } from "./ink";
+import { inkPath, penStyleOptions, polylinePath } from "./ink";
 import { layoutText, measureTextWidthMm, TEXT_PADDING_MM, PT_TO_MM } from "./textLayout";
 import { latexToPng } from "./formula";
 import { paperById } from "./data";
@@ -371,9 +371,10 @@ async function drawAnnotation(context: DrawContext, annotation: Annotation): Pro
 
   switch (annotation.type) {
     case "pen": {
+      const style = annotation.penStyle ?? (annotation.sensitivity ? "pro" : "basic");
       const path = inkPath(annotation.points, annotation.thicknessMm, {
-        simulatePressure: annotation.sensitivity,
-        thinning: annotation.sensitivity ? 0.55 : 0,
+        ...penStyleOptions(style, annotation.pressureLevel ?? (annotation.sensitivity ? 55 : 0)),
+        simulatePressure: false,
       });
       if (!path) return;
       page.drawSvgPath(path, {
@@ -956,6 +957,19 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
   }
 
   return pdf.save();
+}
+
+/** Merges PDFs page by page into one flat document, in the order given. */
+export async function combinePdfs(parts: Uint8Array[]): Promise<Uint8Array> {
+  if (parts.length < 2) throw new Error("Combining documents needs at least two PDFs");
+  const merged = await PDFDocument.create();
+  merged.setProducer("PDF Master");
+  for (const bytes of parts) {
+    const source = await PDFDocument.load(bytes, { updateMetadata: false });
+    const pages = await merged.copyPages(source, source.getPageIndices());
+    for (const page of pages) merged.addPage(page);
+  }
+  return merged.save();
 }
 
 /** Convenience wrapper used by the Save button and the tests. */

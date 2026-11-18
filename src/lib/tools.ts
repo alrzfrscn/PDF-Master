@@ -51,7 +51,7 @@ export const SIDEBAR_TABS = [
   { id: "pages", label: "Pages" },
   { id: "bookmarks", label: "Bookmarks" },
   { id: "annotations", label: "Annotations" },
-  { id: "favorites", label: "Favourites" },
+  { id: "stamps", label: "Stamps" },
 ] as const;
 
 export const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4];

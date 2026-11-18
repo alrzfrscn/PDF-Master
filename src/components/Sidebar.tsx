@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkPlus, FileText, Highlighter, MessageSquareText, PenLine, Plus, RotateCw, Sigma, Square, Stamp, Star, Trash2, CopyPlus, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Type } from "lucide-react";
+import { ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronLeft, ChevronRight, CopyPlus, Eye, EyeOff, FileText, Heart, Highlighter, MessageSquareText, PenLine, Pin, Plus, RotateCw, Sigma, Square, Stamp, Star, Trash2, Type, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { paperTemplates, stampById, stamps, userStamps } from "../lib/data";
 import { PX_PER_MM } from "../lib/paper";
@@ -18,7 +18,7 @@ const TABS: { id: SidebarTab; label: string; Icon: typeof FileText }[] = [
   { id: "pages", label: "Pages", Icon: FileText },
   { id: "bookmarks", label: "Bookmarks", Icon: Bookmark },
   { id: "annotations", label: "Annotations", Icon: MessageSquareText },
-  { id: "favorites", label: "Favourites", Icon: Star },
+  { id: "stamps", label: "Stamps / Library", Icon: Stamp },
 ];
 
 function EmptyState({ Icon, title, body }: { Icon: typeof FileText; title: string; body: string }) {
@@ -149,10 +149,22 @@ function AnnotationIcon({ annotation }: { annotation: Annotation }) {
   return <Square {...props} />;
 }
 
+const TAB_TITLES: Record<SidebarTab, string> = {
+  pages: "Pages",
+  bookmarks: "Bookmarks",
+  annotations: "Annotations",
+  stamps: "Stamps / Library",
+};
+
 export function Sidebar() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const sidebarTab = useUIStore((state) => state.sidebarTab);
-  const setSidebarTab = useUIStore((state) => state.setSidebarTab);
+  const setSidebarTab = useUIStore((state) => state.toggleSidebarTab);
+  const drawerPinned = useUIStore((state) => state.drawerPinned);
+  const toggleDrawerPinned = useUIStore((state) => state.toggleDrawerPinned);
+  const favoritesOpen = useUIStore((state) => state.favoritesOpen);
+  const toggleFavorites = useUIStore((state) => state.toggleFavorites);
+  const setLibraryOpen = useUIStore((state) => state.setLibraryOpen);
   const setNewDocOpen = useUIStore((state) => state.setNewDocOpen);
   const auxLines = useUIStore((state) => state.auxLines);
   const toggleAuxLines = useUIStore((state) => state.toggleAuxLines);
@@ -175,26 +187,20 @@ export function Sidebar() {
   const selectStamp = useToolStore((state) => state.selectStamp);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
+  const railRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
 
-  if (!sidebarOpen) {
-    return (
-      <div className="glass m-2 mr-0 flex w-11 shrink-0 flex-col items-center gap-1 rounded-2xl py-2">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            className="icon-btn"
-            aria-label={label}
-            title={label}
-            aria-pressed={sidebarTab === id}
-            onClick={() => setSidebarTab(id)}
-          >
-            <Icon size={16} strokeWidth={1.75} />
-          </button>
-        ))}
-      </div>
-    );
-  }
+  // An unpinned drawer closes on the first click anywhere on the page.
+  useEffect(() => {
+    if (!sidebarOpen || drawerPinned) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (railRef.current?.contains(target) || drawerRef.current?.contains(target)) return;
+      useUIStore.getState().toggleSidebar();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [sidebarOpen, drawerPinned]);
 
   const recent = recentStamps
     .map((id) => stamps.find((stamp) => stamp.id === id) ?? userStamps.find((stamp) => stamp.id === id))
@@ -209,24 +215,64 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar glass anim-in m-2 mr-0 flex w-[248px] shrink-0 flex-col overflow-hidden rounded-2xl">
-      <div className="flex items-center gap-1 border-b border-[var(--border)] p-1.5">
+    <div ref={railRef} className="sidebar relative z-40 w-[52px] shrink-0">
+      <div className="glass my-2 ml-2 mr-0 flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"
-            className="icon-btn flex-1"
+            className="icon-btn"
             aria-label={label}
             title={label}
-            aria-pressed={sidebarTab === id}
+            aria-pressed={sidebarOpen && sidebarTab === id}
             onClick={() => setSidebarTab(id)}
           >
             <Icon size={16} strokeWidth={1.75} />
           </button>
         ))}
+        <div className="my-0.5 h-px w-6 bg-[var(--border)]" />
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Favorite tools"
+          title="Favorite tools"
+          aria-pressed={favoritesOpen}
+          onClick={toggleFavorites}
+        >
+          <Heart size={16} strokeWidth={1.75} style={favoritesOpen ? { fill: "currentColor" } : undefined} />
+        </button>
       </div>
 
-      <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+      {sidebarOpen && (
+        <aside
+          ref={drawerRef}
+          className="glass-strong anim-in absolute bottom-2 left-[52px] top-2 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
+          aria-label={TAB_TITLES[sidebarTab]}
+        >
+          <div className="flex items-center gap-1 border-b border-[var(--border)] px-3 py-2">
+            <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{TAB_TITLES[sidebarTab]}</span>
+            <button
+              type="button"
+              className="icon-btn h-7 w-7"
+              aria-label={drawerPinned ? "Unpin drawer" : "Pin drawer"}
+              aria-pressed={drawerPinned}
+              title={drawerPinned ? "Unpinned: closes when you click away" : "Pinned: stays open"}
+              onClick={toggleDrawerPinned}
+            >
+              <Pin size={13} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className="icon-btn h-7 w-7"
+              aria-label="Close drawer"
+              title="Close"
+              onClick={() => useUIStore.getState().toggleSidebar()}
+            >
+              <X size={13} strokeWidth={1.75} />
+            </button>
+          </div>
+
+          <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
         {sidebarTab === "pages" && (
           <>
             <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pages.length} pages</span>}>Pages</SectionTitle>
@@ -437,8 +483,11 @@ export function Sidebar() {
           </>
         )}
 
-        {sidebarTab === "favorites" && (
+        {sidebarTab === "stamps" && (
           <>
+            <button type="button" className="chip h-8 justify-center" onClick={() => setLibraryOpen(true)}>
+              <Stamp size={13} strokeWidth={1.75} /> Open stamp library
+            </button>
             <SectionTitle aside={<span className="text-[10px] text-muted">{recent.length}</span>}>Recent stamps</SectionTitle>
             {recent.length === 0 ? (
               <EmptyState Icon={Star} title="Nothing pinned yet" body="A stamp picked from the gallery shows up here for one-click reuse." />
@@ -467,7 +516,9 @@ export function Sidebar() {
             </p>
           </>
         )}
-      </div>
-    </aside>
+          </div>
+        </aside>
+      )}
+    </div>
   );
 }

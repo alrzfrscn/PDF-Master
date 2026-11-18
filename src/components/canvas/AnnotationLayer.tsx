@@ -27,7 +27,7 @@ import {
   translateAnnotation,
 } from "../../lib/annotationGeometry";
 import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
-import { inkPath, polylinePath, pointerPressure } from "../../lib/ink";
+import { inkPath, penStyleOptions, polylinePath, pointerPressure } from "../../lib/ink";
 import { PX_PER_MM } from "../../lib/paper";
 import { stampById, userStamps } from "../../lib/data";
 import { useCustomStampStore } from "../../lib/customStamps";
@@ -211,12 +211,14 @@ function DimensionView({ shape }: { shape: ShapeAnnotation }) {
 function AnnotationView({ annotation }: { annotation: Annotation }) {
   if (annotation.hidden) return null;
   if (annotation.type === "pen") {
+    const style = annotation.penStyle ?? (annotation.sensitivity ? "pro" : "basic");
+    const options = penStyleOptions(style, annotation.pressureLevel ?? (annotation.sensitivity ? 55 : 0));
     return (
       <path
         d={inkPath(annotation.points, annotation.thicknessMm, {
+          ...options,
           simulatePressure: false,
-          thinning: annotation.sensitivity ? 0.6 : 0,
-          smoothing: annotation.smoothed ? 0.85 : 0.55,
+          smoothing: annotation.smoothed ? 0.85 : options.smoothing,
         })}
         fill={annotation.color}
         opacity={annotation.opacity}
@@ -490,6 +492,8 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
             opacity: toolProps.opacity,
             sensitivity: toolProps.pressureSensitive,
             smoothed: toolProps.smoothing,
+            penStyle: toolProps.penStyle,
+            pressureLevel: toolProps.pressureLevel,
           }
         : {
             id: makeId("a"),
@@ -636,6 +640,8 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
 
   const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
     if (panMode || pinching.current || event.button !== 0) return;
+    // Unpinned tool popovers make way for the stroke they would cover.
+    if (activeTool !== "hand" && activeTool !== "select") window.dispatchEvent(new Event("pm:stroke-begin"));
     const point = toMm(event.clientX, event.clientY);
     const target = event.currentTarget;
     const begin = (next: Interaction | null) => {
@@ -1229,8 +1235,8 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
           (draft.tool === "pen" ? (
             <path
               d={inkPath(draft.points, toolProps.thicknessMm, {
+                ...penStyleOptions(toolProps.penStyle, toolProps.pressureLevel),
                 simulatePressure: false,
-                thinning: toolProps.pressureSensitive ? 0.6 : 0,
               })}
               fill={toolProps.color}
               opacity={toolProps.opacity}

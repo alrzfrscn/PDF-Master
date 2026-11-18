@@ -19,7 +19,7 @@ function fileName(title: string, mode: PersistenceMode): string {
 }
 
 /** Native save dialog where available, otherwise a download. */
-async function writeFile(bytes: Uint8Array, name: string): Promise<boolean> {
+async function writeFile(bytes: Uint8Array, name: string, alwaysAsk = false): Promise<boolean> {
   const picker = (window as unknown as SaveFilePickerWindow).showSaveFilePicker;
   if (typeof picker === "function") {
     try {
@@ -36,12 +36,19 @@ async function writeFile(bytes: Uint8Array, name: string): Promise<boolean> {
       // An unavailable picker falls through to the download path.
     }
   }
-  downloadPdf(bytes, name);
+  let target = name;
+  if (alwaysAsk) {
+    const answer = window.prompt("Save as", name);
+    if (answer === null) return false;
+    target = answer.trim() || name;
+    if (!/\.pdf$/i.test(target)) target += ".pdf";
+  }
+  downloadPdf(bytes, target);
   return true;
 }
 
 /** One place for both Save buttons and Ctrl+S. */
-export async function saveActiveDocument(mode: PersistenceMode): Promise<void> {
+export async function saveActiveDocument(mode: PersistenceMode, alwaysAsk = false): Promise<void> {
   const ui = useUIStore.getState();
   if (ui.saving) return;
   const state = useDocStore.getState();
@@ -52,7 +59,7 @@ export async function saveActiveDocument(mode: PersistenceMode): Promise<void> {
   try {
     const bytes = await exportPdf(exportInputFromTab(tab, mode));
     const name = fileName(tab.title, mode);
-    const saved = await writeFile(bytes, name);
+    const saved = await writeFile(bytes, name, alwaysAsk);
     useUIStore.getState().setToast(saved ? `Saved ${name}` : "Save cancelled");
   } catch (error) {
     useUIStore
@@ -60,5 +67,33 @@ export async function saveActiveDocument(mode: PersistenceMode): Promise<void> {
       .setToast(`Could not save: ${error instanceof Error ? error.message : String(error)}`);
   } finally {
     useUIStore.getState().setSaving(false);
+  }
+}
+
+/** Prints every page by handing the flattened export to the browser. */
+export async function printActiveDocument(): Promise<void> {
+  const ui = useUIStore.getState();
+  const state = useDocStore.getState();
+  const tab = state.tabs.find((item) => item.id === state.activeId);
+  if (!tab || ui.saving) return;
+  ui.setSaving(true);
+  try {
+    const bytes = await exportPdf(exportInputFromTab(tab, "flattened"));
+    const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "application/pdf" }));
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+    frame.src = url;
+    frame.onload = () => {
+      frame.contentWindow?.print();
+      window.setTimeout(() => {
+        frame.remove();
+        URL.revokeObjectURL(url);
+      }, 60000);
+    };
+    document.body.appendChild(frame);
+  } catch (error) {
+    ui.setToast(`Could not print: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    ui.setSaving(false);
   }
 }

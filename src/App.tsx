@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { CommandPalette } from "./components/CommandPalette";
+import { FavoriteToolsBar } from "./components/FavoriteToolsBar";
 import { Inspector } from "./components/Inspector";
 import { NewDocumentModal } from "./components/NewDocumentModal";
 import { SettingsModal } from "./components/SettingsModal";
@@ -7,7 +8,6 @@ import { PaperViewport } from "./components/canvas/PaperViewport";
 import { PresentationBar } from "./components/PresentationBar";
 import { Sidebar } from "./components/Sidebar";
 import { StampLibrary } from "./components/StampLibrary";
-import { StatusLine } from "./components/StatusLine";
 import { ToolBar } from "./components/ToolBar";
 import { TopBar } from "./components/TopBar";
 import { addImageStamp } from "./lib/images";
@@ -40,6 +40,7 @@ export default function App() {
   const setPresentation = useUIStore((state) => state.setPresentation);
   const setPaletteOpen = useUIStore((state) => state.setPaletteOpen);
   const toast = useUIStore((state) => state.toast);
+  const selection = useAnnotationStore((state) => state.selection);
   const setTool = useToolStore((state) => state.setTool);
   const zoomBy = useDocStore((state) => state.zoomBy);
   const setFit = useDocStore((state) => state.setFit);
@@ -95,6 +96,21 @@ export default function App() {
     const timer = window.setTimeout(() => useUIStore.getState().setToast(null), 3400);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  // Selecting ink or a stamp brings its properties up; an unpinned popover
+  // collapses as soon as the next stroke starts.
+  useEffect(() => {
+    if (selection.length > 0) useUIStore.getState().openToolPopover();
+  }, [selection]);
+
+  useEffect(() => {
+    const onStrokeBegin = () => {
+      const ui = useUIStore.getState();
+      if (!ui.toolPopoverPinned) ui.closeToolPopover();
+    };
+    window.addEventListener("pm:stroke-begin", onStrokeBegin);
+    return () => window.removeEventListener("pm:stroke-begin", onStrokeBegin);
+  }, []);
 
   // Images arrive through the clipboard as files, not annotations.
   useEffect(() => {
@@ -200,6 +216,8 @@ export default function App() {
         else if (ui.libraryOpen) ui.setLibraryOpen(false);
         else if (ui.settingsOpen) ui.setSettingsOpen(false);
         else if (ui.newDocOpen) ui.setNewDocOpen(false);
+        else if (ui.toolPopoverOpen) ui.closeToolPopover();
+        else if (ui.sidebarOpen) ui.toggleSidebar();
         else if (ui.presentation) setPresentation(false);
         else useAnnotationStore.getState().clearSelection();
         return;
@@ -273,14 +291,14 @@ export default function App() {
       ) : (
         <>
           <TopBar />
-          <div className="flex min-h-0 flex-1">
+          <div className="relative flex min-h-0 flex-1">
             <Sidebar />
+            <FavoriteToolsBar />
             <main className="relative min-w-0 flex-1">
               <PaperViewport />
               <ToolBar />
-              <StatusLine />
+              <Inspector />
             </main>
-            <Inspector />
           </div>
           <CommandPalette />
           <StampLibrary />

@@ -21,6 +21,8 @@ interface AnnotationBase {
   hidden?: boolean;
 }
 
+export type PenStyle = "basic" | "pro" | "calligraphy";
+
 export interface PenAnnotation extends AnnotationBase {
   type: "pen";
   points: InkPoint[];
@@ -29,6 +31,9 @@ export interface PenAnnotation extends AnnotationBase {
   opacity: number;
   sensitivity: boolean;
   smoothed: boolean;
+  /** Absent on ink drawn before Phase 7; the renderer falls back to sensitivity. */
+  penStyle?: PenStyle;
+  pressureLevel?: number;
 }
 
 export type MarkerTip = "vertical" | "horizontal" | "squared" | "ball";

@@ -17,6 +17,8 @@ const BASE: ToolProps = {
   underline: false,
   pressureSensitive: true,
   smoothing: false,
+  penStyle: "pro",
+  pressureLevel: 55,
 };
 
 const TOOLS: ToolId[] = [

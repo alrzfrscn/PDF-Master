@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFString } from "pdf-lib";
 import {
+  combinePdfs,
   decodeSidecar,
   encodeSidecar,
   exportPdf,
@@ -328,5 +329,29 @@ describe("PDF engine", () => {
     const sidecar = await loadSidecar(bytes);
     expect(sidecar?.pages.map((page) => page.pdfPageIndex)).toEqual([undefined, 2, 3]);
     expect(sidecar?.pages[0].annotations[0].id).toBe("shape-1");
+  });
+});
+
+describe("combinePdfs", () => {
+  it("joins the pages of every source in order", async () => {
+    const first = await PDFDocument.create();
+    first.addPage([210 * 2.8346, 297 * 2.8346]);
+    first.addPage([210 * 2.8346, 297 * 2.8346]);
+    const second = await PDFDocument.create();
+    second.addPage([100 * 2.8346, 200 * 2.8346]);
+
+    const bytes = await combinePdfs([await first.save(), await second.save()]);
+    const merged = await PDFDocument.load(bytes);
+
+    expect(merged.getPageCount()).toBe(3);
+    expect(merged.getPage(0).getWidth()).toBeCloseTo(595.28, 0);
+    expect(merged.getPage(2).getWidth()).toBeCloseTo(283.46, 0);
+    expect(merged.getPage(2).getHeight()).toBeCloseTo(566.93, 0);
+  });
+
+  it("needs at least two documents", async () => {
+    const single = await PDFDocument.create();
+    single.addPage([100, 100]);
+    await expect(combinePdfs([await single.save()])).rejects.toThrow();
   });
 });

@@ -9,7 +9,7 @@ const initialTheme: ThemeName =
 
 if (typeof document !== "undefined") document.documentElement.dataset.theme = initialTheme;
 
-export type SidebarTab = "pages" | "bookmarks" | "annotations" | "favorites";
+export type SidebarTab = "pages" | "bookmarks" | "annotations" | "stamps";
 
 export type MeasureModeUi = "distance" | "perimeter" | "area" | "angle";
 
@@ -17,6 +17,10 @@ interface UIState {
   theme: ThemeName;
   sidebarOpen: boolean;
   sidebarTab: SidebarTab;
+  drawerPinned: boolean;
+  favoritesOpen: boolean;
+  toolPopoverOpen: boolean;
+  toolPopoverPinned: boolean;
   auxLines: boolean;
   paletteOpen: boolean;
   libraryOpen: boolean;
@@ -31,6 +35,14 @@ interface UIState {
   setTheme: (theme: ThemeName) => void;
   toggleSidebar: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
+  toggleSidebarTab: (tab: SidebarTab) => void;
+  toggleDrawerPinned: () => void;
+  toggleFavorites: () => void;
+  setFavoritesOpen: (open: boolean) => void;
+  openToolPopover: () => void;
+  closeToolPopover: () => void;
+  toggleToolPopover: () => void;
+  toggleToolPopoverPinned: () => void;
   toggleAuxLines: () => void;
   setPaletteOpen: (open: boolean) => void;
   setLibraryOpen: (open: boolean) => void;
@@ -44,8 +56,12 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   theme: initialTheme,
-  sidebarOpen: true,
+  sidebarOpen: false,
   sidebarTab: "pages",
+  drawerPinned: false,
+  favoritesOpen: true,
+  toolPopoverOpen: true,
+  toolPopoverPinned: false,
   auxLines: false,
   paletteOpen: false,
   libraryOpen: false,
@@ -65,6 +81,18 @@ export const useUIStore = create<UIState>((set) => ({
   },
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarTab: (sidebarTab) => set({ sidebarTab, sidebarOpen: true }),
+  toggleSidebarTab: (sidebarTab) =>
+    set((state) => ({
+      sidebarTab,
+      sidebarOpen: state.sidebarOpen && state.sidebarTab === sidebarTab ? false : true,
+    })),
+  toggleDrawerPinned: () => set((state) => ({ drawerPinned: !state.drawerPinned })),
+  toggleFavorites: () => set((state) => ({ favoritesOpen: !state.favoritesOpen })),
+  setFavoritesOpen: (favoritesOpen) => set({ favoritesOpen }),
+  openToolPopover: () => set({ toolPopoverOpen: true }),
+  closeToolPopover: () => set({ toolPopoverOpen: false }),
+  toggleToolPopover: () => set((state) => ({ toolPopoverOpen: !state.toolPopoverOpen })),
+  toggleToolPopoverPinned: () => set((state) => ({ toolPopoverPinned: !state.toolPopoverPinned })),
   toggleAuxLines: () => set((state) => ({ auxLines: !state.auxLines })),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setLibraryOpen: (libraryOpen) => set({ libraryOpen }),

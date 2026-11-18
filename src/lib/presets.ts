@@ -70,6 +70,8 @@ export const BASE_PROPS: ToolProps = {
   underline: false,
   pressureSensitive: true,
   smoothing: false,
+  penStyle: "pro",
+  pressureLevel: 55,
 };
 
 export const ARROW_HEADS = [

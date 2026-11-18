@@ -1,4 +1,4 @@
-import type { Annotation } from "./annotationTypes";
+import type { Annotation, PenStyle } from "./annotationTypes";
 
 export type ThemeName = "light" | "dark" | "sepia";
 
@@ -150,6 +150,9 @@ export interface ToolProps {
   underline: boolean;
   pressureSensitive: boolean;
   smoothing: boolean;
+  penStyle: PenStyle;
+  /** 0..100, scales the thinning of pro and calligraphy ink. */
+  pressureLevel: number;
 }
 
 export type ToolId =

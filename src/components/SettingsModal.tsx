@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Download, RotateCcw, Upload, X } from "lucide-react";
+import { AlertTriangle, Command, Download, RotateCcw, Upload, X } from "lucide-react";
 import { MEASURE_UNITS, type MeasureUnit } from "../lib/measure";
 import { usePrefsStore, type SnapshotDpi } from "../lib/prefs";
 import {
@@ -31,6 +31,9 @@ export function SettingsModal() {
   const open = useUIStore((state) => state.settingsOpen);
   const setOpen = useUIStore((state) => state.setSettingsOpen);
   const setToast = useUIStore((state) => state.setToast);
+  const auxLines = useUIStore((state) => state.auxLines);
+  const toggleAuxLines = useUIStore((state) => state.toggleAuxLines);
+  const setPaletteOpen = useUIStore((state) => state.setPaletteOpen);
   const map = useShortcutStore((state) => state.map);
   const bind = useShortcutStore((state) => state.bind);
   const reset = useShortcutStore((state) => state.reset);
@@ -198,6 +201,26 @@ export function SettingsModal() {
                 onChange={(value) => setPrefs({ snapshotDpi: Number(value) as SnapshotDpi })}
               />
             </div>
+          </section>
+
+          <section className="flex flex-col gap-2.5">
+            <SectionTitle>Interface</SectionTitle>
+            <button
+              type="button"
+              className="chip h-8 justify-center"
+              onClick={() => {
+                setOpen(false);
+                setPaletteOpen(true);
+              }}
+            >
+              <Command size={13} /> Open Command Palette (Ctrl+K)
+            </button>
+            <ToggleRow
+              label="Show alignment guides"
+              hint="Draws the page's alignment grid while you position annotations."
+              checked={auxLines}
+              onChange={toggleAuxLines}
+            />
           </section>
 
           <section className="flex flex-col gap-2">

@@ -1,4 +1,4 @@
-import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Crop, Eraser, Group, Image as ImageIcon, Lock, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Crop, Ellipsis, Eraser, Group, HeartPlus, Image as ImageIcon, Lock, PanelRightClose, RotateCcw, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { paperTemplates, presets, stamps, userStamps } from "../lib/data";
 import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
@@ -12,10 +12,12 @@ import {
   customScaleLabel,
   useScaleStore,
 } from "../lib/measure";
+import { BASE_PROPS, presetPatch, presetsFor } from "../lib/presets";
 import { usePrefsStore, type SnapshotDpi } from "../lib/prefs";
 import { TOOL_BY_ID } from "../lib/tools";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
+import { useFavoritesStore } from "../stores/useFavoritesStore";
 import { useToolStore } from "../stores/useToolStore";
 import { useUIStore } from "../stores/useUIStore";
 import { PresetGallery } from "./PresetGallery";
@@ -433,8 +435,17 @@ export function Inspector() {
   const sync = useToolStore((state) => state.sync);
   const setSync = useToolStore((state) => state.setSync);
   const selectedStampId = useToolStore((state) => state.selectedStampId);
+  const props = useToolStore((state) => state.props[state.activeTool]);
+  const setProps = useToolStore((state) => state.setProps);
+  const addFavorite = useFavoritesStore((state) => state.add);
   const eraserSplit = useUIStore((state) => state.eraserSplit);
   const setEraserSplit = useUIStore((state) => state.setEraserSplit);
+  const toolPopoverOpen = useUIStore((state) => state.toolPopoverOpen);
+  const toolPopoverPinned = useUIStore((state) => state.toolPopoverPinned);
+  const toggleToolPopoverPinned = useUIStore((state) => state.toggleToolPopoverPinned);
+  const closeToolPopover = useUIStore((state) => state.closeToolPopover);
+  const setToast = useUIStore((state) => state.setToast);
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
@@ -464,8 +475,26 @@ export function Inspector() {
 
   const gridLabel = template.grid ? template.grid.deltaXMm ?? template.grid.deltaYMm ?? template.grid.deltaMm : null;
 
+  if (!toolPopoverOpen) return null;
+
+  const subtitle = chosen.length > 0
+    ? "Edit the selected annotations, or use the mini-bar on the page."
+    : activeTool === "pen"
+      ? `${props.penStyle} · ${Number(props.thicknessMm.toFixed(1))} mm`
+      : meta?.hint;
+
+  const addCurrentFavorite = () => {
+    addFavorite({ label: meta?.name ?? "Tool", tool: activeTool, props: { ...props }, penStyle: props.penStyle });
+    setToast(`${meta?.name ?? "Tool"} added to favourite tools`);
+  };
+
+  const resetTool = () => {
+    const factory = presetsFor(activeTool, presets)[0];
+    setProps({ ...BASE_PROPS, ...(factory ? presetPatch(factory) : {}) });
+  };
+
   return (
-    <aside className="inspector glass m-2 ml-0 hidden w-[316px] shrink-0 flex-col overflow-hidden rounded-2xl lg:flex">
+    <aside className="inspector glass anim-in absolute right-[62px] top-1/2 z-30 flex max-h-[calc(100vh-96px)] w-[320px] -translate-y-1/2 flex-col overflow-hidden rounded-2xl">
       <div className="flex items-start gap-2.5 border-b border-[var(--border)] px-3 py-2.5">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
           <Icon size={18} strokeWidth={1.75} />
@@ -477,9 +506,50 @@ export function Inspector() {
               <kbd className="rounded border border-[var(--border)] px-1 py-px text-[9px] font-medium text-muted">{meta?.shortcut}</kbd>
             )}
           </div>
-          <p className="mt-0.5 text-[10.5px] leading-snug text-muted">
-            {chosen.length > 0 ? "Edit the selected annotations, or use the mini-bar on the page." : meta?.hint}
-          </p>
+          <p className="mt-0.5 truncate text-[10.5px] leading-snug text-muted">{subtitle}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {chosen.length === 0 && meta?.needsProperties && activeTool !== "stamp" && (
+            <button type="button" className="icon-btn h-7 w-7" aria-label="Add to favourite tools" title="Add to favourite tools" onClick={addCurrentFavorite}>
+              <HeartPlus size={13} strokeWidth={1.75} />
+            </button>
+          )}
+          {chosen.length === 0 && meta?.needsProperties && (
+            <button type="button" className="icon-btn h-7 w-7" aria-label="Reset tool defaults" title="Reset tool defaults" onClick={resetTool}>
+              <RotateCcw size={13} strokeWidth={1.75} />
+            </button>
+          )}
+          {chosen.length === 0 && meta?.needsProperties && activeTool !== "stamp" && (
+            <button
+              type="button"
+              className="icon-btn h-7 w-7"
+              aria-label="Factory presets"
+              aria-pressed={presetsOpen}
+              title="Factory presets"
+              onClick={() => setPresetsOpen((open) => !open)}
+            >
+              <Ellipsis size={13} strokeWidth={1.75} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="icon-btn h-7 w-7"
+            aria-label={toolPopoverPinned ? "Unpin popover" : "Pin popover"}
+            aria-pressed={toolPopoverPinned}
+            title={toolPopoverPinned ? "Pinned: stays open while drawing" : "Unpinned: collapses when you draw"}
+            onClick={toggleToolPopoverPinned}
+          >
+            {toolPopoverPinned ? <Lock size={13} strokeWidth={1.75} /> : <Unlock size={13} strokeWidth={1.75} />}
+          </button>
+          <button
+            type="button"
+            className="icon-btn h-7 w-7"
+            aria-label="Close popover"
+            title="Close"
+            onClick={closeToolPopover}
+          >
+            <PanelRightClose size={13} strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 
@@ -562,9 +632,14 @@ export function Inspector() {
             </>
           ) : (
             <>
-              <PresetGallery tool={activeTool} />
-              <div className="divider" />
               <PropertyControls tool={activeTool} />
+
+              {presetsOpen && (
+                <>
+                  <div className="divider" />
+                  <PresetGallery tool={activeTool} />
+                </>
+              )}
 
               <div className="divider" />
               <SectionTitle>Tool properties</SectionTitle>

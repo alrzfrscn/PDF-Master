@@ -1,5 +1,5 @@
 import { getStroke } from "perfect-freehand";
-import type { InkPoint, Pt } from "./annotationTypes";
+import type { InkPoint, PenStyle, Pt } from "./annotationTypes";
 
 export interface InkOutlineOptions {
   /** Simulated pressure from velocity when the device gives no real pressure. */
@@ -7,6 +7,16 @@ export interface InkOutlineOptions {
   /** 0..1: how much the width follows pressure. */
   thinning?: number;
   smoothing?: number;
+}
+
+/** Style presets: Basic is a fixed nib, Pro and Calligraphy follow pressure. */
+export function penStyleOptions(style: PenStyle = "pro", pressureLevel = 55): Required<Pick<InkOutlineOptions, "thinning" | "smoothing" | "simulatePressure">> {
+  const level = Math.min(100, Math.max(0, pressureLevel));
+  return {
+    thinning: style === "basic" ? 0 : level / 100,
+    smoothing: style === "calligraphy" ? 0.85 : 0.5,
+    simulatePressure: style !== "basic",
+  };
 }
 
 function toStrokePoints(points: InkPoint[]) {

@@ -3,6 +3,7 @@ import { useCustomStampStore, type CustomStamp } from "./customStamps";
 import { useScaleStore, type MeasurementScale } from "./measure";
 import { useShortcutStore, type ShortcutAction } from "./shortcuts";
 import { usePrefsStore, type Prefs } from "./prefs";
+import { useFavoritesStore, type FavoriteTool } from "../stores/useFavoritesStore";
 import { useUIStore } from "../stores/useUIStore";
 
 /** Everything a `.pmbackup.json` carries besides tabs, pages and annotations. */
@@ -13,6 +14,8 @@ export interface WorkspaceStores {
   shortcuts: Record<ShortcutAction, string>;
   prefs: Prefs;
   theme: ThemeName;
+  /** Absent in backups written before the favourite tools dock. */
+  favorites?: FavoriteTool[];
 }
 
 export interface SavedWorkspace {
@@ -145,6 +148,7 @@ export function collectWorkspaceStores(): WorkspaceStores {
     shortcuts: useShortcutStore.getState().map,
     prefs: { scratchOut: prefs.scratchOut, measureUnit: prefs.measureUnit, snapshotDpi: prefs.snapshotDpi },
     theme: useUIStore.getState().theme,
+    favorites: useFavoritesStore.getState().favorites,
   };
 }
 
@@ -158,6 +162,7 @@ export function applyWorkspaceStores(stores: WorkspaceStores | undefined): void 
   if (stores.shortcuts) useShortcutStore.getState().replace(stores.shortcuts);
   if (stores.prefs) usePrefsStore.getState().replace(stores.prefs);
   if (stores.theme && THEMES.includes(stores.theme)) useUIStore.getState().setTheme(stores.theme);
+  if (Array.isArray(stores.favorites)) useFavoritesStore.getState().restore(stores.favorites);
 }
 
 export function workspaceBackup(

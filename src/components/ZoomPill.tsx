@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Maximize2, Minus, MoveHorizontal, Plus } from "lucide-react";
 import { useDocStore } from "../stores/useDocStore";
 
 export function ZoomPill() {
@@ -8,13 +8,6 @@ export function ZoomPill() {
   const setFit = useDocStore((state) => state.setFit);
   const setZoom = useDocStore((state) => state.setZoom);
 
-  const cycle = () => {
-    if (fitMode === "page") setFit("width");
-    else if (fitMode === "width") setZoom(1);
-    else setFit("page");
-  };
-  const label = fitMode === "page" ? "Fit page" : fitMode === "width" ? "Fit width" : "Custom zoom";
-
   return (
     <div className="pill">
       <button type="button" className="icon-btn h-7 w-7" aria-label="Zoom out" onClick={() => zoomBy(-1)}>
@@ -22,9 +15,29 @@ export function ZoomPill() {
       </button>
       <button
         type="button"
-        className="h-7 min-w-[62px] rounded-lg px-1 text-center text-[11.5px] font-medium tabular-nums hover:bg-[var(--hover)]"
-        onClick={cycle}
-        title={`${label} — click to cycle fit page, fit width, 100 %`}
+        className="icon-btn h-7 w-7"
+        aria-label="Fit to page"
+        aria-pressed={fitMode === "page"}
+        title="Fit to page"
+        onClick={() => setFit("page")}
+      >
+        <Maximize2 size={13} strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="icon-btn h-7 w-7"
+        aria-label="Fit to width"
+        aria-pressed={fitMode === "width"}
+        title="Fit to width"
+        onClick={() => setFit("width")}
+      >
+        <MoveHorizontal size={14} strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="h-7 min-w-[54px] rounded-lg px-1 text-center text-[11.5px] font-medium tabular-nums hover:bg-[var(--hover)]"
+        title="Reset to 100 %"
+        onClick={() => setZoom(1)}
       >
         {Math.round(zoom * 100)}%
       </button>
