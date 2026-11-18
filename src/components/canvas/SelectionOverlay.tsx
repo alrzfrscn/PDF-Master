@@ -7,6 +7,7 @@ import {
   Lock,
   RotateCw,
   SendToBack,
+  SlidersHorizontal,
   Stamp,
   Trash2,
   Ungroup,
@@ -38,6 +39,7 @@ export function handlePoints(box: BBox, rotateGapMm: number): Record<HandleId, P
 }
 
 export type SelectionAction =
+  | "style"
   | "duplicate"
   | "rotate"
   | "flip-h"
@@ -51,6 +53,7 @@ export type SelectionAction =
   | "delete";
 
 const BUTTONS: { action: SelectionAction; label: string; Icon: typeof Copy }[] = [
+  { action: "style", label: "Style / properties", Icon: SlidersHorizontal },
   { action: "duplicate", label: "Duplicate (Ctrl+D)", Icon: Copy },
   { action: "rotate", label: "Rotate 90°", Icon: RotateCw },
   { action: "flip-h", label: "Flip horizontal", Icon: FlipHorizontal2 },
@@ -68,6 +71,7 @@ interface Props {
   bounds: BBox | null;
   count: number;
   zoom: number;
+  pageWidthMm: number;
   locked: boolean;
   grouped: boolean;
   onHandleDown: (handle: HandleId, event: React.PointerEvent) => void;
@@ -75,7 +79,7 @@ interface Props {
 }
 
 /** Screen-space selection chrome; the page wrapper's CSS zoom would scale it, so it counter-scales. */
-export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandleDown, onAction }: Props) {
+export function SelectionOverlay({ bounds, count, zoom, pageWidthMm, locked, grouped, onHandleDown, onAction }: Props) {
   if (!bounds) return null;
   const scale = PX_PER_MM;
   const left = bounds.x * scale;
@@ -86,6 +90,16 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
   const hit = 24 / zoom;
   const rotateGap = 26 / scale;
   const handles = handlePoints(bounds, rotateGap);
+  // 48 screen px above the box top: keeps the bar 22 px clear of the rotate grip.
+  const lift = 48 / zoom;
+  const below = top < lift;
+  // Anchor the bar to the near edge so its 12 buttons stay inside the page.
+  const anchorRight = left + width / 2 > (pageWidthMm * scale) / 2;
+  const barLeft = anchorRight ? left + width : left;
+  const barShift = below
+    ? `translate(${anchorRight ? "-100%" : "0"}, 0)`
+    : `translate(${anchorRight ? "-100%" : "0"}, -100%)`;
+  const barOrigin = `${below ? "top" : "bottom"} ${anchorRight ? "right" : "left"}`;
 
   return (
     <div className="selection-chrome pointer-events-none absolute inset-0 z-20">
@@ -127,22 +141,29 @@ export function SelectionOverlay({ bounds, count, zoom, locked, grouped, onHandl
           </button>
         );
       })}
+      {!below && (
+        <div
+          className="absolute"
+          style={{
+            left: left + width / 2,
+            top: top - lift,
+            height: lift,
+            width: 1 / zoom,
+            background: "var(--accent)",
+            transform: "translateX(-50%)",
+          }}
+        />
+      )}
       <div
         className="absolute"
         style={{
-          left: left + width / 2,
-          top: top - 26,
-          height: 26,
-          width: 1 / zoom,
-          background: "var(--accent)",
-          transform: "translateX(-50%)",
+          left: barLeft,
+          top: below ? top + height + 12 / zoom : top - lift,
+          transform: barShift,
+          transformOrigin: barOrigin,
         }}
-      />
-      <div
-        className="absolute"
-        style={{ left: left + width / 2, top, transform: "translate(-50%, -100%)", transformOrigin: "bottom center" }}
       >
-        <div style={{ transform: `scale(${1 / zoom})`, transformOrigin: "bottom center", paddingBottom: 10 }}>
+        <div style={{ transform: `scale(${1 / zoom})`, transformOrigin: barOrigin }}>
           <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-lg px-1 py-0.5 shadow-lg">
             {BUTTONS.map(({ action, label, Icon }) => (
               <button

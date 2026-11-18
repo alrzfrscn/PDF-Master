@@ -143,9 +143,21 @@ export function ColorRow({
     <div className="field">
       <div className="field-label">
         <span>{label}</span>
-        <span className="field-value">{value ?? "None"}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="field-value">{value ?? "None"}</span>
+          {allowNone && (
+            <button
+              type="button"
+              className="chip h-5 shrink-0 px-1.5 text-[9px] normal-case tracking-normal"
+              aria-pressed={value === null}
+              onClick={() => onChange(null)}
+            >
+              None
+            </button>
+          )}
+        </span>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between">
         {SWATCHES.map((swatch) => (
           <button
             key={swatch}
@@ -158,7 +170,7 @@ export function ColorRow({
           />
         ))}
         <label
-          className="relative grid h-[22px] w-[22px] shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--border)]"
+          className="relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-[7px] border border-[var(--border)]"
           title="Custom colour"
           style={{
             backgroundColor: value ?? "transparent",
@@ -175,16 +187,6 @@ export function ColorRow({
             aria-label={`${label} custom colour`}
           />
         </label>
-        {allowNone && (
-          <button
-            type="button"
-            className="chip h-[22px] px-2 text-[10px]"
-            aria-pressed={value === null}
-            onClick={() => onChange(null)}
-          >
-            None
-          </button>
-        )}
       </div>
     </div>
   );

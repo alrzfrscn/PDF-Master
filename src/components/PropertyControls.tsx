@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { SHAPE_LABEL, type DimensionUnit, type TextAlign } from "../lib/annotationTypes";
-import { ARROW_HEADS } from "../lib/presets";
+import { ARROW_HEADS, SWATCHES } from "../lib/presets";
 import { inkPath, penStyleOptions } from "../lib/ink";
 import type { InkPoint, PenStyle } from "../lib/annotationTypes";
 import { isShapeTool, SHAPE_TOOLS } from "../lib/tools";
@@ -11,7 +11,6 @@ import { ColorRow, Segmented } from "./ui/controls";
 
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Courier New", "Verdana", "Calibri", "Trebuchet MS"];
 
-const INK_COLORS = ["#EF4444", "#2563EB", "#000000", "#10B981", "#8B5CF6", "#F97316", "#FACC15", "#EC4899", "#06B6D4"];
 const THICKNESS_PRESETS = [0.5, 0.7, 1, 1.5, 2, 2.5, 3, 5, 8, 12, 16];
 const THICKNESS_TICKS = [
   { value: 0.5, label: "1" },
@@ -30,9 +29,9 @@ const FONT_SIZES = [8, 10, 12, 14, 18, 24, 32, 48, 64, 72];
 
 const LINE_STYLES: { value: LineStyleName; label: string }[] = [
   { value: "solid", label: "Solid" },
-  { value: "dash", label: "Dashed" },
-  { value: "dot", label: "Dotted" },
-  { value: "dash-dot", label: "Dash-Dot" },
+  { value: "dash", label: "Dash" },
+  { value: "dot", label: "Dot" },
+  { value: "dash-dot", label: "Dash-dot" },
 ];
 
 const DIMENSION_UNITS: { value: DimensionUnit; label: string }[] = [
@@ -74,11 +73,18 @@ function strokePreview(style: PenStyle, level: number, thickness: number) {
   });
 }
 
+/** A live nib always stays slender, however wide the real stroke is. */
+function previewNib(tool: ToolId, thicknessMm: number) {
+  return tool === "marker"
+    ? Math.min(12, 3 + Math.sqrt(thicknessMm) * 1.5)
+    : Math.min(9, 1.5 + Math.sqrt(thicknessMm) * 1.4);
+}
+
 /** Live ink preview: colour, nib, opacity and stroke style update as you type. */
-function WavePreview({ props }: { props: ToolProps }) {
+function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
   const path = useMemo(
-    () => strokePreview(props.penStyle, props.pressureLevel, props.thicknessMm * 2.2),
-    [props],
+    () => strokePreview(props.penStyle, props.pressureLevel, previewNib(tool, props.thicknessMm)),
+    [props, tool],
   );
   return (
     <div
@@ -208,7 +214,6 @@ function ValuePill({
 function ColorGrid({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const [customOpen, setCustomOpen] = useState(false);
   const [hex, setHex] = useState(value);
-  const selected = INK_COLORS.find((color) => color.toLowerCase() === value.toLowerCase());
 
   const apply = (next: string) => {
     setHex(next);
@@ -221,29 +226,21 @@ function ColorGrid({ value, onChange }: { value: string; onChange: (value: strin
         <span>Colour</span>
         <span className="field-value">{value.toUpperCase()}</span>
       </span>
-      <div className="flex items-center justify-between gap-1">
-        {INK_COLORS.map((color) => {
-          const active = selected === color;
-          return (
-            <button
-              key={color}
-              type="button"
-              aria-label={`Ink ${color}`}
-              aria-pressed={active}
-              onClick={() => onChange(color)}
-              className="h-[22px] w-[22px] rounded-[7px] border border-black/15"
-              style={{
-                background: color,
-                outline: active ? "2px solid #fff" : undefined,
-                outlineOffset: active ? 1 : undefined,
-                boxShadow: active ? "0 0 0 3px var(--accent)" : "inset 0 1px 0 rgba(255,255,255,0.3)",
-              }}
-            />
-          );
-        })}
+      <div className="flex flex-wrap items-center justify-between gap-y-1">
+        {SWATCHES.map((color) => (
+          <button
+            key={color}
+            type="button"
+            className="swatch"
+            aria-label={`Ink ${color}`}
+            aria-pressed={color.toLowerCase() === value.toLowerCase()}
+            onClick={() => onChange(color)}
+            style={{ background: color }}
+          />
+        ))}
         <button
           type="button"
-          className="grid h-[22px] w-[22px] place-items-center rounded-[7px] border border-[var(--border)] text-[10px] font-semibold text-muted"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] border border-[var(--border)] text-[10px] font-semibold text-muted"
           aria-label="Custom colour"
           aria-pressed={customOpen}
           onClick={() => setCustomOpen((open) => !open)}
@@ -279,7 +276,7 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
 
   return (
     <div className="flex flex-col gap-3">
-      {isInk && <WavePreview props={props} />}
+      {isInk && <WavePreview tool={tool} props={props} />}
 
       {tool === "pen" && (
         <div className="grid grid-cols-3 gap-1.5">

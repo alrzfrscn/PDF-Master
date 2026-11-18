@@ -121,7 +121,7 @@ export function FormulaEditor({ initial, anchor, onSave, onClose }: Props) {
 
   return (
     <div
-      className="glass-strong anim-in fixed z-[60] flex w-[360px] flex-col gap-2.5 rounded-2xl p-3 shadow-2xl"
+      className="glass-strong anim-in no-scrollbar fixed z-[60] flex w-[360px] flex-col gap-2.5 rounded-2xl p-3 shadow-2xl"
       style={position}
       role="dialog"
       aria-label="LaTeX formula editor"
@@ -151,7 +151,7 @@ export function FormulaEditor({ initial, anchor, onSave, onClose }: Props) {
 
       <textarea
         ref={textareaRef}
-        className="scroll-thin min-h-[64px] resize-y rounded-lg border border-[var(--border)] bg-[var(--glass)] p-2 font-mono text-[11.5px]"
+        className="no-scrollbar min-h-[64px] resize-y rounded-lg border border-[var(--border)] bg-[var(--glass)] p-2 font-mono text-[11.5px]"
         aria-label="LaTeX source"
         spellCheck={false}
         value={draft.latex}
@@ -165,14 +165,14 @@ export function FormulaEditor({ initial, anchor, onSave, onClose }: Props) {
       />
 
       <div
-        className="scroll-thin flex min-h-[42px] items-center justify-center overflow-x-auto rounded-lg px-2 py-1.5"
+        className="no-scrollbar flex min-h-[42px] items-center justify-center overflow-x-auto rounded-lg px-2 py-1.5"
         style={{ background: "var(--paper)", color: draft.color, maxHeight: 84 }}
         aria-label="Formula preview"
       >
         <div style={{ fontSize: 15 }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
 
-      <div className="scroll-thin flex max-h-[186px] flex-col gap-1.5 overflow-y-auto pr-0.5">
+      <div className="no-scrollbar flex max-h-[186px] flex-col gap-1.5 overflow-y-auto pr-0.5">
         {PALETTES.map((group) => (
           <div key={group.name} className="flex flex-col gap-1">
             <span className="text-[9.5px] font-semibold uppercase tracking-[0.07em] text-muted">{group.name}</span>

@@ -12,7 +12,8 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
   const color = item.props.color ?? "#101114";
   const style = item.penStyle ?? item.props.penStyle ?? "pro";
   const level = item.props.pressureLevel ?? 55;
-  const width = Math.max(1.4, Math.min(9, (item.props.thicknessMm ?? 1) * 3));
+  // Capped so a 16 mm nib still reads as a delicate wave inside a 28 px icon.
+  const nib = Math.max(1.4, Math.min(3, 1.4 + Math.sqrt(item.props.thicknessMm ?? 1) * 0.4));
   const opacity = item.props.opacity ?? 1;
 
   const wave = useMemo(() => {
@@ -21,8 +22,8 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
       const t = index / 24;
       points.push([3 + t * 26, 14 + Math.sin(t * Math.PI * 2) * 6, 0.35 + Math.sin(t * Math.PI * 3) * 0.5 + 0.5]);
     }
-    return inkPath(points, width, { ...penStyleOptions(style, level), simulatePressure: false });
-  }, [level, style, width]);
+    return inkPath(points, nib, { ...penStyleOptions(style, level), simulatePressure: false });
+  }, [level, nib, style]);
 
   if (item.tool === "pen" || item.tool === "formula") {
     return (
@@ -51,7 +52,7 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
   if (item.tool === "line") {
     return (
       <svg viewBox="0 0 32 28" className="h-7 w-7" aria-hidden="true">
-        <line x1="6" y1="22" x2="26" y2="7" stroke={color} strokeWidth={Math.max(1.4, (item.props.thicknessMm ?? 1) * 1.6)} strokeLinecap="round" />
+        <line x1="6" y1="22" x2="26" y2="7" stroke={color} strokeWidth={nib} strokeLinecap="round" />
       </svg>
     );
   }
@@ -84,8 +85,8 @@ export function FavoriteToolsBar() {
   };
 
   return (
-    <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2 transition-[left] duration-200"style={{ left: sidebarOpen ? 316 : 56 }}>
-      <div className="glass scroll-thin flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-y-auto rounded-full px-0 py-1.5">
+    <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2" style={{ left: sidebarOpen ? 348 : 68 }}>
+      <div className="glass no-scrollbar flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto rounded-full px-0 py-1.5">
         <span className="grid h-8 w-8 place-items-center text-muted" aria-hidden="true">
           <Heart size={14} strokeWidth={1.75} />
         </span>
