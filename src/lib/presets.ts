@@ -76,6 +76,9 @@ export const BASE_PROPS: ToolProps = {
   smoothing: false,
   penStyle: "pro",
   pressureLevel: 55,
+  tipStyle: "vertical",
+  polygonSides: 6,
+  straightHighlight: false,
 };
 
 export const ARROW_HEADS = [

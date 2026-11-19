@@ -1,5 +1,5 @@
 import { useMemo, type CSSProperties, type ReactNode } from "react";
-import { SHAPE_LABEL, type DimensionUnit, type TextAlign } from "../lib/annotationTypes";
+import { SHAPE_LABEL, type DimensionUnit, type MarkerTip, type TextAlign } from "../lib/annotationTypes";
 import { ARROW_HEADS, SWATCHES } from "../lib/presets";
 import { inkPath, penStyleOptions } from "../lib/ink";
 import type { InkPoint, PenStyle } from "../lib/annotationTypes";
@@ -7,7 +7,7 @@ import { isShapeTool, SHAPE_TOOLS } from "../lib/tools";
 import type { LineStyleName, ShapeTool, ToolId, ToolProps } from "../lib/types";
 import { useToolStore } from "../stores/useToolStore";
 import { TOOL_ICONS } from "./toolIcons";
-import { ColorRow, Segmented } from "./ui/controls";
+import { ColorRow, Segmented, ToggleRow } from "./ui/controls";
 import { CustomColorPicker } from "./ui/CustomColorPicker";
 
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Courier New", "Verdana", "Calibri", "Trebuchet MS"];
@@ -42,6 +42,28 @@ const DIMENSION_UNITS: { value: DimensionUnit; label: string }[] = [
   { value: "in", label: "in" },
   { value: "ft", label: "ft" },
 ];
+
+const POLYGON_SIDES: { value: string; label: string }[] = [
+  { value: "3", label: "3" },
+  { value: "4", label: "4" },
+  { value: "5", label: "5" },
+  { value: "6", label: "6" },
+  { value: "8", label: "8" },
+];
+
+const MARKER_TIPS: { value: MarkerTip; label: string }[] = [
+  { value: "vertical", label: "Vertical" },
+  { value: "horizontal", label: "Horizontal" },
+  { value: "squared", label: "Squared" },
+  { value: "ball", label: "Ball" },
+];
+
+function TipIcon({ tip }: { tip: MarkerTip }) {
+  if (tip === "vertical") return <rect x="15" y="5" width="8" height="22" rx="1.5" fill="currentColor" />;
+  if (tip === "horizontal") return <rect x="5" y="15" width="22" height="8" rx="1.5" fill="currentColor" />;
+  if (tip === "squared") return <rect x="9" y="9" width="14" height="14" rx="1.5" fill="currentColor" />;
+  return <circle cx="16" cy="16" r="7.5" fill="currentColor" />;
+}
 
 const STROKE_STYLES: { value: PenStyle; label: string; hint: string; patch: Partial<ToolProps> }[] = [
   { value: "basic", label: "Basic", hint: "Fixed width", patch: { penStyle: "basic", pressureLevel: 0, pressureSensitive: false, smoothing: false } },
@@ -87,6 +109,8 @@ function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
     () => strokePreview(props.penStyle, props.pressureLevel, previewNib(tool, props.thicknessMm)),
     [props, tool],
   );
+  const tip = props.tipStyle ?? "vertical";
+  const band = tool === "marker" ? (tip === "horizontal" ? 8 : tip === "squared" ? 16 : tip === "ball" ? 16 : 22) : 0;
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-[var(--border)]"
@@ -94,7 +118,20 @@ function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
     >
       <svg viewBox="0 0 320 72" className="h-full w-full" aria-hidden="true">
         <line x1="6" y1="36" x2="314" y2="36" stroke="var(--border)" strokeDasharray="2 4" />
-        <path d={path} fill={props.color} opacity={props.opacity} />
+        {tool === "marker" ? (
+          <line
+            x1="24"
+            y1="36"
+            x2="296"
+            y2="36"
+            stroke={props.color}
+            strokeWidth={band}
+            strokeLinecap={tip === "squared" ? "square" : tip === "ball" ? "round" : "butt"}
+            opacity={props.opacity}
+          />
+        ) : (
+          <path d={path} fill={props.color} opacity={props.opacity} />
+        )}
       </svg>
       <span className="absolute bottom-1.5 right-2 text-[9.5px] font-medium text-muted">Live preview</span>
     </div>
@@ -244,6 +281,42 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
   return (
     <div className="flex flex-col gap-3">
       {isInk && <WavePreview tool={tool} props={props} />}
+
+      {tool === "marker" && (
+        <div className="field">
+          <span className="field-label">
+            <span>Tip style</span>
+            <span className="field-value">{MARKER_TIPS.find((tip) => tip.value === (props.tipStyle ?? "vertical"))?.label}</span>
+          </span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {MARKER_TIPS.map((tip) => (
+              <button
+                key={tip.value}
+                type="button"
+                className="tile flex flex-col items-center gap-0.5 px-1 py-1.5"
+                aria-pressed={(props.tipStyle ?? "vertical") === tip.value}
+                aria-label={`${tip.label} highlighter tip`}
+                title={tip.label}
+                onClick={() => setProps({ tipStyle: tip.value })}
+              >
+                <svg viewBox="0 0 32 32" className="h-6 w-6" aria-hidden="true" style={{ color: props.color }}>
+                  <TipIcon tip={tip.value} />
+                </svg>
+                <span className="text-[9px] font-medium">{tip.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tool === "marker" && (
+        <ToggleRow
+          label="Straight line highlight"
+          hint="Snaps the highlight to a straight line between start and end."
+          checked={Boolean(props.straightHighlight)}
+          onChange={(straightHighlight) => setProps({ straightHighlight })}
+        />
+      )}
 
       {tool === "pen" && (
         <div className="grid grid-cols-3 gap-1.5">
@@ -514,6 +587,19 @@ export function PropertyControls({ tool }: { tool: ToolId }) {
       <div className="flex flex-col gap-3">
         <ShapeGrid tool={shape} />
         <ShapePreview tool={shape} props={props} />
+        {shape === "polygon" && (
+          <div className="field">
+            <span className="field-label">
+              <span>Sides</span>
+              <span className="field-value">{props.polygonSides ?? 6}</span>
+            </span>
+            <Segmented
+              value={String(props.polygonSides ?? 6)}
+              options={POLYGON_SIDES}
+              onChange={(value) => setProps({ polygonSides: Number(value) as 3 | 4 | 5 | 6 | 8 })}
+            />
+          </div>
+        )}
         <StudioInk tool={tool} props={props} setProps={setProps} />
 
         {shape !== "line" && shape !== "arrow" && shape !== "dimension" && (

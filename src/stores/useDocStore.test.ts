@@ -59,3 +59,27 @@ describe("document store bookmarks", () => {
     expect(bookmarks()[0]).toMatchObject({ pageIndex: 2, pageId: "p2" });
   });
 });
+
+describe("closing the last tab", () => {
+  it("replaces it with a fresh blank tab", () => {
+    const blank: DocumentTab = {
+      id: "doc-last",
+      title: "Last",
+      templateId: "paper-000",
+      landscape: false,
+      pageCount: 1,
+      pages: [page("only")],
+    };
+    useDocStore.setState({ tabs: [blank], activeId: blank.id, page: 1, history: {}, lastClosedTab: null });
+
+    useDocStore.getState().closeTab(blank.id);
+
+    const state = useDocStore.getState();
+    expect(state.tabs).toHaveLength(1);
+    expect(state.tabs[0].id).not.toBe(blank.id);
+    expect(state.activeId).toBe(state.tabs[0].id);
+    expect(state.tabs[0].pages).toHaveLength(1);
+    expect(state.tabs[0].pages[0].annotations).toEqual([]);
+    expect(state.lastClosedTab).toBeNull();
+  });
+});

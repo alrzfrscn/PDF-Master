@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { stampById, userStamps } from "./data";
 
 /** A snapshot or converted selection saved as a reusable raster stamp. */
 export interface CustomStamp {
@@ -17,7 +18,36 @@ const STORE = "stamps";
 
 export interface StampWriteResult {
   ok: boolean;
+  /** The created stamp, present as soon as the store accepts it. */
+  stamp?: CustomStamp;
   error?: string;
+}
+
+export interface ResolvedStamp {
+  id: string;
+  name: string;
+  imageUrl: string;
+  /** Natural raster width in pixels. */
+  width: number;
+  /** Natural raster height in pixels. */
+  height: number;
+  source: "custom" | "factory" | "user";
+}
+
+/** One lookup for every stamp source; saved stamps win over factory ids. */
+export function resolveStamp(id: string | null | undefined): ResolvedStamp | null {
+  if (!id) return null;
+  const custom = useCustomStampStore.getState().stamps.find((stamp) => stamp.id === id);
+  if (custom) {
+    return { id: custom.id, name: custom.name, imageUrl: custom.imageUrl, width: custom.width, height: custom.height, source: "custom" };
+  }
+  const factory = stampById.get(id);
+  if (factory?.imageUrl) {
+    return { id: factory.id, name: factory.title.en, imageUrl: factory.imageUrl, width: factory.width, height: factory.height, source: "factory" };
+  }
+  const user = userStamps.find((stamp) => stamp.id === id);
+  if (user) return { id: user.id, name: user.name, imageUrl: user.imageUrl, width: user.inkWidth, height: user.inkHeight, source: "user" };
+  return null;
 }
 
 function openDb(): Promise<IDBDatabase | null> {
@@ -106,7 +136,7 @@ export const useCustomStampStore = create<CustomStampState>((set, get) => ({
     const stamps = [created, ...get().stamps];
     persist(stamps);
     set({ stamps });
-    return mirror(stamps);
+    return { ...(await mirror(stamps)), stamp: created };
   },
   remove: (id) => {
     const stamps = get().stamps.filter((stamp) => stamp.id !== id);

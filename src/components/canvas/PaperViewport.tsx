@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FileText, Image as ImageIcon } from "lucide-react";
-import { clamp, fitScale, PX_PER_MM } from "../../lib/paper";
+import { clamp, PX_PER_MM } from "../../lib/paper";
 import { pageSizeMm, pageTemplate } from "../../lib/pageUtils";
 import { addImageStamp } from "../../lib/images";
 import { readImageFile } from "../../lib/raster";
@@ -177,6 +177,7 @@ function PageView({
         register(node);
       }}
       data-page-index={index}
+      data-page-number={index + 1}
       className="relative shrink-0"
       style={{ width: displayW, height: displayH }}
       onPointerDownCapture={(event) => {
@@ -252,6 +253,9 @@ export function PaperViewport() {
   const gridStyle = useUIStore((state) => state.gridStyle);
   const lastError = useDocStore((state) => state.lastError);
   const touchDrawEnabled = usePrefsStore((state) => state.touchDrawEnabled);
+  const sidebarOpen = useUIStore((state) => state.sidebarOpen);
+  const favoritesOpen = useUIStore((state) => state.favoritesOpen);
+  const presentation = useUIStore((state) => state.presentation);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
   const pageNumber = clamp(pageIndex, 1, tab.pages.length);
@@ -261,6 +265,9 @@ export function PaperViewport() {
   const fitSize = rotated ? { widthMm: size.heightMm, heightMm: size.widthMm } : size;
   const continuous = viewMode === "one-continuous" || viewMode === "two-continuous";
   const twoPage = viewMode === "two-page" || viewMode === "two-continuous";
+  // Floating controls cover part of the canvas; fitting must centre in the rest.
+  const leftInset = presentation ? 0 : sidebarOpen ? 344 : favoritesOpen ? 120 : 68;
+  const rightInset = presentation ? 0 : 76;
 
   const rows = useMemo(() => buildRows(tab.pages.length, twoPage, separateCoverPage), [tab.pages.length, twoPage, separateCoverPage]);
   const displayRows = useMemo(() => {
@@ -273,6 +280,7 @@ export function PaperViewport() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef(new Map<number, HTMLDivElement>());
   const drag = useRef<{ x: number; y: number; panX: number; panY: number; scroll: boolean } | null>(null);
+  const programmaticScrollUntil = useRef(0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const panRef = useRef(pan);
   panRef.current = pan;
@@ -340,7 +348,8 @@ export function PaperViewport() {
     };
   }, []);
 
-  // Fit to the viewport whenever that fit was requested, or the page/rotation changes.
+  // Fit to the safe workspace between the floating side rails whenever that fit
+  // was requested, or the page/rotation/sidebars change.
   useLayoutEffect(() => {
     if (!fitMode) return;
     const element = viewportRef.current;
@@ -348,17 +357,23 @@ export function PaperViewport() {
     const apply = () => {
       const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
-      const target = twoPage
-        ? { widthMm: fitSize.widthMm * 2 + 12, heightMm: fitSize.heightMm }
-        : fitSize;
-      useDocStore.setState({ zoom: fitScale(rect.width, rect.height, target, fitMode, 120) });
+      const rowWidthPx = (twoPage ? fitSize.widthMm * 2 + 12 : fitSize.widthMm) * PX_PER_MM;
+      const rowHeightPx = fitSize.heightMm * PX_PER_MM;
+      const availWidth = Math.max(200, rect.width - leftInset - rightInset - 24);
+      const availHeight = Math.max(200, rect.height - 8);
+      const zoom = fitMode === "width" ? availWidth / rowWidthPx : Math.min(availWidth / rowWidthPx, availHeight / rowHeightPx);
+      useDocStore.setState({ zoom: clamp(zoom, 0.1, 6) });
       setPan({ x: 0, y: 0 });
+      if (continuous) {
+        const active = useDocStore.getState().page;
+        requestAnimationFrame(() => pageRefs.current.get(active - 1)?.scrollIntoView({ block: "start" }));
+      }
     };
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [fitMode, fitSize.widthMm, fitSize.heightMm, twoPage, viewMode]);
+  }, [fitMode, fitSize.widthMm, fitSize.heightMm, twoPage, viewMode, leftInset, rightInset, continuous]);
 
   useEffect(() => {
     setPan({ x: 0, y: 0 });
@@ -424,12 +439,27 @@ export function PaperViewport() {
     return () => window.removeEventListener("pm:search-focus", onFocus);
   }, [continuous]);
 
+  // An explicit page jump (top bar, sidebar, PageUp/PageDown) scrolls the
+  // continuous view to that page; the scroll listener must not undo it.
+  useEffect(() => {
+    const onGoto = (event: Event) => {
+      const detail = (event as CustomEvent<{ page?: number }>).detail;
+      if (!continuous || !detail || typeof detail.page !== "number") return;
+      programmaticScrollUntil.current = Date.now() + 400;
+      const node = scrollRef.current?.querySelector<HTMLElement>(`[data-page-number="${detail.page}"]`);
+      node?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener("pm:goto-page", onGoto);
+    return () => window.removeEventListener("pm:goto-page", onGoto);
+  }, [continuous]);
+
   const canPan = activeTool === "hand" || spaceDown;
   const cursor = drag.current ? "grabbing" : canPan ? "grab" : "default";
 
   const scrollToCenterPage = () => {
     const element = scrollRef.current;
     if (!element) return;
+    if (Date.now() < programmaticScrollUntil.current) return;
     const rect = element.getBoundingClientRect();
     const center = rect.top + rect.height / 2;
     let best = useDocStore.getState().page;
@@ -442,7 +472,8 @@ export function PaperViewport() {
         best = index + 1;
       }
     }
-    if (best !== useDocStore.getState().page) useDocStore.getState().setPage(best);
+    // Scrolling is not navigation: update the page without a goto event.
+    if (best !== useDocStore.getState().page) useDocStore.setState({ page: best });
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -483,7 +514,8 @@ export function PaperViewport() {
   };
 
   const activate = (index: number) => {
-    if (useDocStore.getState().page !== index + 1) useDocStore.getState().setPage(index + 1);
+    // Clicking a page on screen is not a jump request.
+    if (useDocStore.getState().page !== index + 1) useDocStore.setState({ page: index + 1 });
   };
 
   const pageNodes = (row: number[], observe: boolean) =>
@@ -546,10 +578,18 @@ export function PaperViewport() {
       {continuous ? (
         <div
           ref={scrollRef}
-          className="doc-scroll absolute inset-0 overflow-auto"
+          className="doc-scroll absolute inset-0 overflow-y-scroll overflow-x-auto"
           onScroll={scrollToCenterPage}
         >
-          <div className="flex min-h-full flex-col items-center gap-5 px-12 py-8" style={{ width: "max-content", minWidth: "100%" }}>
+          <div
+            className="flex min-h-full flex-col items-center gap-5 py-8"
+            style={{
+              width: "max-content",
+              minWidth: "100%",
+              paddingLeft: Math.max(24, leftInset),
+              paddingRight: Math.max(24, rightInset),
+            }}
+          >
             {displayRows.map((row, rowIndex) => (
               <div key={rowIndex} className="flex items-start justify-center gap-5">
                 {pageNodes(row, true)}
@@ -559,8 +599,11 @@ export function PaperViewport() {
         </div>
       ) : (
         <div
-          className="page-stage absolute left-1/2 top-1/2 will-change-transform"
-          style={{ transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)` }}
+          className="page-stage absolute top-1/2 will-change-transform"
+          style={{
+            left: `calc(50% + ${(leftInset - rightInset) / 2}px)`,
+            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
+          }}
         >
           <div className="flex items-start justify-center gap-5">{pageNodes(displayRows[0], false)}</div>
         </div>

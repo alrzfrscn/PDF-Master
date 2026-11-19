@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PenAnnotation, ShapeAnnotation, ShapeType } from "../lib/annotationTypes";
 import { annotationBounds } from "../lib/annotationGeometry";
-import { useAnnotationStore } from "./useAnnotationStore";
+import { useAnnotationStore, selectionForAnnotation } from "./useAnnotationStore";
 import { newPage, useDocStore } from "./useDocStore";
 import type { DocumentTab } from "../lib/types";
 
@@ -153,6 +153,16 @@ describe("annotation store", () => {
 
     useDocStore.getState().undo();
     expect(annotations().map((annotation) => annotation.id)).toEqual(["ink-1", "ink-2"]);
+  });
+
+  it("selects only the clicked annotation when it has no group", () => {
+    useAnnotationStore.getState().addMany([shape("a1", 10, 10), shape("a2", 40, 10), shape("a3", 70, 10)]);
+    const hit = annotations()[0];
+    const ids = selectionForAnnotation(annotations(), hit);
+    useAnnotationStore.getState().select(ids);
+    expect(ids).toEqual(["a1"]);
+    expect(useAnnotationStore.getState().selection).toHaveLength(1);
+    expect(useAnnotationStore.getState().selection).not.toContain("a2");
   });
 
   it("gives duplicated groups a fresh group id", () => {

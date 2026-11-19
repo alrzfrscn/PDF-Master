@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSearchText, searchTextContains } from "./pdfSearch";
+import { findTextMatches, normalizeSearchText, pdfTextRect, searchTextContains } from "./pdfSearch";
+
+const PT_TO_MM = 25.4 / 72;
 
 // "باکتری‌شناسی" with a ZWNJ between the two words.
 const ZWNJ_WORD = "\u0628\u0627\u06A9\u062A\u0631\u06CC\u200C\u0634\u0646\u0627\u0633\u06CC";
@@ -35,5 +37,40 @@ describe("Persian and multilingual search normalisation", () => {
   it("finds a legacy visual order run", () => {
     // "یسانش" is the reversed run of "شناسی".
     expect(searchTextContains("\u06CC\u0633\u0627\u0646\u0634", normalizeSearchText("\u0634\u0646\u0627\u0633\u06CC"))).toBe(true);
+  });
+});
+
+describe("word-level search", () => {
+  it("returns original indices for a latin word", () => {
+    expect(findTextMatches("Hello world", "world")).toEqual([{ start: 6, end: 11 }]);
+    expect(findTextMatches("Hello world", "hello")).toEqual([{ start: 0, end: 5 }]);
+  });
+
+  it("rejects a partial word when wholeWord is on", () => {
+    expect(findTextMatches("water damage", "water", true)).toEqual([{ start: 0, end: 5 }]);
+    expect(findTextMatches("waterfall", "water", true)).toEqual([]);
+    expect(findTextMatches("آب", "آب", true)).toHaveLength(1);
+    expect(findTextMatches("آبدهی", "آب", true)).toEqual([]);
+  });
+
+  it("boxes a latin slice inside the text item", () => {
+    const item = { str: "Hello world", transform: [1, 0, 0, 1, 100, 700], width: 110, height: 12 };
+    const rect = pdfTextRect(item, 6, 11, 792);
+    expect(rect.xMm).toBeCloseTo(100 * PT_TO_MM + (6 / 11) * 110 * PT_TO_MM);
+    expect(rect.widthMm).toBeCloseTo((5 / 11) * 110 * PT_TO_MM);
+    expect(rect.yMm).toBeCloseTo((792 - 700 - 12) * PT_TO_MM);
+  });
+
+  it("boxes a Persian slice from the right edge of the run", () => {
+    const item = { str: "آبدهی", transform: [1, 0, 0, 1, 200, 500], width: 50, height: 14 };
+    const right = pdfTextRect(item, 0, 2, 792);
+    // "آب" starts the logical string, so it sits at the visual right edge.
+    expect(right.xMm).toBeCloseTo(200 * PT_TO_MM + 0.6 * 50 * PT_TO_MM);
+    expect(right.widthMm).toBeCloseTo((2 / 5) * 50 * PT_TO_MM);
+    expect(right.xMm).toBeGreaterThan(200 * PT_TO_MM + 25 * PT_TO_MM);
+
+    const left = pdfTextRect(item, 2, 5, 792);
+    expect(left.xMm).toBeCloseTo(200 * PT_TO_MM);
+    expect(left.widthMm).toBeCloseTo((3 / 5) * 50 * PT_TO_MM);
   });
 });

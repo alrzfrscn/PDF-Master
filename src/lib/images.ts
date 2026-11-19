@@ -4,6 +4,7 @@ import { pageSizeMm } from "./pageUtils";
 import type { RasterImage } from "./raster";
 import { makeId, useDocStore } from "../stores/useDocStore";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
+import { useToolStore } from "../stores/useToolStore";
 
 /** Places a raster image as a movable, scalable stamp annotation. */
 export function addImageStamp(image: RasterImage, atMm?: Pt): string | null {
@@ -33,5 +34,8 @@ export function addImageStamp(image: RasterImage, atMm?: Pt): string | null {
     opacity: 1,
   };
   useAnnotationStore.getState().add(annotation);
+  // The fresh image is ready to move or resize, not another trip to the file picker.
+  useAnnotationStore.getState().select([annotation.id]);
+  useToolStore.getState().setTool("select");
   return annotation.id;
 }

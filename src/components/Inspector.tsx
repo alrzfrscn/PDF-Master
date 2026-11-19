@@ -1,9 +1,9 @@
 import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Ellipsis, Eraser, Group, HeartPlus, Lock, PanelRightClose, RotateCcw, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
 import { useMemo, useState } from "react";
-import { presets, stamps, userStamps } from "../lib/data";
+import { presets } from "../lib/data";
 import { pageSizeMm } from "../lib/pageUtils";
 import { SHAPE_LABEL, TEXT_FONTS, type Annotation, type AnnotationPatch, type AlignMode, type TextAlign } from "../lib/annotationTypes";
-import { useCustomStampStore } from "../lib/customStamps";
+import { resolveStamp, useCustomStampStore } from "../lib/customStamps";
 import {
   MEASURE_MODES,
   MEASURE_UNITS,
@@ -453,13 +453,12 @@ export function Inspector() {
   const Icon = TOOL_ICONS[activeTool];
 
   const selectedStamp = useMemo(() => {
-    const factory = stamps.find((stamp) => stamp.id === selectedStampId);
-    if (factory) return { name: factory.title.en, imageUrl: factory.imageUrl, width: factory.width, height: factory.height, sub: "Factory stamp" };
-    const user = userStamps.find((stamp) => stamp.id === selectedStampId);
-    if (user) return { name: user.name, imageUrl: user.imageUrl, width: user.inkWidth, height: user.inkHeight, sub: user.groupName };
-    const custom = customStamps.find((stamp) => stamp.id === selectedStampId);
-    if (custom) return { name: custom.name, imageUrl: custom.imageUrl, width: custom.width, height: custom.height, sub: "Saved stamp" };
-    return null;
+    const stamp = resolveStamp(selectedStampId);
+    if (!stamp) return null;
+    const sub = stamp.source === "factory" ? "Factory stamp" : stamp.source === "user" ? "My stamps" : "Saved stamp";
+    return { name: stamp.name, imageUrl: stamp.imageUrl, width: stamp.width, height: stamp.height, sub };
+    // customStamps is read so a store update re-resolves the preview.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customStamps, selectedStampId]);
 
   if (!toolPopoverOpen) return null;

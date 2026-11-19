@@ -26,6 +26,16 @@ export function cloneAnnotations(annotations: Annotation[]): Annotation[] {
   return structuredClone(annotations);
 }
 
+/**
+ * Ids a click should select. Only a real group id expands to its siblings;
+ * ungrouped annotations share `undefined`, which must never mean "all".
+ */
+export function selectionForAnnotation(annotations: Annotation[], hit: Annotation): string[] {
+  const groupId = typeof hit.groupId === "string" && hit.groupId.length > 0 ? hit.groupId : null;
+  if (!groupId) return [hit.id];
+  return annotations.filter((annotation) => annotation.groupId === groupId).map((annotation) => annotation.id);
+}
+
 interface ActiveContext {
   tabId: string;
   pageIndex: number;

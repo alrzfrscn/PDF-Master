@@ -21,6 +21,7 @@ import {
   formatDimension,
   hitTest,
   pointInPolygon,
+  regularPolygonPoints,
   rotateAnnotation,
   scaleAnnotation,
   selectionBounds,
@@ -29,8 +30,7 @@ import {
 import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
 import { inkPath, penStyleOptions, polylinePath, pointerPressure } from "../../lib/ink";
 import { PX_PER_MM } from "../../lib/paper";
-import { stampById, userStamps } from "../../lib/data";
-import { useCustomStampStore } from "../../lib/customStamps";
+import { resolveStamp, useCustomStampStore } from "../../lib/customStamps";
 import { captureRegion, readImageFile, type RasterImage } from "../../lib/raster";
 import { addImageStamp } from "../../lib/images";
 import { usePrefsStore } from "../../lib/prefs";
@@ -65,7 +65,6 @@ type Draft =
   | { kind: "marquee"; start: Pt; end: Pt }
   | { kind: "lasso"; points: Pt[] }
   | { kind: "stamp"; start: Pt; end: Pt; widthMm: number; heightMm: number }
-  | { kind: "polygon"; points: Pt[] }
   | { kind: "text"; start: Pt; end: Pt }
   | { kind: "snapshot"; start: Pt; end: Pt }
   | null;
@@ -100,7 +99,8 @@ const EPSILON = 0.001;
 const LONG_PRESS_MS = 320;
 const LONG_PRESS_TOLERANCE_PX = 4;
 // Tools whose press can also mean "hold to select what is underneath".
-const LONG_PRESS_TOOLS = ["pen", "marker", "line", "arrow", "rectangle", "ellipse", "polygon", "dimension", "stamp", "text", "formula"];
+// Pen and highlighter are excluded: a held nib or a dot is still ink.
+const LONG_PRESS_TOOLS = ["line", "arrow", "rectangle", "ellipse", "polygon", "dimension", "stamp", "text", "formula"];
 
 function distance(a: Pt, b: Pt): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -156,13 +156,17 @@ function samplePoints(annotation: Annotation): Pt[] {
 }
 
 function stampArt(stampId: string) {
-  const factory = stampById.get(stampId);
-  if (factory) return { imageUrl: factory.imageUrl, width: factory.width, height: factory.height, name: factory.title.en };
-  const user = userStamps.find((stamp) => stamp.id === stampId);
-  if (user) return { imageUrl: user.imageUrl, width: user.inkWidth, height: user.inkHeight, name: user.name };
-  const custom = useCustomStampStore.getState().stamps.find((stamp) => stamp.id === stampId);
-  if (custom) return { imageUrl: custom.imageUrl, width: custom.width, height: custom.height, name: custom.name };
-  return null;
+  const stamp = resolveStamp(stampId);
+  return stamp ? { imageUrl: stamp.imageUrl, width: stamp.width, height: stamp.height, name: stamp.name } : null;
+}
+
+/** Marker nib: vertical is a tall band, horizontal a flat one. */
+// shortcut: a nib is approximated by stroke width and cap, upgrade to a shaped outline if tips must be exact.
+function markerNib(tip: MarkerTip | undefined, thicknessMm: number): { width: number; cap: "butt" | "square" | "round" } {
+  if (tip === "horizontal") return { width: Math.max(0.6, thicknessMm * 0.45), cap: "butt" };
+  if (tip === "squared") return { width: thicknessMm, cap: "square" };
+  if (tip === "ball") return { width: thicknessMm, cap: "round" };
+  return { width: thicknessMm, cap: "butt" };
 }
 
 function normalizeFont(name: string | undefined): string {
@@ -231,15 +235,14 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
     );
   }
   if (annotation.type === "marker") {
-    const stroke = annotation.color;
-    const cap = annotation.tipStyle === "squared" ? "square" : annotation.tipStyle === "ball" ? "round" : "butt";
+    const nib = markerNib(annotation.tipStyle, annotation.thicknessMm);
     return (
       <polyline
         points={annotation.points.map(([x, y]) => `${x},${y}`).join(" ")}
         fill="none"
-        stroke={stroke}
-        strokeWidth={annotation.thicknessMm}
-        strokeLinecap={cap}
+        stroke={annotation.color}
+        strokeWidth={nib.width}
+        strokeLinecap={nib.cap}
         strokeLinejoin="round"
         opacity={annotation.opacity}
         style={{ mixBlendMode: "multiply" }}
@@ -483,15 +486,23 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
   }, [widthMm, heightMm]);
 
   const commitInk = (points: InkPoint[], tool: "pen" | "marker", shift: boolean) => {
-    if (points.length < 2) return;
-    let final = points;
-    if (shift) {
-      const first = points[0];
-      const last = points[points.length - 1];
+    if (points.length < 1) return;
+    // A tap is a dot: two points give it a visible nib mark.
+    let final: InkPoint[] = points.length === 1 ? [points[0], [points[0][0] + 0.01, points[0][1], points[0][2]]] : points;
+    if (tool === "marker" && (toolProps.straightHighlight || shift)) {
+      const first = final[0];
+      const last = final[final.length - 1];
+      const angle = Math.abs((Math.atan2(last[1] - first[1], last[0] - first[0]) * 180) / Math.PI);
+      const endY = angle <= 4 || angle >= 176 ? first[1] : last[1];
+      final = [first, [last[0], endY, last[2]]];
+    } else if (shift) {
+      const first = final[0];
+      const last = final[final.length - 1];
       const snapped = snapAngle([first[0], first[1]], [last[0], last[1]]);
       final = [first, [snapped[0], snapped[1], last[2]]];
     }
-    if (tool === "pen" && usePrefsStore.getState().scratchOut && detectScratchOut(final)) {
+    // Only a deliberate, wide, rapidly zig-zagging scribble erases; handwriting never does.
+    if (tool === "pen" && usePrefsStore.getState().scratchOut && detectScratchOut(final, { minReversals: 8, minAspect: 3.5 })) {
       const xs = points.map(([x]) => x);
       const ys = points.map(([, y]) => y);
       useAnnotationStore.getState().scratchOut({
@@ -523,17 +534,20 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
             color: toolProps.color,
             thicknessMm: toolProps.thicknessMm,
             opacity: toolProps.opacity === 1 ? 0.45 : toolProps.opacity,
-            tipStyle: (toolProps as { tipStyle?: MarkerTip }).tipStyle ?? "vertical",
+            tipStyle: toolProps.tipStyle ?? "vertical",
           };
     addSilently(annotation);
   };
 
   const commitShape = (shapeType: ShapeType, start: Pt, end: Pt, points: Pt[] = []) => {
-    if (shapeType === "polygon" ? points.length < 2 : distance(start, end) < 0.4) return;
-    const shape = shapeProps(shapeType, start, shapeType === "polygon" ? points[points.length - 1] : end);
-    shape.points = points;
+    const polygon = shapeType === "polygon";
+    if (polygon ? points.length < 3 : distance(start, end) < 0.4) return;
+    const shape = shapeProps(shapeType, start, end);
+    shape.points = polygon ? points : [];
     addSilently(shape);
   };
+
+  const polygonSides = () => toolProps.polygonSides ?? 6;
 
   const commitStamp = (start: Pt, end: Pt) => {
     const art = selectedStampId ? stampArt(selectedStampId) : null;
@@ -577,23 +591,10 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
           return;
         }
       }
-      if (activeTool !== "polygon") return;
-      if (event.key === "Escape") {
-        interaction.current = null;
-        setDraft(null);
-        return;
-      }
-      if (event.key === "Enter" && draft?.kind === "polygon" && draft.points.length >= 3) {
-        event.preventDefault();
-        const points = draft.points;
-        commitShape("polygon", points[0], points[points.length - 1], points);
-        interaction.current = null;
-        setDraft(null);
-      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeTool, draft, measure, measureMode]);
+  }, [activeTool, measure, measureMode]);
 
   const selectAt = (point: Pt, additive: boolean): Annotation | null => {
     const list = page.annotations;
@@ -612,7 +613,8 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       return null;
     }
     let ids = [hit.id];
-    if (hit.groupId) ids = list.filter((annotation) => annotation.groupId === hit.groupId).map((annotation) => annotation.id);
+    const groupId = typeof hit.groupId === "string" && hit.groupId.length > 0 ? hit.groupId : null;
+    if (groupId) ids = list.filter((annotation) => annotation.groupId === groupId).map((annotation) => annotation.id);
     if (additive) {
       const all = ids.every((id) => store.selection.includes(id));
       store.select(all ? store.selection.filter((id) => !ids.includes(id)) : [...new Set([...store.selection, ...ids])]);
@@ -718,27 +720,10 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       case "arrow":
       case "rectangle":
       case "ellipse":
+      case "polygon":
       case "dimension": {
         begin({ kind: "shape", start: point, tool: activeTool });
         setDraft({ kind: "shape", shape: shapeProps(activeTool, point, point) });
-        return;
-      }
-      case "polygon": {
-        const current = interaction.current;
-        if (current?.kind === "shape") {
-          const points = [...(draft?.kind === "polygon" ? draft.points : []), point];
-          const first = points[0];
-          if (points.length >= 3 && distance(point, first) < 2.2) {
-            commitShape("polygon", first, point, points.slice(0, -1));
-            interaction.current = null;
-            setDraft(null);
-            return;
-          }
-          setDraft({ kind: "polygon", points });
-          return;
-        }
-        begin({ kind: "shape", start: point, tool: "polygon" });
-        setDraft({ kind: "polygon", points: [point] });
         return;
       }
       case "stamp": {
@@ -846,7 +831,9 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
         : 0.5;
       const first = current.points[0];
       let points = [...current.points, [point[0], point[1], pressure] as InkPoint];
-      if (event.shiftKey) {
+      if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
+        points = [first, [point[0], point[1], pressure]];
+      } else if (event.shiftKey) {
         const snapped = snapAngle([first[0], first[1]], point);
         points = [first, [snapped[0], snapped[1], pressure]];
       }
@@ -857,10 +844,10 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       return;
     }
     if (current.kind === "shape") {
-      if (current.tool === "polygon") return;
-      const boxy = current.tool === "rectangle" || current.tool === "ellipse";
+      const boxy = current.tool === "rectangle" || current.tool === "ellipse" || current.tool === "polygon";
       const end = constrainEnd(current.start, point, event.shiftKey, event.ctrlKey || event.metaKey, boxy);
       const shape = shapeProps(current.tool, current.start, end);
+      if (current.tool === "polygon") shape.points = regularPolygonPoints(current.start, end, polygonSides());
       setDraft({ kind: "shape", shape });
       return;
     }
@@ -983,10 +970,15 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     }
     const point = toMm(event.clientX, event.clientY);
     if (current.kind === "ink") commitInk(current.points, current.tool, event.shiftKey);
-    if (current.kind === "shape" && current.tool !== "polygon") {
-      const boxy = current.tool === "rectangle" || current.tool === "ellipse";
+    if (current.kind === "shape") {
+      const boxy = current.tool === "rectangle" || current.tool === "ellipse" || current.tool === "polygon";
       const end = constrainEnd(current.start, point, event.shiftKey, event.ctrlKey || event.metaKey, boxy);
-      commitShape(current.tool, current.start, end);
+      if (current.tool === "polygon") {
+        const points = distance(current.start, end) < 0.4 ? [] : regularPolygonPoints(current.start, end, polygonSides());
+        commitShape("polygon", current.start, end, points);
+      } else {
+        commitShape(current.tool, current.start, end);
+      }
     }
     if (current.kind === "stamp") commitStamp(current.start, point);
     if (current.kind === "text") {
@@ -1014,7 +1006,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       if (box.width > 0.6 || box.height > 0.6) selectInBox(box, current.additive);
     }
     if (current.kind === "lasso") selectInLasso(current.points);
-    if (current.kind === "shape" && current.tool === "polygon") return;
     setDraft(null);
   };
 
@@ -1044,6 +1035,9 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     if (!result.ok) {
       useUIStore.getState().setToast(`Stamp added for this session only: ${result.error ?? "storage failed"}`);
     }
+    // Place the stamp that was just captured, never a factory fallback.
+    if (result.stamp) useToolStore.getState().setStamp(result.stamp.id);
+    useToolStore.getState().setTool("stamp");
     setSnap({ region, image, status: result.ok ? "Saved to stamps" : "Saved for this session" });
     return true;
   };
@@ -1262,14 +1256,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
           setDraft(null);
         }}
         onDoubleClick={(event) => {
-          if (activeTool === "polygon" && draft?.kind === "polygon" && draft.points.length >= 3) {
-            event.stopPropagation();
-            const points = draft.points;
-            commitShape("polygon", points[0], points[points.length - 1], points);
-            interaction.current = null;
-            setDraft(null);
-            return;
-          }
           const point = toMm(event.clientX, event.clientY);
           const hit = [...page.annotations]
             .reverse()
@@ -1311,25 +1297,22 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
               opacity={toolProps.opacity}
             />
           ) : (
-            <polyline
-              points={draft.points.map(([x, y]) => `${x},${y}`).join(" ")}
-              fill="none"
-              stroke={toolProps.color}
-              strokeWidth={toolProps.thicknessMm}
-              strokeLinecap="butt"
-              opacity={toolProps.opacity}
-              style={{ mixBlendMode: "multiply" }}
-            />
+            (() => {
+              const nib = markerNib(toolProps.tipStyle, toolProps.thicknessMm);
+              return (
+                <polyline
+                  points={draft.points.map(([x, y]) => `${x},${y}`).join(" ")}
+                  fill="none"
+                  stroke={toolProps.color}
+                  strokeWidth={nib.width}
+                  strokeLinecap={nib.cap}
+                  opacity={toolProps.opacity}
+                  style={{ mixBlendMode: "multiply" }}
+                />
+              );
+            })()
           ))}
         {draft?.kind === "shape" && <AnnotationView annotation={draft.shape} />}
-        {draft?.kind === "polygon" && (
-          <g fill="none" stroke="var(--accent)" strokeWidth={0.4} strokeDasharray="1 0.8">
-            <path d={polylinePath(draft.points, draft.points.length >= 3)} />
-            {draft.points.map(([x, y], index) => (
-              <circle key={index} cx={x} cy={y} r={index === 0 ? 1.1 : 0.75} fill="var(--paper)" />
-            ))}
-          </g>
-        )}
         {draft?.kind === "marquee" && (
           <rect
             x={Math.min(draft.start[0], draft.end[0])}
@@ -1423,6 +1406,8 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
           region={snap.region}
           imageUrl={snap.image?.dataUrl ?? null}
           zoom={zoom}
+          widthMm={widthMm}
+          heightMm={heightMm}
           status={snap.status}
           onCopy={() => {
             if (!snap.image) return;

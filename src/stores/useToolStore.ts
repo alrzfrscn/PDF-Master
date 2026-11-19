@@ -33,6 +33,8 @@ interface ToolState {
   setSync: (sync: boolean) => void;
   selectPreset: (preset: Preset) => void;
   selectStamp: (stampId: string) => void;
+  /** Switches the stamp tool to an id without touching the recent list. */
+  setStamp: (stampId: string) => void;
 }
 
 export const useToolStore = create<ToolState>((set, get) => ({
@@ -67,4 +69,5 @@ export const useToolStore = create<ToolState>((set, get) => ({
       activeTool: "stamp",
       recentStamps: [selectedStampId, ...state.recentStamps.filter((id) => id !== selectedStampId)].slice(0, 8),
     })),
+  setStamp: (selectedStampId) => set({ selectedStampId }),
 }));

@@ -324,6 +324,21 @@ export interface ScratchOutOptions {
   minReversals?: number;
   maxSizeMm?: number;
   minTravelMm?: number;
+  /** Minimum width/height ratio; a real scribble is wide and flat. */
+  minAspect?: number;
+}
+
+/** Vertices of a regular N-gon inscribed in the drag box (start/end opposite corners). */
+export function regularPolygonPoints(start: Pt, end: Pt, sides: number): Pt[] {
+  const count = Math.max(3, Math.round(sides));
+  const cx = (start[0] + end[0]) / 2;
+  const cy = (start[1] + end[1]) / 2;
+  const rx = Math.abs(end[0] - start[0]) / 2;
+  const ry = Math.abs(end[1] - start[1]) / 2;
+  return Array.from({ length: count }, (_, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    return [cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)] as Pt;
+  });
 }
 
 /**
@@ -331,11 +346,12 @@ export interface ScratchOutOptions {
  * tight box. Used to turn a scribble into "erase what is underneath".
  */
 export function detectScratchOut(points: InkPoint[], options: ScratchOutOptions = {}): boolean {
-  const { minReversals = 4, maxSizeMm = 26, minTravelMm = 25 } = options;
+  const { minReversals = 4, maxSizeMm = 26, minTravelMm = 25, minAspect = 0 } = options;
   if (points.length < 8) return false;
   const xy = points.map(([x, y]) => [x, y] as Pt);
   const box = pointsBounds(xy);
   if (box.width > maxSizeMm || box.height > maxSizeMm) return false;
+  if (minAspect > 0 && box.width / Math.max(0.001, box.height) < minAspect) return false;
 
   let travel = 0;
   for (let index = 1; index < xy.length; index += 1) travel += ptDistance(xy[index - 1], xy[index]);

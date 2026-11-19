@@ -96,6 +96,7 @@ export function TopBar() {
   const [combineFiles, setCombineFiles] = useState<File[]>([]);
   const filesRef = useRef<HTMLDivElement>(null);
   const combineRef = useRef<HTMLInputElement>(null);
+  const tabStripRef = useRef<HTMLDivElement>(null);
 
   const pdfTabs = tabs;
 
@@ -108,6 +109,19 @@ export function TopBar() {
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [filesOpen]);
+
+  // A mouse wheel over the tab strip walks through tabs instead of the page.
+  useEffect(() => {
+    const strip = tabStripRef.current;
+    if (!strip) return;
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      strip.scrollLeft -= event.deltaY;
+    };
+    strip.addEventListener("wheel", onWheel, { passive: false });
+    return () => strip.removeEventListener("wheel", onWheel);
+  }, []);
 
   useEffect(() => {
     if (!combineOpen) return;
@@ -150,7 +164,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="top-bar glass relative z-40 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
+      <header className="top-bar glass relative z-[120] flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-2.5">
         <div ref={filesRef} className="relative">
           <button
             type="button"
@@ -238,7 +252,7 @@ export function TopBar() {
 
         <div className="mx-0.5 h-7 w-px shrink-0 bg-[var(--border)]" />
 
-        <div className="scroll-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
+        <div ref={tabStripRef} className="scroll-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
           {tabs.map((tab) => {
             const selected = tab.id === activeId;
             return (

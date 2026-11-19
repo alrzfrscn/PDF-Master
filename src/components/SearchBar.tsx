@@ -16,6 +16,7 @@ export function SearchBar() {
   const current = useSearchStore((state) => state.current);
   const searching = useSearchStore((state) => state.searching);
   const [text, setText] = useState(query);
+  const [wholeWord, setWholeWord] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function SearchBar() {
     let cancelled = false;
     useSearchStore.getState().setSearching(true);
     const timer = window.setTimeout(() => {
-      void searchTab(tab, value)
+      void searchTab(tab, value, { wholeWord })
         .then((found) => {
           if (cancelled) return;
           useSearchStore.getState().setQuery(value);
@@ -61,7 +62,7 @@ export function SearchBar() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, text, tab?.id]);
+  }, [open, text, tab?.id, wholeWord]);
 
   if (!open || !tab) return null;
 
@@ -106,6 +107,16 @@ export function SearchBar() {
           {searching ? "…" : `${matches.length ? current + 1 : 0}/${matches.length}`}
         </span>
         <div className="mx-0.5 h-5 w-px bg-[var(--border)]" />
+        <button
+          type="button"
+          className="chip h-7 shrink-0 px-1.5 font-mono text-[10px]"
+          aria-pressed={wholeWord}
+          aria-label="Whole word only"
+          title="Whole word only"
+          onClick={() => setWholeWord((value) => !value)}
+        >
+          [ab]
+        </button>
         <button
           type="button"
           className="icon-btn h-7 w-7"

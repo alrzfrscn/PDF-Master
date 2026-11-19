@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, Search } from "lucide-react";
-import { useCustomStampStore } from "../lib/customStamps";
+import { resolveStamp, useCustomStampStore } from "../lib/customStamps";
 import { stampGroups, stamps, userStamps } from "../lib/data";
 import type { UserStamp } from "../lib/types";
 import { useToolStore } from "../stores/useToolStore";
@@ -186,7 +186,8 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
                 aria-pressed={selectedStampId === item.id}
                 title={`${item.name} — ${item.sub}`}
                 onClick={() => {
-                  selectStamp(item.id);
+                  const resolved = resolveStamp(item.id);
+                  if (resolved) selectStamp(resolved.id);
                   onPick?.();
                 }}
               >

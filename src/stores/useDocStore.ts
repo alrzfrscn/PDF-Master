@@ -19,6 +19,18 @@ export function newPage(templateId: string, annotations: DocumentPage["annotatio
   return { id: makeId("page"), templateId, rotation: 0, annotations };
 }
 
+/** A clean blank document used when the last tab is closed. */
+export function createInitialTab(): DocumentTab {
+  return {
+    id: makeId("doc"),
+    title: "A4 Blank",
+    templateId: DEFAULT_TEMPLATE_ID,
+    landscape: false,
+    pageCount: 1,
+    pages: [newPage(DEFAULT_TEMPLATE_ID)],
+  };
+}
+
 const initialTabs: DocumentTab[] = [
   {
     id: "doc-a4",
@@ -150,15 +162,41 @@ export const useDocStore = create<DocState>((set, get) => ({
   },
   closeTab: (id) => {
     const { tabs, activeId, history, lastClosedTab } = get();
-    if (tabs.length === 1) return;
     const index = tabs.findIndex((tab) => tab.id === id);
     const closing = tabs[index];
     if (!closing) return;
     // The previous closed tab is now beyond undo: free its document and blob.
     if (lastClosedTab) disposeTab(lastClosedTab.tab, tabs.filter((tab) => tab.id !== lastClosedTab.tab.id).map((tab) => tab.id));
-    const next = tabs.filter((tab) => tab.id !== id);
     const nextHistory = { ...history };
     delete nextHistory[id];
+
+    // Closing the only tab never traps the user: it becomes a fresh blank tab.
+    if (tabs.length === 1) {
+      const fresh = createInitialTab();
+      const annotated = closing.pages.some((page) => page.annotations.length > 0);
+      set({
+        tabs: [fresh],
+        history: nextHistory,
+        activeId: fresh.id,
+        page: 1,
+        lastClosedTab: annotated ? { tab: closing, index: 0 } : null,
+      });
+      if (!annotated) {
+        disposeTab(closing, [fresh.id]);
+        return;
+      }
+      if (closeTimer) globalThis.clearTimeout(closeTimer);
+      closeTimer = globalThis.setTimeout(() => {
+        closeTimer = 0;
+        const state = get();
+        if (state.lastClosedTab?.tab.id !== id) return;
+        disposeTab(state.lastClosedTab.tab, state.tabs.map((tab) => tab.id));
+        set({ lastClosedTab: null });
+      }, 15000);
+      return;
+    }
+
+    const next = tabs.filter((tab) => tab.id !== id);
     set({
       tabs: next,
       history: nextHistory,
@@ -235,7 +273,12 @@ export const useDocStore = create<DocState>((set, get) => ({
   setFit: (fitMode) => set({ fitMode }),
   setPage: (page) => {
     const tab = tabOf(get());
-    set({ page: clamp(page, 1, tab?.pages.length ?? 1) });
+    const next = clamp(page, 1, tab?.pages.length ?? 1);
+    set({ page: next });
+    // The continuous viewport listens for explicit navigation and scrolls there.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pm:goto-page", { detail: { page: next } }));
+    }
   },
 
   addPage: (templateId) => {

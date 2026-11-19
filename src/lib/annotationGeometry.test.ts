@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FormulaAnnotation, TextAnnotation } from "./annotationTypes";
-import { annotationBounds, hitTest, rotateAnnotation, scaleAnnotation } from "./annotationGeometry";
+import { annotationBounds, hitTest, regularPolygonPoints, rotateAnnotation, scaleAnnotation } from "./annotationGeometry";
 
 const text: TextAnnotation = {
   id: "text-1",
@@ -82,5 +82,19 @@ describe("box annotation geometry", () => {
     expect(rotated.rotation).toBeCloseTo(40);
     expect(rotated.xMm + rotated.widthMm / 2).toBeCloseTo(50);
     expect(rotated.yMm + rotated.heightMm / 2).toBeCloseTo(38);
+  });
+});
+
+describe("regular polygon drag", () => {
+  it("fits a hexagon inside the drag box", () => {
+    const points = regularPolygonPoints([10, 20], [60, 70], 6);
+    expect(points).toHaveLength(6);
+    for (const [x, y] of points) {
+      expect(x).toBeGreaterThanOrEqual(10 - 1e-9);
+      expect(x).toBeLessThanOrEqual(60 + 1e-9);
+      expect(y).toBeGreaterThanOrEqual(20 - 1e-9);
+      expect(y).toBeLessThanOrEqual(70 + 1e-9);
+    }
+    expect(new Set(points.map(([x]) => Number(x.toFixed(4)))).size).toBeGreaterThan(2);
   });
 });

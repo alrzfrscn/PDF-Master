@@ -1,4 +1,4 @@
-import type { Annotation, DimensionUnit, PenStyle, TextAlign } from "./annotationTypes";
+import type { Annotation, DimensionUnit, MarkerTip, PenStyle, TextAlign } from "./annotationTypes";
 
 export type ThemeName = "light" | "dark" | "sepia";
 
@@ -157,6 +157,12 @@ export interface ToolProps {
   penStyle: PenStyle;
   /** 0..100, scales the thinning of pro and calligraphy ink. */
   pressureLevel: number;
+  /** Highlighter nib orientation/shape. */
+  tipStyle?: MarkerTip;
+  /** Regular polygon sides drawn by the Polygon tool. */
+  polygonSides?: 3 | 4 | 5 | 6 | 8;
+  /** Highlighter collapses to a straight two-point segment. */
+  straightHighlight?: boolean;
 }
 
 export type ToolId =

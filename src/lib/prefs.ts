@@ -14,7 +14,7 @@ export interface Prefs {
 
 const PREFS_KEY = "pm.prefs";
 
-const DEFAULTS: Prefs = { scratchOut: true, measureUnit: "mm", snapshotDpi: 150, touchDrawEnabled: false };
+const DEFAULTS: Prefs = { scratchOut: false, measureUnit: "mm", snapshotDpi: 150, touchDrawEnabled: false };
 
 function readPrefs(): Prefs {
   if (typeof localStorage === "undefined") return DEFAULTS;
