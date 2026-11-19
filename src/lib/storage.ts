@@ -190,7 +190,12 @@ export function collectWorkspaceStores(): WorkspaceStores {
     customScales: useScaleStore.getState().custom,
     activeScaleId: useScaleStore.getState().activeId,
     shortcuts: useShortcutStore.getState().map,
-    prefs: { scratchOut: prefs.scratchOut, measureUnit: prefs.measureUnit, snapshotDpi: prefs.snapshotDpi },
+    prefs: {
+      scratchOut: prefs.scratchOut,
+      measureUnit: prefs.measureUnit,
+      snapshotDpi: prefs.snapshotDpi,
+      touchDrawEnabled: prefs.touchDrawEnabled,
+    },
     theme: useUIStore.getState().theme,
     favorites: useFavoritesStore.getState().favorites,
   };

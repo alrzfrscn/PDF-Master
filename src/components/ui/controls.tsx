@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { SWATCHES } from "../../lib/presets";
+import { CustomColorPicker } from "./CustomColorPicker";
 
 export function Segmented<T extends string>({
   value,
@@ -169,24 +170,7 @@ export function ColorRow({
             onClick={() => onChange(swatch)}
           />
         ))}
-        <label
-          className="relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-[7px] border border-[var(--border)]"
-          title="Custom colour"
-          style={{
-            backgroundColor: value ?? "transparent",
-            backgroundImage: value
-              ? undefined
-              : "conic-gradient(#ff3b30, #ffcc00, #34c759, #0a84ff, #5e5ce6, #ff2d55, #ff3b30)",
-          }}
-        >
-          <input
-            type="color"
-            value={value ?? "#101114"}
-            onChange={(event) => onChange(event.target.value)}
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            aria-label={`${label} custom colour`}
-          />
-        </label>
+        <CustomColorPicker value={value} onChange={onChange} />
       </div>
     </div>
   );

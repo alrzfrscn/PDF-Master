@@ -13,6 +13,10 @@ export type SidebarTab = "pages" | "bookmarks" | "annotations" | "stamps";
 
 export type MeasureModeUi = "distance" | "perimeter" | "area" | "angle";
 
+export type ViewMode = "one-page" | "one-continuous" | "two-page" | "two-continuous";
+
+export type GridStyle = "none" | "squared-5" | "squared-10" | "ruled-8" | "dots-5" | "millimeter";
+
 interface UIState {
   theme: ThemeName;
   sidebarOpen: boolean;
@@ -34,6 +38,14 @@ interface UIState {
   saving: boolean;
   eraserSplit: boolean;
   eraserSizeMm: number;
+  viewMode: ViewMode;
+  separateCoverPage: boolean;
+  gridStyle: GridStyle;
+  searchOpen: boolean;
+  setViewMode: (mode: ViewMode) => void;
+  toggleSeparateCoverPage: () => void;
+  setGridStyle: (style: GridStyle) => void;
+  setSearchOpen: (open: boolean) => void;
   setEraserSplit: (split: boolean) => void;
   setEraserSize: (sizeMm: number) => void;
   setTheme: (theme: ThemeName) => void;
@@ -78,6 +90,14 @@ export const useUIStore = create<UIState>((set) => ({
   saving: false,
   eraserSplit: false,
   eraserSizeMm: 5.2,
+  viewMode: "one-continuous",
+  separateCoverPage: false,
+  gridStyle: "none",
+  searchOpen: false,
+  setViewMode: (viewMode) => set({ viewMode }),
+  toggleSeparateCoverPage: () => set((state) => ({ separateCoverPage: !state.separateCoverPage })),
+  setGridStyle: (gridStyle) => set({ gridStyle }),
+  setSearchOpen: (searchOpen) => set({ searchOpen }),
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),
   setEraserSize: (eraserSizeMm) => set({ eraserSizeMm }),
   setSaving: (saving) => set({ saving }),

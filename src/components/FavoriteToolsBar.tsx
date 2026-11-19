@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Heart, Pencil, X } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import { penStyleOptions, inkPath } from "../lib/ink";
 import type { InkPoint } from "../lib/annotationTypes";
 import { useFavoritesStore, type FavoriteTool } from "../stores/useFavoritesStore";
@@ -87,9 +87,6 @@ export function FavoriteToolsBar() {
   return (
     <div className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2" style={{ left: sidebarOpen ? 348 : 68 }}>
       <div className="glass no-scrollbar flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto rounded-full px-0 py-1.5">
-        <span className="grid h-8 w-8 place-items-center text-muted" aria-hidden="true">
-          <Heart size={14} strokeWidth={1.75} />
-        </span>
         {favorites.map((item) => (
           <div key={item.id} className="tooltip relative">
             <button

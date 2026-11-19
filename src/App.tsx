@@ -3,6 +3,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { FavoriteToolsBar } from "./components/FavoriteToolsBar";
 import { Inspector } from "./components/Inspector";
 import { NewDocumentModal } from "./components/NewDocumentModal";
+import { SearchBar } from "./components/SearchBar";
 import { SettingsModal } from "./components/SettingsModal";
 import { PaperViewport } from "./components/canvas/PaperViewport";
 import { PresentationBar } from "./components/PresentationBar";
@@ -219,11 +220,36 @@ export default function App() {
           event.preventDefault();
           annotations.ungroupSelection();
           return;
+        case "search":
+          event.preventDefault();
+          useUIStore.getState().setSearchOpen(true);
+          return;
+        case "view-one-page":
+          event.preventDefault();
+          useUIStore.getState().setViewMode("one-page");
+          return;
+        case "view-one-continuous":
+          event.preventDefault();
+          useUIStore.getState().setViewMode("one-continuous");
+          return;
+        case "view-two-continuous":
+          event.preventDefault();
+          useUIStore.getState().setViewMode("two-continuous");
+          return;
+        case "view-two-page":
+          event.preventDefault();
+          useUIStore.getState().setViewMode("two-page");
+          return;
+        case "toggle-cover-page":
+          event.preventDefault();
+          useUIStore.getState().toggleSeparateCoverPage();
+          return;
       }
 
       if (event.key === "Escape") {
         const ui = useUIStore.getState();
-        if (ui.paletteOpen) ui.setPaletteOpen(false);
+        if (ui.searchOpen) ui.setSearchOpen(false);
+        else if (ui.paletteOpen) ui.setPaletteOpen(false);
         else if (ui.libraryOpen) ui.setLibraryOpen(false);
         else if (ui.settingsOpen) ui.setSettingsOpen(false);
         else if (ui.newDocOpen) ui.setNewDocOpen(false);
@@ -262,11 +288,11 @@ export default function App() {
 
       if (event.altKey) return;
 
-      if (event.key === "+" || event.key === "=") {
+      if (event.code === "Equal" || event.code === "NumpadAdd" || event.key === "+") {
         zoomBy(1);
         return;
       }
-      if (event.key === "-") {
+      if (event.code === "Minus" || event.code === "NumpadSubtract" || event.key === "-") {
         zoomBy(-1);
         return;
       }
@@ -310,6 +336,7 @@ export default function App() {
               <ToolBar />
               <Inspector />
             </main>
+            <SearchBar />
           </div>
           <CommandPalette />
           <StampLibrary />

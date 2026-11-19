@@ -55,6 +55,8 @@ interface Props {
   heightMm: number;
   zoom: number;
   panMode: boolean;
+  /** One finger scrolls the document instead of drawing; pen and mouse always draw. */
+  touchScroll?: boolean;
 }
 
 type Draft =
@@ -303,7 +305,7 @@ function StampView({ stamp }: { stamp: StampAnnotation }) {
   );
 }
 
-export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }: Props) {
+export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, touchScroll = false }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const interaction = useRef<Interaction>(null);
   const [draft, setDraft] = useState<Draft>(null);
@@ -658,7 +660,15 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
   };
 
   const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (panMode || pinching.current || event.button !== 0) return;
+    if (pinching.current) return;
+    // Stylus erasers report button 5 / bit 32 and must erase whatever tool is active.
+    const hardwareErase =
+      (event.pointerType as string) === "eraser" || (event.pointerType === "pen" && (event.button === 5 || (event.buttons & 32) !== 0));
+    // Hand tool and space-pan still give way to a hardware eraser.
+    if (panMode && !hardwareErase) return;
+    if (panMode) event.stopPropagation();
+    if (touchScroll && event.pointerType === "touch" && !hardwareErase) return;
+    if (!hardwareErase && event.button !== 0) return;
     // Unpinned tool popovers make way for the stroke they would cover.
     if (activeTool !== "hand" && activeTool !== "select") window.dispatchEvent(new Event("pm:stroke-begin"));
     const point = toMm(event.clientX, event.clientY);
@@ -669,7 +679,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
     };
 
     // Hold still on an annotation to select it, whatever drawing tool is active.
-    if (LONG_PRESS_TOOLS.includes(activeTool)) {
+    if (!hardwareErase && LONG_PRESS_TOOLS.includes(activeTool)) {
       cancelLongPress();
       const press = {
         x: event.clientX,
@@ -683,6 +693,13 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         }, LONG_PRESS_MS),
       };
       longPress.current = press;
+    }
+
+    if (hardwareErase) {
+      const split = eraserSplit || event.altKey;
+      const pushed = useAnnotationStore.getState().eraseAt(point, split, eraserSizeMm);
+      begin({ kind: "erase", last: point, split, pushed });
+      return;
     }
 
     switch (activeTool) {
@@ -1235,7 +1252,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode }:
         data-annotation-layer
         viewBox={`0 0 ${widthMm} ${heightMm}`}
         className="absolute inset-0 h-full w-full"
-        style={{ touchAction: panMode ? "auto" : "none", display: "block", overflow: "visible" }}
+        style={{ touchAction: panMode || touchScroll ? "auto" : "none", display: "block", overflow: "visible" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

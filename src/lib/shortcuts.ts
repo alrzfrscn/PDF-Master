@@ -19,7 +19,13 @@ export type ShortcutAction =
   | "group"
   | "ungroup"
   | "presentation"
-  | "fit-page";
+  | "fit-page"
+  | "search"
+  | "view-one-page"
+  | "view-one-continuous"
+  | "view-two-continuous"
+  | "view-two-page"
+  | "toggle-cover-page";
 
 export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   ...(Object.fromEntries(TOOLS.map((tool) => [tool.id, tool.name])) as Record<ToolId, string>),
@@ -39,6 +45,12 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   ungroup: "Ungroup selection",
   presentation: "Presentation mode",
   "fit-page": "Fit page",
+  search: "Search document",
+  "view-one-page": "One page",
+  "view-one-continuous": "One page continuous",
+  "view-two-continuous": "Two pages continuous",
+  "view-two-page": "Two pages",
+  "toggle-cover-page": "Separate cover page",
 };
 
 /** `⇧S` from the migration table becomes a real binding. */
@@ -64,6 +76,12 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
   ungroup: "Ctrl+Shift+G",
   presentation: "Ctrl+Shift+P",
   "fit-page": "0",
+  search: "Ctrl+F",
+  "view-one-page": "Ctrl+1",
+  "view-one-continuous": "Ctrl+2",
+  "view-two-continuous": "Ctrl+3",
+  "view-two-page": "Ctrl+4",
+  "toggle-cover-page": "Ctrl+7",
 };
 
 export const SHORTCUT_ACTIONS = Object.keys(DEFAULT_SHORTCUTS) as ShortcutAction[];
@@ -85,14 +103,28 @@ export function normalizeBinding(binding: string): string {
   return ordered.join("+");
 }
 
+/** Physical key from `event.code`, so a Persian or other non-Latin layout still matches. */
+function physicalKey(code: string | undefined): string | null {
+  if (!code) return null;
+  const letter = /^Key([A-Z])$/.exec(code);
+  if (letter) return letter[1];
+  const digit = /^Digit([0-9])$/.exec(code);
+  if (digit) return digit[1];
+  if (code === "Comma") return ",";
+  if (code === "Minus" || code === "NumpadSubtract") return "-";
+  if (code === "Equal" || code === "NumpadAdd") return "+";
+  return null;
+}
+
 export function bindingFromEvent(event: {
   key: string;
+  code?: string;
   ctrlKey: boolean;
   metaKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
 }): string | null {
-  const key = event.key;
+  const key = physicalKey(event.code) ?? event.key;
   if (!key || ["Control", "Meta", "Alt", "Shift", "CapsLock", "Dead"].includes(key)) return null;
   const mods: string[] = [];
   if (event.ctrlKey || event.metaKey) mods.push("Ctrl");

@@ -477,7 +477,7 @@ export function Inspector() {
   };
 
   return (
-    <aside className="inspector glass anim-in absolute right-[74px] top-1/2 z-30 flex max-h-[calc(100vh-96px)] w-[320px] -translate-y-1/2 flex-col overflow-hidden rounded-2xl">
+    <aside className="inspector glass anim-in absolute right-[78px] top-1/2 z-30 flex max-h-[calc(100vh-96px)] w-[320px] -translate-y-1/2 flex-col overflow-hidden rounded-2xl">
       <div className="flex items-center gap-2.5 border-b border-[var(--border)] px-3 py-2.5">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
           <Icon size={18} strokeWidth={1.75} />

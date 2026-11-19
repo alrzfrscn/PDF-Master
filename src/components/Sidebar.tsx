@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronLeft, ChevronRight, CopyPlus, Eye, EyeOff, FileText, Heart, Highlighter, MessageSquareText, PenLine, Pin, Plus, RotateCw, Sigma, Square, Stamp, Star, Trash2, Type, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronLeft, ChevronRight, CopyPlus, Eye, EyeOff, FileText, Hand, Heart, Highlighter, LayoutGrid, MessageSquareText, PenLine, Pin, Plus, RotateCw, Search, Sigma, Square, Stamp, Star, Trash2, Type, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { stampById, stamps, userStamps } from "../lib/data";
 import { PX_PER_MM } from "../lib/paper";
@@ -6,7 +6,8 @@ import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
 import { renderPdfPage } from "../lib/pdfEngine";
 import { SHAPE_LABEL, type Annotation } from "../lib/annotationTypes";
 import type { DocumentPage, DocumentTab } from "../lib/types";
-import type { SidebarTab } from "../stores/useUIStore";
+import { usePrefsStore } from "../lib/prefs";
+import type { GridStyle, SidebarTab, ViewMode } from "../stores/useUIStore";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
@@ -156,6 +157,22 @@ const TAB_TITLES: Record<SidebarTab, string> = {
   stamps: "Stamps / Library",
 };
 
+const VIEW_MODES: { id: ViewMode; label: string }[] = [
+  { id: "one-page", label: "One page" },
+  { id: "one-continuous", label: "One continuous" },
+  { id: "two-continuous", label: "Two continuous" },
+  { id: "two-page", label: "Two page" },
+];
+
+const GRID_STYLES: { id: GridStyle; label: string }[] = [
+  { id: "none", label: "None" },
+  { id: "squared-5", label: "Squared 5 mm" },
+  { id: "squared-10", label: "Squared 10 mm" },
+  { id: "ruled-8", label: "Ruled 8 mm" },
+  { id: "dots-5", label: "Dots 5 mm" },
+  { id: "millimeter", label: "Millimeter" },
+];
+
 export function Sidebar() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const sidebarTab = useUIStore((state) => state.sidebarTab);
@@ -185,22 +202,43 @@ export function Sidebar() {
   const update = useAnnotationStore((state) => state.update);
   const recentStamps = useToolStore((state) => state.recentStamps);
   const selectStamp = useToolStore((state) => state.selectStamp);
+  const viewMode = useUIStore((state) => state.viewMode);
+  const setViewMode = useUIStore((state) => state.setViewMode);
+  const separateCoverPage = useUIStore((state) => state.separateCoverPage);
+  const toggleSeparateCoverPage = useUIStore((state) => state.toggleSeparateCoverPage);
+  const gridStyle = useUIStore((state) => state.gridStyle);
+  const setGridStyle = useUIStore((state) => state.setGridStyle);
+  const searchOpen = useUIStore((state) => state.searchOpen);
+  const setSearchOpen = useUIStore((state) => state.setSearchOpen);
+  const touchDrawEnabled = usePrefsStore((state) => state.touchDrawEnabled);
+  const setPrefs = usePrefsStore((state) => state.set);
+  const [viewOpen, setViewOpen] = useState(false);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
   const railRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
 
   // An unpinned drawer closes on the first click anywhere on the page.
   useEffect(() => {
     if (!sidebarOpen || drawerPinned) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (railRef.current?.contains(target) || drawerRef.current?.contains(target)) return;
+      if (railRef.current?.contains(target) || drawerRef.current?.contains(target) || viewRef.current?.contains(target)) return;
       useUIStore.getState().toggleSidebar();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [sidebarOpen, drawerPinned]);
+
+  useEffect(() => {
+    if (!viewOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!viewRef.current?.contains(event.target as Node)) setViewOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [viewOpen]);
 
   const recent = recentStamps
     .map((id) => stamps.find((stamp) => stamp.id === id) ?? userStamps.find((stamp) => stamp.id === id))
@@ -212,8 +250,19 @@ export function Sidebar() {
   };
 
   return (
-    <div ref={railRef} className="sidebar relative z-40 w-[68px] shrink-0">
-      <div className="glass my-2 ml-3 mr-0 flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
+    <div ref={railRef} className="sidebar absolute left-3 top-3 z-40">
+      <div className="glass flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="View settings"
+          title="View"
+          aria-pressed={viewOpen}
+          onClick={() => setViewOpen((open) => !open)}
+        >
+          <LayoutGrid size={16} strokeWidth={1.75} />
+        </button>
+        <div className="my-0.5 h-px w-6 bg-[var(--border)]" />
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -231,6 +280,16 @@ export function Sidebar() {
         <button
           type="button"
           className="icon-btn"
+          aria-label="Search document"
+          title="Search (Ctrl+F)"
+          aria-pressed={searchOpen}
+          onClick={() => setSearchOpen(!searchOpen)}
+        >
+          <Search size={16} strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          className="icon-btn"
           aria-label="Favorite tools"
           title="Favorite tools"
           aria-pressed={favoritesOpen}
@@ -238,12 +297,62 @@ export function Sidebar() {
         >
           <Heart size={16} strokeWidth={1.75} style={favoritesOpen ? { fill: "currentColor" } : undefined} />
         </button>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Finger draws"
+          title={touchDrawEnabled ? "Finger draws · tap to pan with one finger" : "One finger pans · tap to draw with a finger"}
+          aria-pressed={touchDrawEnabled}
+          onClick={() => setPrefs({ touchDrawEnabled: !touchDrawEnabled })}
+        >
+          <Hand size={16} strokeWidth={1.75} />
+        </button>
       </div>
+
+      {viewOpen && (
+        <div ref={viewRef} className="glass-strong anim-in absolute left-[52px] top-0 z-50 w-[232px] rounded-xl p-2">
+          <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">Page view</div>
+          <div className="flex flex-col gap-0.5">
+            {VIEW_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                className="chip h-7 w-full justify-start px-2"
+                aria-pressed={viewMode === mode.id}
+                onClick={() => setViewMode(mode.id)}
+              >
+                {mode.label}
+              </button>
+            ))}
+            {(viewMode === "two-page" || viewMode === "two-continuous") && (
+              <button
+                type="button"
+                className="chip h-7 w-full justify-start px-2"
+                aria-pressed={separateCoverPage}
+                onClick={toggleSeparateCoverPage}
+              >
+                Separate cover page
+              </button>
+            )}
+          </div>
+          <div className="divider my-1.5" />
+          <label className="field">
+            <span className="field-label">Grid line</span>
+            <select className="text-input" value={gridStyle} onChange={(event) => setGridStyle(event.target.value as GridStyle)} aria-label="Grid line">
+              {GRID_STYLES.map((style) => (
+                <option key={style.id} value={style.id}>
+                  {style.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {sidebarOpen && (
         <aside
           ref={drawerRef}
-          className="glass-strong anim-in absolute left-[68px] top-2 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
+          className="glass-strong anim-in absolute left-[52px] top-0 z-40 flex w-[268px] flex-col overflow-hidden rounded-2xl"
           style={{ maxHeight: "calc(100vh - 120px)", height: "auto" }}
           aria-label={TAB_TITLES[sidebarTab]}
         >

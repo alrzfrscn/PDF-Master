@@ -74,8 +74,8 @@ export function ToolBar() {
   };
 
   return (
-    <div className="tool-rail absolute right-3 top-1/2 z-30 -translate-y-1/2">
-      <div className="glass no-scrollbar relative flex max-h-[calc(100vh-120px)] flex-col items-center gap-1 overflow-x-hidden overflow-y-auto rounded-[18px] p-1">
+    <div className="tool-rail absolute right-[18px] top-1/2 z-30 -translate-y-1/2">
+      <div className="glass no-scrollbar relative flex flex-col items-center gap-1 rounded-[18px] p-1">
         {TOOLBAR.map((group, index) => (
           <div key={index} className="flex flex-col items-center gap-1">
             {index > 0 && <div className="my-0.5 h-px w-6 bg-[var(--border)]" />}

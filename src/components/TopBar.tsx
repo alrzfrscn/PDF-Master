@@ -162,7 +162,7 @@ export function TopBar() {
             <FolderOpen size={14} strokeWidth={1.75} /> Files
           </button>
           {filesOpen && (
-            <div className="glass-strong anim-in absolute left-0 top-[calc(100%+6px)] z-50 w-[228px] rounded-xl p-1.5">
+            <div className="menu-surface anim-in absolute left-0 top-[calc(100%+6px)] z-[100] w-[228px] rounded-xl p-1.5">
               <FileAction
                 label="Open Document..."
                 shortcut="Ctrl+O"

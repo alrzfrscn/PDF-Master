@@ -8,11 +8,13 @@ export interface Prefs {
   scratchOut: boolean;
   measureUnit: MeasureUnit;
   snapshotDpi: SnapshotDpi;
+  /** Finger touch draws; off means single-finger touch pans and stylus/mouse still draw. */
+  touchDrawEnabled: boolean;
 }
 
 const PREFS_KEY = "pm.prefs";
 
-const DEFAULTS: Prefs = { scratchOut: true, measureUnit: "mm", snapshotDpi: 150 };
+const DEFAULTS: Prefs = { scratchOut: true, measureUnit: "mm", snapshotDpi: 150, touchDrawEnabled: false };
 
 function readPrefs(): Prefs {
   if (typeof localStorage === "undefined") return DEFAULTS;
@@ -33,7 +35,12 @@ export const usePrefsStore = create<PrefState>((set, get) => ({
   ...readPrefs(),
   set: (patch) => {
     const next = { ...get(), ...patch };
-    const value: Prefs = { scratchOut: next.scratchOut, measureUnit: next.measureUnit, snapshotDpi: next.snapshotDpi };
+    const value: Prefs = {
+      scratchOut: next.scratchOut,
+      measureUnit: next.measureUnit,
+      snapshotDpi: next.snapshotDpi,
+      touchDrawEnabled: next.touchDrawEnabled,
+    };
     if (typeof localStorage !== "undefined") localStorage.setItem(PREFS_KEY, JSON.stringify(value));
     set(patch);
   },

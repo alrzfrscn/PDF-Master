@@ -34,7 +34,7 @@ const stores: WorkspaceStores = {
   customScales: [{ id: "scale-2.5", label: "1:2.5", denominator: 2.5 }],
   activeScaleId: "scale-2.5",
   shortcuts: { ...DEFAULT_SHORTCUTS, pen: "Ctrl+Shift+9" },
-  prefs: { scratchOut: false, measureUnit: "in", snapshotDpi: 300 },
+  prefs: { scratchOut: false, measureUnit: "in", snapshotDpi: 300, touchDrawEnabled: false },
   theme: "sepia",
 };
 

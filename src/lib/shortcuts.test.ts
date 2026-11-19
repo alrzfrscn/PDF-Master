@@ -23,6 +23,14 @@ describe("shortcuts", () => {
     expect(bindingFromEvent({ key: "Shift", ctrlKey: false, metaKey: false, altKey: false, shiftKey: true })).toBeNull();
   });
 
+  it("resolves the physical key on a Persian keyboard layout", () => {
+    expect(bindingFromEvent({ key: "ر", code: "KeyV", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false })).toBe("Ctrl+V");
+    expect(bindingFromEvent({ key: "ح", code: "KeyP", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false })).toBe("P");
+    expect(bindingFromEvent({ key: "ظ", code: "KeyZ", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false })).toBe("Ctrl+Z");
+    expect(bindingFromEvent({ key: "۱", code: "Digit1", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false })).toBe("Ctrl+1");
+    expect(bindingFromEvent({ key: "،", code: "Comma", ctrlKey: true, metaKey: false, altKey: false, shiftKey: false })).toBe("Ctrl+,");
+  });
+
   it("defaults are conflict free", () => {
     const { conflicting, byBinding } = detectConflicts(DEFAULT_SHORTCUTS);
     expect(conflicting.size).toBe(0);

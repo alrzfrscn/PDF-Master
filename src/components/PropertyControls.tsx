@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { SHAPE_LABEL, type DimensionUnit, type TextAlign } from "../lib/annotationTypes";
 import { ARROW_HEADS, SWATCHES } from "../lib/presets";
 import { inkPath, penStyleOptions } from "../lib/ink";
@@ -8,6 +8,7 @@ import type { LineStyleName, ShapeTool, ToolId, ToolProps } from "../lib/types";
 import { useToolStore } from "../stores/useToolStore";
 import { TOOL_ICONS } from "./toolIcons";
 import { ColorRow, Segmented } from "./ui/controls";
+import { CustomColorPicker } from "./ui/CustomColorPicker";
 
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "Courier New", "Verdana", "Calibri", "Trebuchet MS"];
 
@@ -212,14 +213,6 @@ function ValuePill({
 }
 
 function ColorGrid({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [customOpen, setCustomOpen] = useState(false);
-  const [hex, setHex] = useState(value);
-
-  const apply = (next: string) => {
-    setHex(next);
-    if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next);
-  };
-
   return (
     <div className="field">
       <span className="field-label">
@@ -238,34 +231,8 @@ function ColorGrid({ value, onChange }: { value: string; onChange: (value: strin
             style={{ background: color }}
           />
         ))}
-        <button
-          type="button"
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] border border-[var(--border)] text-[10px] font-semibold text-muted"
-          aria-label="Custom colour"
-          aria-pressed={customOpen}
-          onClick={() => setCustomOpen((open) => !open)}
-        >
-          ...
-        </button>
+        <CustomColorPicker value={value} onChange={onChange} />
       </div>
-      {customOpen && (
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <input
-            type="color"
-            value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#000000"}
-            aria-label="Pick custom colour"
-            onChange={(event) => apply(event.target.value)}
-            className="h-7 w-9 cursor-pointer rounded-md border border-[var(--border)] bg-transparent p-0.5"
-          />
-          <input
-            className="text-input h-7 text-[11px]"
-            value={hex}
-            aria-label="Hex colour"
-            placeholder="#0044FF"
-            onChange={(event) => apply(event.target.value)}
-          />
-        </div>
-      )}
     </div>
   );
 }
