@@ -5,3 +5,4 @@
 *.tsbuildinfo
 /scripts/convert/reverse/payloads
 /scripts/convert/reverse/__pycache__
+/agent-report
