@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FileText, Image as ImageIcon } from "lucide-react";
-import { clamp, PX_PER_MM } from "../../lib/paper";
+import { clamp, getWorkspaceInsets, PX_PER_MM, workspaceSafeArea } from "../../lib/paper";
+import { CANVAS_TOUCH_ACTION, pansWithPointer } from "../../lib/canvasInput";
 import { pageSizeMm, pageTemplate } from "../../lib/pageUtils";
 import { addImageStamp } from "../../lib/images";
 import { readImageFile } from "../../lib/raster";
@@ -193,7 +194,7 @@ function PageView({
           top: (displayH - baseH * scale) / 2,
           transform: `scale(${scale})${page.rotation ? ` rotate(${page.rotation}deg)` : ""}`,
           transformOrigin: "center",
-          touchAction: touchScroll ? "auto" : undefined,
+          touchAction: CANVAS_TOUCH_ACTION,
         }}
       >
         <div className="relative h-full w-full" style={{ clipPath, overflow: "hidden" }}>
@@ -255,6 +256,8 @@ export function PaperViewport() {
   const touchDrawEnabled = usePrefsStore((state) => state.touchDrawEnabled);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const favoritesOpen = useUIStore((state) => state.favoritesOpen);
+  const toolPopoverOpen = useUIStore((state) => state.toolPopoverOpen);
+  const toolPopoverPinned = useUIStore((state) => state.toolPopoverPinned);
   const presentation = useUIStore((state) => state.presentation);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
@@ -266,8 +269,14 @@ export function PaperViewport() {
   const continuous = viewMode === "one-continuous" || viewMode === "two-continuous";
   const twoPage = viewMode === "two-page" || viewMode === "two-continuous";
   // Floating controls cover part of the canvas; fitting must centre in the rest.
-  const leftInset = presentation ? 0 : sidebarOpen ? 344 : favoritesOpen ? 120 : 68;
-  const rightInset = presentation ? 0 : 76;
+  const { leftInset, rightInset } = presentation
+    ? { leftInset: 0, rightInset: 0 }
+    : getWorkspaceInsets({
+        sidebarOpen,
+        favoritesOpen,
+        inspectorOpen: toolPopoverOpen,
+        inspectorPinned: toolPopoverPinned,
+      });
 
   const rows = useMemo(() => buildRows(tab.pages.length, twoPage, separateCoverPage), [tab.pages.length, twoPage, separateCoverPage]);
   const displayRows = useMemo(() => {
@@ -284,6 +293,8 @@ export function PaperViewport() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const panRef = useRef(pan);
   panRef.current = pan;
+  // A second finger takes over from the one-finger pan; its pointerdown must not start one.
+  const pinching = useRef(false);
   const [spaceDown, setSpaceDown] = useState(false);
   const [dropActive, setDropActive] = useState(false);
 
@@ -306,6 +317,7 @@ export function PaperViewport() {
       window.dispatchEvent(new Event("pm:cancel-draft"));
       window.dispatchEvent(new Event("pm:pinch-start"));
       drag.current = null;
+      pinching.current = true;
       const points = [...pointers.values()];
       pinch = {
         distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1,
@@ -335,6 +347,7 @@ export function PaperViewport() {
       if (pointers.size >= 2) return;
       if (pinch) window.dispatchEvent(new Event("pm:pinch-end"));
       pinch = null;
+      pinching.current = false;
     };
     element.addEventListener("pointerdown", onDown);
     element.addEventListener("pointermove", onMove, { passive: false });
@@ -359,14 +372,20 @@ export function PaperViewport() {
       if (rect.width === 0 || rect.height === 0) return;
       const rowWidthPx = (twoPage ? fitSize.widthMm * 2 + 12 : fitSize.widthMm) * PX_PER_MM;
       const rowHeightPx = fitSize.heightMm * PX_PER_MM;
-      const availWidth = Math.max(200, rect.width - leftInset - rightInset - 24);
-      const availHeight = Math.max(200, rect.height - 8);
-      const zoom = fitMode === "width" ? availWidth / rowWidthPx : Math.min(availWidth / rowWidthPx, availHeight / rowHeightPx);
+      const { safeWidth } = workspaceSafeArea(rect.width, leftInset, rightInset);
+      // 12px of breathing room on each side of the safe strip.
+      const byWidth = (safeWidth - 24) / rowWidthPx;
+      const byHeight = (rect.height - 16) / rowHeightPx;
+      const zoom = fitMode === "width" ? byWidth : Math.min(byWidth, byHeight);
       useDocStore.setState({ zoom: clamp(zoom, 0.1, 6) });
       setPan({ x: 0, y: 0 });
       if (continuous) {
         const active = useDocStore.getState().page;
-        requestAnimationFrame(() => pageRefs.current.get(active - 1)?.scrollIntoView({ block: "start" }));
+        requestAnimationFrame(() => {
+          pageRefs.current.get(active - 1)?.scrollIntoView({ block: "start" });
+          // A stale horizontal offset would leave the fitted page under a rail.
+          if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+        });
       }
     };
     apply();
@@ -477,8 +496,10 @@ export function PaperViewport() {
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (pinching.current) return;
+    const touchPan = pansWithPointer(event.pointerType, touchDrawEnabled, canPan);
     if (continuous) {
-      if (!canPan && event.button !== 1) return;
+      if (!touchPan && event.button !== 1) return;
       drag.current = {
         x: event.clientX,
         y: event.clientY,
@@ -489,8 +510,7 @@ export function PaperViewport() {
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
-    const touchPan = event.pointerType === "touch" && !touchDrawEnabled;
-    if (!canPan && event.button !== 1 && !touchPan) return;
+    if (!touchPan && event.button !== 1) return;
     drag.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y, scroll: false };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -532,7 +552,7 @@ export function PaperViewport() {
         gridStyle={gridStyle}
         activeTool={activeTool}
         activePageIndex={pageNumber - 1}
-        touchScroll={touchDrawEnabled ? false : true}
+        touchScroll={!touchDrawEnabled}
         register={(node) => {
           if (node) pageRefs.current.set(index, node);
           else pageRefs.current.delete(index);
@@ -545,7 +565,7 @@ export function PaperViewport() {
     <div
       ref={viewportRef}
       className="viewport relative h-full w-full overflow-hidden"
-      style={{ cursor, touchAction: continuous && !touchDrawEnabled ? "pan-x pan-y" : "none" }}
+      style={{ cursor, touchAction: CANVAS_TOUCH_ACTION }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -582,16 +602,19 @@ export function PaperViewport() {
           onScroll={scrollToCenterPage}
         >
           <div
-            className="flex min-h-full flex-col items-center gap-5 py-8"
+            className="flex min-h-full flex-col gap-5 py-8"
             style={{
               width: "max-content",
               minWidth: "100%",
-              paddingLeft: Math.max(24, leftInset),
-              paddingRight: Math.max(24, rightInset),
+              // border-box: the rail padding must come out of the content box, not add to it,
+              // or the fitted page is pushed right and clipped.
+              boxSizing: "border-box",
+              paddingLeft: leftInset,
+              paddingRight: rightInset,
             }}
           >
             {displayRows.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex items-start justify-center gap-5">
+              <div key={rowIndex} className="flex items-start justify-center gap-5" style={{ marginLeft: "auto", marginRight: "auto" }}>
                 {pageNodes(row, true)}
               </div>
             ))}
@@ -601,7 +624,8 @@ export function PaperViewport() {
         <div
           className="page-stage absolute top-1/2 will-change-transform"
           style={{
-            left: `calc(50% + ${(leftInset - rightInset) / 2}px)`,
+            // Centre of the safe strip: leftInset + (100% - leftInset - rightInset) / 2.
+            left: `calc(${leftInset}px + (100% - ${leftInset + rightInset}px) / 2)`,
             transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
           }}
         >

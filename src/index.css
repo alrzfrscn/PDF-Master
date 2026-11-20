@@ -184,8 +184,10 @@ textarea {
   background: var(--paper);
 }
 
-/* A stylus must draw, not scroll or select text. */
+/* A stylus must draw, not scroll or select text. Chromium applies touch-action to
+   pens too, so every canvas surface stays `none`; finger panning is done in code. */
 .viewport,
+.doc-scroll,
 .page-stage,
 .page-paper,
 .page-paper svg {

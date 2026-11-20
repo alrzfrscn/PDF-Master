@@ -29,6 +29,7 @@ import {
 } from "../../lib/annotationGeometry";
 import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
 import { inkPath, penStyleOptions, polylinePath, pointerPressure } from "../../lib/ink";
+import { CANVAS_TOUCH_ACTION, drawsWithPointer } from "../../lib/canvasInput";
 import { PX_PER_MM } from "../../lib/paper";
 import { resolveStamp, useCustomStampStore } from "../../lib/customStamps";
 import { captureRegion, readImageFile, type RasterImage } from "../../lib/raster";
@@ -667,9 +668,12 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     const hardwareErase =
       (event.pointerType as string) === "eraser" || (event.pointerType === "pen" && (event.button === 5 || (event.buttons & 32) !== 0));
     // Hand tool and space-pan still give way to a hardware eraser.
-    if (panMode && !hardwareErase) return;
-    if (panMode) event.stopPropagation();
-    if (touchScroll && event.pointerType === "touch" && !hardwareErase) return;
+    if (panMode) {
+      if (!hardwareErase) return;
+      event.stopPropagation();
+    }
+    // A finger bubbles to the viewport's own pan gesture; pen and mouse always draw.
+    if (!drawsWithPointer(event.pointerType, !touchScroll)) return;
     if (!hardwareErase && event.button !== 0) return;
     // Unpinned tool popovers make way for the stroke they would cover.
     if (activeTool !== "hand" && activeTool !== "select") window.dispatchEvent(new Event("pm:stroke-begin"));
@@ -1246,7 +1250,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
         data-annotation-layer
         viewBox={`0 0 ${widthMm} ${heightMm}`}
         className="absolute inset-0 h-full w-full"
-        style={{ touchAction: panMode || touchScroll ? "auto" : "none", display: "block", overflow: "visible" }}
+        style={{ touchAction: CANVAS_TOUCH_ACTION, display: "block", overflow: "visible" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

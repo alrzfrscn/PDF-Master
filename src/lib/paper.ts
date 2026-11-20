@@ -87,6 +87,39 @@ export function paperGeometry(template: PaperTemplate, landscape = false): Paper
   };
 }
 
+/** Horizontal space the floating chrome takes on each side of the page. */
+export interface WorkspaceInsets {
+  leftInset: number;
+  rightInset: number;
+}
+
+/** Left rail 12+44, favourite dock 68..112, sidebar drawer to 332, inspector 398..718. */
+export function getWorkspaceInsets({
+  sidebarOpen = false,
+  favoritesOpen = false,
+  inspectorOpen = false,
+  inspectorPinned = false,
+}: {
+  sidebarOpen?: boolean;
+  favoritesOpen?: boolean;
+  inspectorOpen?: boolean;
+  inspectorPinned?: boolean;
+}): WorkspaceInsets {
+  const leftInset = sidebarOpen ? (favoritesOpen ? 404 : 348) : favoritesOpen ? 124 : 68;
+  const rightInset = inspectorOpen && inspectorPinned ? 410 : 76;
+  return { leftInset, rightInset };
+}
+
+/** The page-safe strip between the rails: its width and its centre in viewport pixels. */
+export function workspaceSafeArea(
+  viewportWidth: number,
+  leftInset: number,
+  rightInset: number,
+): { safeWidth: number; safeCenterX: number } {
+  const safeWidth = Math.max(200, viewportWidth - leftInset - rightInset);
+  return { safeWidth, safeCenterX: leftInset + safeWidth / 2 };
+}
+
 /** Zoom that fits the whole page (or just its width) inside a viewport. */
 export function fitScale(
   viewportWidth: number,

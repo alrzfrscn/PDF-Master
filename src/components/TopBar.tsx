@@ -61,14 +61,14 @@ function PagePill() {
         <ChevronLeft size={14} strokeWidth={1.75} />
       </button>
       <select
-        className="h-7 max-w-[96px] cursor-pointer rounded-md bg-transparent px-0.5 text-center text-[11.5px] font-medium tabular-nums outline-none"
+        className="h-7 min-w-[64px] max-w-[96px] cursor-pointer whitespace-nowrap rounded-md bg-transparent px-0.5 text-center text-[11.5px] font-medium tabular-nums outline-none"
         aria-label="Jump to page"
         value={current}
         onChange={(event) => setPage(Number(event.target.value))}
       >
         {tab.pages.map((item, index) => (
           <option key={item.id} value={index + 1}>
-            Page {index + 1} / {count}
+            {index + 1} / {count}
           </option>
         ))}
       </select>
