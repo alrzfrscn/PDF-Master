@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PX_PER_MM, getWorkspaceInsets, workspaceSafeArea } from "./paper";
+import { PX_PER_MM, clampPan, getWorkspaceInsets, workspaceSafeArea } from "./paper";
 
 const VIEWPORT = 1600;
 const A4_WIDTH_PX = 210 * PX_PER_MM;
@@ -60,5 +60,45 @@ describe("safe-area centring", () => {
 
   it("keeps a usable strip on a very narrow window", () => {
     expect(workspaceSafeArea(400, 404, 76).safeWidth).toBe(200);
+  });
+});
+
+describe("pan clamping", () => {
+  const viewportWidth = 1600;
+  const viewportHeight = 900;
+  const { leftInset, rightInset } = getWorkspaceInsets({});
+  const safeWidth = viewportWidth - leftInset - rightInset;
+
+  it("keeps a fitted single page near the safe centre", () => {
+    const pageWidth = 400;
+    const pageHeight = 400;
+    const clamped = clampPan(
+      { x: 9999, y: -9999 },
+      pageWidth,
+      pageHeight,
+      viewportWidth,
+      viewportHeight,
+      leftInset,
+      rightInset,
+    );
+    expect(clamped.x).toBeCloseTo(safeWidth * 0.35);
+    expect(clamped.y).toBeCloseTo(-viewportHeight * 0.35);
+  });
+
+  it("lets a zoomed page pan but never off the safe strip", () => {
+    const rowWidth = safeWidth * 2;
+    const clamped = clampPan({ x: 99999, y: 0 }, rowWidth, 2000, viewportWidth, viewportHeight, leftInset, rightInset);
+    expect(clamped.x).toBeCloseTo((rowWidth - safeWidth) / 2 + 48);
+  });
+
+  it("leaves a pan inside the bounds untouched", () => {
+    const pan = { x: 20, y: -20 };
+    expect(clampPan(pan, safeWidth * 2, 2000, viewportWidth, viewportHeight, leftInset, rightInset)).toEqual(pan);
+  });
+
+  it("clamps both axes symmetrically", () => {
+    const rowHeight = viewportHeight * 2;
+    const clamped = clampPan({ x: 0, y: -99999 }, 100, rowHeight, viewportWidth, viewportHeight, leftInset, rightInset);
+    expect(clamped.y).toBeCloseTo(-((rowHeight - viewportHeight) / 2 + 48));
   });
 });

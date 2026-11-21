@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { FormulaAnnotation, TextAnnotation } from "./annotationTypes";
-import { annotationBounds, hitTest, regularPolygonPoints, rotateAnnotation, scaleAnnotation } from "./annotationGeometry";
+import type { FormulaAnnotation, InkPoint, TextAnnotation } from "./annotationTypes";
+import { annotationBounds, hitTest, regularPolygonPoints, rotateAnnotation, scaleAnnotation, subtractEraser } from "./annotationGeometry";
 
 const text: TextAnnotation = {
   id: "text-1",
@@ -96,5 +96,47 @@ describe("regular polygon drag", () => {
       expect(y).toBeLessThanOrEqual(70 + 1e-9);
     }
     expect(new Set(points.map(([x]) => Number(x.toFixed(4)))).size).toBeGreaterThan(2);
+  });
+});
+
+describe("split eraser", () => {
+  const stroke: InkPoint[] = [
+    [-10, 0, 0.4],
+    [-5, 0, 0.5],
+    [0, 0, 0.7],
+    [5, 0, 0.6],
+    [10, 0, 0.8],
+  ];
+
+  it("cuts exactly on the eraser perimeter and keeps surviving vertices still", () => {
+    const runs = subtractEraser(stroke, [0, 0], 2);
+    expect(runs).toHaveLength(2);
+
+    // The left half keeps its untouched vertices and ends on the circle edge.
+    expect(runs[0].map(([x]) => Number(x.toFixed(6)))).toEqual([-10, -5, -2]);
+    expect(runs[0][1]).toEqual([-5, 0, 0.5]);
+    expect(runs[0][2][0]).toBeCloseTo(-2);
+    expect(runs[0][2][1]).toBeCloseTo(0);
+    // Pressure is interpolated along the cut segment: 0.5 + 0.6 × (0.7 − 0.5).
+    expect(runs[0][2][2]).toBeCloseTo(0.62);
+
+    // The right half starts on the other side of the circle, also at the edge.
+    expect(runs[1][0][0]).toBeCloseTo(2);
+    expect(runs[1][1]).toEqual([5, 0, 0.6]);
+    expect(runs[1][2]).toEqual([10, 0, 0.8]);
+  });
+
+  it("leaves a stroke that never touches the eraser unchanged", () => {
+    const far: InkPoint[] = [
+      [20, 0, 0.5],
+      [25, 0, 0.6],
+      [30, 0, 0.7],
+    ];
+    const runs = subtractEraser(far, [0, 0], 2);
+    expect(runs).toEqual([far]);
+  });
+
+  it("removes a stroke swallowed by the eraser", () => {
+    expect(subtractEraser([[-1, 0, 0.5], [1, 0, 0.5]], [0, 0], 5)).toEqual([]);
   });
 });

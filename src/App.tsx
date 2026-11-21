@@ -36,6 +36,27 @@ function isTyping(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * A `.pdf` opened from Windows Explorer reaches the Rust shell as a positional
+ * argument; it reads the file once and this bridge turns it into a tab.
+ */
+async function openStartupPdf(): Promise<void> {
+  const bridge = (window as unknown as {
+    __TAURI_INTERNALS__?: { invoke?: (command: string) => Promise<unknown> };
+  }).__TAURI_INTERNALS__;
+  if (!bridge?.invoke) return;
+  try {
+    const pdf = (await bridge.invoke("get_startup_pdf")) as { name: string; base64: string } | null;
+    if (!pdf?.base64) return;
+    const binary = atob(pdf.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    await useDocStore.getState().openPdfBytes(bytes, pdf.name);
+  } catch {
+    // No document was requested, or this is not the desktop shell.
+  }
+}
+
 export default function App() {
   const presentation = useUIStore((state) => state.presentation);
   const setPresentation = useUIStore((state) => state.setPresentation);
@@ -67,6 +88,8 @@ export default function App() {
       }
       if (boot.fullscreen) useUIStore.getState().setPresentation(true);
       if (boot.print) window.setTimeout(() => window.print(), 500);
+      // After the workspace restore, so a file opened from Explorer becomes the active tab.
+      void openStartupPdf();
     });
     let timer = 0;
     let pending: { tabs: import("./lib/types").DocumentTab[]; activeId: string } | null = null;

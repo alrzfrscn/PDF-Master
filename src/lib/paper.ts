@@ -120,6 +120,30 @@ export function workspaceSafeArea(
   return { safeWidth, safeCenterX: leftInset + safeWidth / 2 };
 }
 
+export interface PanOffset {
+  x: number;
+  y: number;
+}
+
+/**
+ * Keeps a panned page on screen: a row that fits the safe strip may drift at
+ * most 35 % of it, a larger row keeps 48 px of itself inside the strip.
+ */
+export function clampPan(
+  pan: PanOffset,
+  rowWidthPx: number,
+  rowHeightPx: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  leftInset: number,
+  rightInset: number,
+): PanOffset {
+  const { safeWidth } = workspaceSafeArea(viewportWidth, leftInset, rightInset);
+  const maxX = rowWidthPx <= safeWidth ? safeWidth * 0.35 : (rowWidthPx - safeWidth) / 2 + 48;
+  const maxY = rowHeightPx <= viewportHeight ? viewportHeight * 0.35 : (rowHeightPx - viewportHeight) / 2 + 48;
+  return { x: clamp(pan.x, -maxX, maxX), y: clamp(pan.y, -maxY, maxY) };
+}
+
 /** Zoom that fits the whole page (or just its width) inside a viewport. */
 export function fitScale(
   viewportWidth: number,

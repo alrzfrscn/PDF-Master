@@ -78,6 +78,10 @@ function saveRecent(colors: string[]): void {
 
 const QUICK = SWATCHES.slice(0, 9);
 
+/** The custom-colour tile is always the same rainbow, never the current ink. */
+const RAINBOW_GRADIENT =
+  "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444)";
+
 /** Apple-style glass colour studio: SV square, hue slider, eyedropper, hex and RGB. */
 export function CustomColorPicker({
   value,
@@ -157,11 +161,10 @@ export function CustomColorPicker({
         aria-pressed={open}
         onClick={() => setOpen((state) => !state)}
         style={{
-          backgroundColor: solid,
-          backgroundImage: value ? undefined : "conic-gradient(#ff3b30, #ffcc00, #34c759, #0a84ff, #5e5ce6, #ff2d55, #ff3b30)",
+          backgroundImage: RAINBOW_GRADIENT,
         }}
       >
-        {!value && <span className="text-[9px] font-bold text-white drop-shadow">+</span>}
+        <span className="pointer-events-none absolute inset-0 rounded-[6px] ring-1 ring-inset ring-black/10" />
       </button>
 
       {open && (

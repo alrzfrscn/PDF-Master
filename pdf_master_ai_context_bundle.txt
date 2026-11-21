@@ -4,7 +4,7 @@ AI PROJECT CONTEXT & ARCHITECTURE BUNDLE
 Project Name   : PDF Master
 Detected Stack : Node.js / JavaScript, TypeScript
 Root Path      : D:\Project\PDF Master
-Generated At   : 2026-11-20 14:09:25
+Generated At   : 2026-11-20 14:22:29
 Included Files : 111 source/config/data files
 
 GUIDE FOR AI ASSISTANT:
@@ -97,8 +97,8 @@ PDF Master/
 │   │   ├── bookmarks.ts (1.5 KB)
 │   │   ├── bootArgs.test.ts (2.3 KB)
 │   │   ├── bootArgs.ts (3.5 KB)
-│   │   ├── canvasInput.test.ts (1016 B)
-│   │   ├── canvasInput.ts (792 B)
+│   │   ├── canvasInput.test.ts (1.1 KB)
+│   │   ├── canvasInput.ts (831 B)
 │   │   ├── customStamps.ts (5.4 KB)
 │   │   ├── data.ts (1.9 KB)
 │   │   ├── formula.ts (1.2 KB)
@@ -11615,7 +11615,7 @@ export function resolvePaperTarget(
 }
 
 ================================================================================
-FILE: src\lib\canvasInput.test.ts (1016 B)
+FILE: src\lib\canvasInput.test.ts (1.1 KB)
 ================================================================================
 import { describe, expect, it } from "vitest";
 import { CANVAS_TOUCH_ACTION, drawsWithPointer, pansWithPointer } from "./canvasInput";
@@ -11633,16 +11633,17 @@ describe("stylus and finger routing", () => {
     expect(CANVAS_TOUCH_ACTION).toBe("none");
   });
 
-  it("pans with one finger only while finger drawing is off", () => {
+  it("pans with one finger while finger drawing is off or the hand tool is active", () => {
     expect(pansWithPointer("touch", false, false)).toBe(true);
     expect(pansWithPointer("touch", true, false)).toBe(false);
+    expect(pansWithPointer("touch", true, true)).toBe(true);
     expect(pansWithPointer("pen", false, false)).toBe(false);
     expect(pansWithPointer("pen", false, true)).toBe(true);
   });
 });
 
 ================================================================================
-FILE: src\lib\canvasInput.ts (792 B)
+FILE: src\lib\canvasInput.ts (831 B)
 ================================================================================
 /**
  * Chromium applies `touch-action` to pens as well as fingers, so the canvas keeps
@@ -11656,9 +11657,10 @@ export function drawsWithPointer(pointerType: string, touchDrawEnabled: boolean)
   return pointerType !== "touch" || touchDrawEnabled;
 }
 
-/** One finger pans only while finger drawing is off; pen and mouse never pan by drag. */
+/** One finger pans while finger drawing is off, or with the hand tool; pen and mouse never pan by drag. */
 export function pansWithPointer(pointerType: string, touchDrawEnabled: boolean, canPan: boolean): boolean {
-  return pointerType === "touch" ? !touchDrawEnabled : canPan;
+  if (pointerType === "touch") return !touchDrawEnabled || canPan;
+  return canPan;
 }
 
 ================================================================================

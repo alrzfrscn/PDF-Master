@@ -371,18 +371,73 @@ export function detectScratchOut(points: InkPoint[], options: ScratchOutOptions 
   return reversals >= minReversals;
 }
 
-/** Splits ink into continuous runs that stay outside the eraser circle. */
+/** Where a segment crosses the eraser circle, as parameters along `a`→`b`. */
+function circleHits(a: Pt, b: Pt, center: Pt, radiusMm: number): number[] {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) return [];
+  const fx = a[0] - center[0];
+  const fy = a[1] - center[1];
+  const half = fx * dx + fy * dy;
+  const constant = fx * fx + fy * fy - radiusMm * radiusMm;
+  const discriminant = half * half - lengthSq * constant;
+  if (discriminant <= 0) return [];
+  const root = Math.sqrt(discriminant);
+  return [(-half - root) / lengthSq, (-half + root) / lengthSq]
+    .filter((t) => t >= 0 && t <= 1)
+    .sort((left, right) => left - right);
+}
+
+/**
+ * Splits ink into continuous runs that stay outside the eraser circle. The cut
+ * ends land exactly on the circle perimeter and surviving vertices keep their
+ * coordinates and pressure, so an untouched part of a stroke never shifts.
+ */
 export function subtractEraser(points: InkPoint[], center: Pt, radiusMm: number): InkPoint[][] {
   const runs: InkPoint[][] = [];
+  if (points.length === 0) return runs;
+  const inside = (point: InkPoint) => ptDistance([point[0], point[1]], center) <= radiusMm;
+  const onEdge = (a: InkPoint, b: InkPoint, t: number): InkPoint => [
+    a[0] + (b[0] - a[0]) * t,
+    a[1] + (b[1] - a[1]) * t,
+    a[2] + (b[2] - a[2]) * t,
+  ];
   let current: InkPoint[] = [];
-  for (const point of points) {
-    if (ptDistance([point[0], point[1]], center) > radiusMm) {
-      current.push(point);
-    } else if (current.length > 0) {
-      runs.push(current);
-      current = [];
+  const flush = () => {
+    if (current.length > 0) runs.push(current);
+    current = [];
+  };
+
+  if (!inside(points[0])) current.push(points[0]);
+  for (let index = 1; index < points.length; index += 1) {
+    const a = points[index - 1];
+    const b = points[index];
+    const aIn = inside(a);
+    const bIn = inside(b);
+    if (!aIn && !bIn) {
+      const hits = circleHits([a[0], a[1]], [b[0], b[1]], center, radiusMm);
+      if (hits.length >= 2) {
+        // The segment dips through the circle: close the run on its entry and
+        // resume on its exit, so the hole is exactly the eraser footprint.
+        current.push(onEdge(a, b, hits[0]));
+        flush();
+        current.push(onEdge(a, b, hits[1]));
+      }
+      current.push(b);
+    } else if (!aIn && bIn) {
+      const exits = circleHits([a[0], a[1]], [b[0], b[1]], center, radiusMm);
+      if (exits.length === 0) flush();
+      else {
+        current.push(onEdge(a, b, exits[0]));
+        flush();
+      }
+    } else if (aIn && !bIn) {
+      const exits = circleHits([a[0], a[1]], [b[0], b[1]], center, radiusMm);
+      if (exits.length > 0) current.push(onEdge(a, b, exits[exits.length - 1]));
+      current.push(b);
     }
   }
-  if (current.length > 0) runs.push(current);
+  flush();
   return runs.filter((run) => run.length > 1);
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Maximize2, Search } from "lucide-react";
+import { Maximize2, Search, X } from "lucide-react";
 import { resolveStamp, useCustomStampStore } from "../lib/customStamps";
 import { stampGroups, stamps, userStamps } from "../lib/data";
 import type { UserStamp } from "../lib/types";
@@ -43,11 +43,13 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
   const [group, setGroup] = useState("all");
   const [scrollTop, setScrollTop] = useState(0);
   const [height, setHeight] = useState(320);
+  const [editing, setEditing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectedStampId = useToolStore((state) => state.selectedStampId);
   const selectStamp = useToolStore((state) => state.selectStamp);
   const setLibraryOpen = useUIStore((state) => state.setLibraryOpen);
   const customStamps = useCustomStampStore((state) => state.stamps);
+  const removeCustomStamp = useCustomStampStore((state) => state.remove);
   const library = variant === "library";
   const groups = useMemo(stampGroups, []);
   const columns = library ? 7 : 3;
@@ -65,8 +67,9 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
     [customStamps],
   );
 
-  const items = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+  const customIds = useMemo(() => new Set(customStamps.map((stamp) => stamp.id)), [customStamps]);
+
+  const items = useMemo(() => {    const needle = query.trim().toLowerCase();
     const source =
       group === "user"
         ? USER_ITEMS
@@ -179,31 +182,47 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
             }}
           >
             {visible.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="tile group flex h-full flex-col overflow-hidden text-left"
-                aria-pressed={selectedStampId === item.id}
-                title={`${item.name} — ${item.sub}`}
-                onClick={() => {
-                  const resolved = resolveStamp(item.id);
-                  if (resolved) selectStamp(resolved.id);
-                  onPick?.();
-                }}
-              >
-                <span className="checker flex h-[52px] w-full shrink-0 items-center justify-center p-1.5">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    loading="lazy"
-                    decoding="async"
-                    className="max-h-full max-w-full object-contain drop-shadow-sm"
-                  />
-                </span>
-                <span className="truncate px-1.5 py-1 text-[9.5px] leading-tight text-muted group-hover:text-fg">
-                  {item.name}
-                </span>
-              </button>
+              <div key={item.id} className="relative h-full">
+                <button
+                  type="button"
+                  className="tile group flex h-full w-full flex-col overflow-hidden text-left"
+                  aria-pressed={selectedStampId === item.id}
+                  title={`${item.name} — ${item.sub}`}
+                  onClick={() => {
+                    const resolved = resolveStamp(item.id);
+                    if (resolved) selectStamp(resolved.id);
+                    onPick?.();
+                  }}
+                >
+                  <span className="checker flex h-[52px] w-full shrink-0 items-center justify-center p-1.5">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="max-h-full max-w-full object-contain drop-shadow-sm"
+                    />
+                  </span>
+                  <span className="truncate px-1.5 py-1 text-[9.5px] leading-tight text-muted group-hover:text-fg">
+                    {item.name}
+                  </span>
+                </button>
+                {editing && customIds.has(item.id) && (
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full border border-white/70 text-white shadow-[0_1px_4px_rgba(16,24,40,0.45)]"
+                    style={{ background: "var(--danger)" }}
+                    title={`Delete ${item.name}`}
+                    aria-label={`Delete custom stamp ${item.name}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removeCustomStamp(item.id);
+                    }}
+                  >
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -211,6 +230,17 @@ export function StampGallery({ variant = "panel", onPick }: { variant?: "panel" 
           <p className="py-6 text-center text-[11.5px] text-muted">No stamp matches “{query}”.</p>
         )}
       </div>
+
+      {customStamps.length > 0 && (
+        <button
+          type="button"
+          className="chip h-7 justify-center"
+          aria-pressed={editing}
+          onClick={() => setEditing((value) => !value)}
+        >
+          {editing ? "Done" : "Edit"}
+        </button>
+      )}
 
       {library && (
         <p className="text-[10.5px] leading-relaxed text-muted">

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FileText, Image as ImageIcon } from "lucide-react";
-import { clamp, getWorkspaceInsets, PX_PER_MM, workspaceSafeArea } from "../../lib/paper";
-import { CANVAS_TOUCH_ACTION, pansWithPointer } from "../../lib/canvasInput";
+import { clamp, clampPan, getWorkspaceInsets, PX_PER_MM, workspaceSafeArea, type PanOffset } from "../../lib/paper";
+import { CANVAS_TOUCH_ACTION, pansFromBackground } from "../../lib/canvasInput";
 import { pageSizeMm, pageTemplate } from "../../lib/pageUtils";
 import { addImageStamp } from "../../lib/images";
 import { readImageFile } from "../../lib/raster";
@@ -15,6 +15,8 @@ import { AnnotationLayer } from "./AnnotationLayer";
 import { CropOverlay } from "./CropOverlay";
 import { PaperSheet } from "./PaperSheet";
 import { PdfBackground } from "./PdfBackground";
+
+const ROW_GAP_PX = 20;
 
 function buildRows(count: number, twoPage: boolean, cover: boolean): number[][] {
   if (!twoPage) return Array.from({ length: count }, (_, index) => [index]);
@@ -262,10 +264,6 @@ export function PaperViewport() {
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
   const pageNumber = clamp(pageIndex, 1, tab.pages.length);
-  const page = tab.pages[pageNumber - 1] ?? tab.pages[0];
-  const size = pageSizeMm(tab, page);
-  const rotated = page.rotation === 90 || page.rotation === 270;
-  const fitSize = rotated ? { widthMm: size.heightMm, heightMm: size.widthMm } : size;
   const continuous = viewMode === "one-continuous" || viewMode === "two-continuous";
   const twoPage = viewMode === "two-page" || viewMode === "two-continuous";
   // Floating controls cover part of the canvas; fitting must centre in the rest.
@@ -297,6 +295,34 @@ export function PaperViewport() {
   const pinching = useRef(false);
   const [spaceDown, setSpaceDown] = useState(false);
   const [dropActive, setDropActive] = useState(false);
+
+  /** Rendered size of one row at `scale`; rows of mixed page sizes differ. */
+  const rowMetrics = (row: number[], scale: number) => {
+    let width = 0;
+    let height = 0;
+    row.forEach((index, position) => {
+      const item = tab.pages[index];
+      if (!item) return;
+      const itemSize = pageSizeMm(tab, item);
+      const turned = item.rotation === 90 || item.rotation === 270;
+      width += (turned ? itemSize.heightMm : itemSize.widthMm) * PX_PER_MM * scale;
+      height = Math.max(height, (turned ? itemSize.widthMm : itemSize.heightMm) * PX_PER_MM * scale);
+      if (position > 0) width += ROW_GAP_PX;
+    });
+    return { width, height };
+  };
+  const activeRow = () => rows.find((row) => row.includes(pageNumber - 1)) ?? [pageNumber - 1];
+  // One-page and two-page panning must never lose the page in the empty workspace.
+  const clampViewportPan = (next: PanOffset): PanOffset => {
+    if (continuous) return next;
+    const element = viewportRef.current;
+    if (!element) return next;
+    const rect = element.getBoundingClientRect();
+    const metrics = rowMetrics(displayRows[0] ?? [pageNumber - 1], useDocStore.getState().zoom);
+    return clampPan(next, metrics.width, metrics.height, rect.width, rect.height, leftInset, rightInset);
+  };
+  const clampPanRef = useRef(clampViewportPan);
+  clampPanRef.current = clampViewportPan;
 
   // Two-finger pinch pans and zooms around the midpoint; one finger cancels any draft.
   useEffect(() => {
@@ -336,10 +362,10 @@ export function PaperViewport() {
       const zoom = clamp(pinch.zoom * (distance / pinch.distance), 0.1, 6);
       const ratio = zoom / pinch.zoom;
       const center = midpoint();
-      setPan({
+      setPan(clampPanRef.current({
         x: center.x - (pinch.center.x - pinch.pan.x) * ratio,
         y: center.y - (pinch.center.y - pinch.pan.y) * ratio,
-      });
+      }));
       useDocStore.setState({ zoom, fitMode: null });
     };
     const onUp = (event: PointerEvent) => {
@@ -370,21 +396,25 @@ export function PaperViewport() {
     const apply = () => {
       const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
-      const rowWidthPx = (twoPage ? fitSize.widthMm * 2 + 12 : fitSize.widthMm) * PX_PER_MM;
-      const rowHeightPx = fitSize.heightMm * PX_PER_MM;
+      // The active page's own row decides the fit: a wider page elsewhere in the
+      // document must not shrink this one.
+      const metrics = rowMetrics(activeRow(), 1);
       const { safeWidth } = workspaceSafeArea(rect.width, leftInset, rightInset);
       // 12px of breathing room on each side of the safe strip.
-      const byWidth = (safeWidth - 24) / rowWidthPx;
-      const byHeight = (rect.height - 16) / rowHeightPx;
-      const zoom = fitMode === "width" ? byWidth : Math.min(byWidth, byHeight);
-      useDocStore.setState({ zoom: clamp(zoom, 0.1, 6) });
+      const byWidth = (safeWidth - 24) / Math.max(1, metrics.width);
+      const byHeight = (rect.height - 16) / Math.max(1, metrics.height);
+      const nextZoom = clamp(fitMode === "width" ? byWidth : Math.min(byWidth, byHeight), 0.1, 6);
+      useDocStore.setState({ zoom: nextZoom });
       setPan({ x: 0, y: 0 });
       if (continuous) {
         const active = useDocStore.getState().page;
         requestAnimationFrame(() => {
-          pageRefs.current.get(active - 1)?.scrollIntoView({ block: "start" });
-          // A stale horizontal offset would leave the fitted page under a rail.
-          if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+          const node = pageRefs.current.get(active - 1);
+          node?.scrollIntoView({ block: "start", inline: "nearest" });
+          // Centre the fitted row in the safe strip; a stale offset would leave it under a rail.
+          if (scrollRef.current) {
+            scrollRef.current.scrollLeft = Math.max(0, (metrics.width * nextZoom - safeWidth) / 2);
+          }
         });
       }
     };
@@ -392,11 +422,30 @@ export function PaperViewport() {
     const observer = new ResizeObserver(apply);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [fitMode, fitSize.widthMm, fitSize.heightMm, twoPage, viewMode, leftInset, rightInset, continuous]);
+  }, [fitMode, twoPage, viewMode, leftInset, rightInset, continuous, rows, pageNumber]);
+
+  // A zoom change in a continuous view keeps the active row centred horizontally.
+  useLayoutEffect(() => {
+    if (!continuous) return;
+    const element = scrollRef.current;
+    if (!element) return;
+    const metrics = rowMetrics(activeRow(), zoom);
+    const { safeWidth } = workspaceSafeArea(element.clientWidth, leftInset, rightInset);
+    element.scrollLeft = Math.max(0, (metrics.width - safeWidth) / 2);
+  }, [zoom, continuous, leftInset, rightInset, rows, tab.id]);
 
   useEffect(() => {
     setPan({ x: 0, y: 0 });
   }, [viewMode]);
+
+  // Zooming out shrinks the legal pan range; pull a stale offset back in.
+  useLayoutEffect(() => {
+    if (continuous) return;
+    setPan((current) => {
+      const next = clampPanRef.current(current);
+      return next.x === current.x && next.y === current.y ? current : next;
+    });
+  }, [zoom, viewMode, leftInset, rightInset, continuous]);
 
   // Ctrl/⌘ + wheel zooms about the cursor; a bare wheel scrolls the document.
   useEffect(() => {
@@ -411,13 +460,13 @@ export function PaperViewport() {
         const cursorY = event.clientY - rect.top - rect.height / 2;
         const next = clamp(zoom * Math.exp(-event.deltaY * 0.0016), 0.1, 6);
         const ratio = next / zoom;
-        setPan((current) => ({
+        setPan((current) => clampPanRef.current({
           x: cursorX - (cursorX - current.x) * ratio,
           y: cursorY - (cursorY - current.y) * ratio,
         }));
         useDocStore.setState({ zoom: next, fitMode: null });
       } else {
-        setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
+        setPan((current) => clampPanRef.current({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
       }
     };
     element.addEventListener("wheel", onWheel, { passive: false });
@@ -497,7 +546,9 @@ export function PaperViewport() {
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (pinching.current) return;
-    const touchPan = pansWithPointer(event.pointerType, touchDrawEnabled, canPan);
+    // Empty space beside a page is never a drawing surface: it always pans.
+    const onPaper = Boolean((event.target as HTMLElement).closest?.(".page-paper"));
+    const touchPan = pansFromBackground(event.pointerType, onPaper, touchDrawEnabled, canPan);
     if (continuous) {
       if (!touchPan && event.button !== 1) return;
       drag.current = {
@@ -525,7 +576,10 @@ export function PaperViewport() {
       element.scrollTop = current.panY - (event.clientY - current.y);
       return;
     }
-    setPan({ x: current.panX + event.clientX - current.x, y: current.panY + event.clientY - current.y });
+    setPan(clampPanRef.current({
+      x: current.panX + event.clientX - current.x,
+      y: current.panY + event.clientY - current.y,
+    }));
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -599,25 +653,26 @@ export function PaperViewport() {
         <div
           ref={scrollRef}
           className="doc-scroll absolute inset-0 overflow-y-scroll overflow-x-auto"
+          // border-box: the rail padding is part of the scroll box, so the content
+          // column is exactly the safe strip and its scroll range covers the rails.
+          style={{ boxSizing: "border-box", paddingLeft: leftInset, paddingRight: rightInset }}
           onScroll={scrollToCenterPage}
         >
-          <div
-            className="flex min-h-full flex-col gap-5 py-8"
-            style={{
-              width: "max-content",
-              minWidth: "100%",
-              // border-box: the rail padding must come out of the content box, not add to it,
-              // or the fitted page is pushed right and clipped.
-              boxSizing: "border-box",
-              paddingLeft: leftInset,
-              paddingRight: rightInset,
-            }}
-          >
-            {displayRows.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex items-start justify-center gap-5" style={{ marginLeft: "auto", marginRight: "auto" }}>
-                {pageNodes(row, true)}
-              </div>
-            ))}
+          <div className="flex min-h-full flex-col gap-5 py-8" style={{ width: "100%" }}>
+            {displayRows.map((row, rowIndex) => {
+              // Each row is only as wide as its own pages, so a wide page elsewhere
+              // in the document never shifts this row's horizontal centre.
+              const metrics = rowMetrics(row, zoom);
+              return (
+                <div
+                  key={rowIndex}
+                  className="flex shrink-0 items-start justify-center gap-5"
+                  style={{ width: metrics.width, marginLeft: "auto", marginRight: "auto" }}
+                >
+                  {pageNodes(row, true)}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : (

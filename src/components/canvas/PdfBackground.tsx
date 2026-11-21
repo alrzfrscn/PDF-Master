@@ -28,5 +28,6 @@ export function PdfBackground({ page, widthMm, heightMm, zoom }: Props) {
     };
   }, [page.url, page.pageNumber, widthMm, heightMm, renderQuality]);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-label={`PDF page ${page.pageNumber}`} />;
+  // CSS size always follows the .page-paper box; only the raster resolution is quantised.
+  return <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full" aria-label={`PDF page ${page.pageNumber}`} />;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CANVAS_TOUCH_ACTION, drawsWithPointer, pansWithPointer } from "./canvasInput";
+import { CANVAS_TOUCH_ACTION, drawsWithPointer, pansFromBackground, pansWithPointer } from "./canvasInput";
 
 describe("stylus and finger routing", () => {
   it("always lets a pen draw, even with finger drawing switched off", () => {
@@ -20,5 +20,16 @@ describe("stylus and finger routing", () => {
     expect(pansWithPointer("touch", true, true)).toBe(true);
     expect(pansWithPointer("pen", false, false)).toBe(false);
     expect(pansWithPointer("pen", false, true)).toBe(true);
+  });
+
+  it("always pans from the empty background, even with finger drawing on", () => {
+    expect(pansFromBackground("touch", false, true, false)).toBe(true);
+    expect(pansFromBackground("mouse", false, true, false)).toBe(true);
+    // On the paper the drawing tool keeps the finger.
+    expect(pansFromBackground("touch", true, true, false)).toBe(false);
+    expect(pansFromBackground("touch", true, false, false)).toBe(true);
+    // A pen is a drawing instrument everywhere.
+    expect(pansFromBackground("pen", false, true, false)).toBe(false);
+    expect(pansFromBackground("pen", false, true, true)).toBe(true);
   });
 });

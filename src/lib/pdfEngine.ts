@@ -15,7 +15,7 @@ import {
 import type { DocumentPage, PaperTemplate, DocumentTab, PdfBookmark } from "./types";
 import type { Annotation, FormulaAnnotation, Pt, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, formatDimension } from "./annotationGeometry";
-import { inkPath, penStyleOptions, polylinePath } from "./ink";
+import { inkPath, markerOpacity, penStyleOptions, polylinePath } from "./ink";
 import { layoutText, measureTextWidthMm, TEXT_PADDING_MM, PT_TO_MM } from "./textLayout";
 import { latexToPng } from "./formula";
 import { paperById } from "./data";
@@ -400,7 +400,7 @@ async function drawAnnotation(context: DrawContext, annotation: Annotation): Pro
         ...svgOptions,
         borderColor: hexToRgb(annotation.color),
         borderWidth: annotation.thicknessMm,
-        borderOpacity: annotation.opacity,
+        borderOpacity: markerOpacity(annotation.opacity),
       });
       return;
     }

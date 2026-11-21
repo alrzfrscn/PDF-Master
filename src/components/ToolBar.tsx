@@ -42,7 +42,12 @@ export function ToolBar() {
             onClick={() => {
               const tools = useToolStore.getState();
               const ui = useUIStore.getState();
-              if (!isShapeTool(tools.activeTool)) tools.setTool(tools.lastShapeTool);
+              // A second click on the already-active Shapes button closes the popover.
+              if (isShapeTool(tools.activeTool)) {
+                ui.toggleToolPopover();
+                return;
+              }
+              tools.setTool(tools.lastShapeTool);
               ui.openToolPopover();
             }}
           >

@@ -15,3 +15,17 @@ export function pansWithPointer(pointerType: string, touchDrawEnabled: boolean, 
   if (pointerType === "touch") return !touchDrawEnabled || canPan;
   return canPan;
 }
+
+/**
+ * A touch or mouse drag that starts on the empty workspace beside a page always
+ * pans, even while finger drawing is on: the background is never a drawing surface.
+ */
+export function pansFromBackground(
+  pointerType: string,
+  onPaper: boolean,
+  touchDrawEnabled: boolean,
+  canPan: boolean,
+): boolean {
+  if (!onPaper && (pointerType === "touch" || pointerType === "mouse")) return true;
+  return pansWithPointer(pointerType, touchDrawEnabled, canPan);
+}

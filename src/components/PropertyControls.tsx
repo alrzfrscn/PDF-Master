@@ -1,7 +1,7 @@
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { SHAPE_LABEL, type DimensionUnit, type MarkerTip, type TextAlign } from "../lib/annotationTypes";
 import { ARROW_HEADS, SWATCHES } from "../lib/presets";
-import { inkPath, penStyleOptions } from "../lib/ink";
+import { inkPath, markerOpacity, penStyleOptions } from "../lib/ink";
 import type { InkPoint, PenStyle } from "../lib/annotationTypes";
 import { isShapeTool, SHAPE_TOOLS } from "../lib/tools";
 import type { LineStyleName, ShapeTool, ToolId, ToolProps } from "../lib/types";
@@ -103,6 +103,12 @@ function previewNib(tool: ToolId, thicknessMm: number) {
     : Math.min(9, 1.5 + Math.sqrt(thicknessMm) * 1.4);
 }
 
+/** Highlighter preview nib: 3 px at the thinnest marker, 12 px at the widest. */
+function markerPreviewWidth(thicknessMm: number, tip: MarkerTip): number {
+  const band = Math.min(12, Math.max(3, 3 + ((thicknessMm - 2) / 30) * 9));
+  return tip === "horizontal" ? Math.max(3, band * 0.55) : band;
+}
+
 /** Live ink preview: colour, nib, opacity and stroke style update as you type. */
 function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
   const path = useMemo(
@@ -110,7 +116,6 @@ function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
     [props, tool],
   );
   const tip = props.tipStyle ?? "vertical";
-  const band = tool === "marker" ? (tip === "horizontal" ? 8 : tip === "squared" ? 16 : tip === "ball" ? 16 : 22) : 0;
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-[var(--border)]"
@@ -119,15 +124,15 @@ function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
       <svg viewBox="0 0 320 72" className="h-full w-full" aria-hidden="true">
         <line x1="6" y1="36" x2="314" y2="36" stroke="var(--border)" strokeDasharray="2 4" />
         {tool === "marker" ? (
-          <line
-            x1="24"
-            y1="36"
-            x2="296"
-            y2="36"
+          <polyline
+            points={WAVE_POINTS.map(([x, y]) => `${x},${y}`).join(" ")}
+            fill="none"
             stroke={props.color}
-            strokeWidth={band}
+            strokeWidth={markerPreviewWidth(props.thicknessMm, tip)}
             strokeLinecap={tip === "squared" ? "square" : tip === "ball" ? "round" : "butt"}
-            opacity={props.opacity}
+            strokeLinejoin="round"
+            opacity={markerOpacity(props.opacity)}
+            style={{ mixBlendMode: "multiply" }}
           />
         ) : (
           <path d={path} fill={props.color} opacity={props.opacity} />
@@ -312,7 +317,6 @@ function StudioInk({ tool, props, setProps }: { tool: ToolId; props: ToolProps; 
       {tool === "marker" && (
         <ToggleRow
           label="Straight line highlight"
-          hint="Snaps the highlight to a straight line between start and end."
           checked={Boolean(props.straightHighlight)}
           onChange={(straightHighlight) => setProps({ straightHighlight })}
         />
@@ -485,6 +489,15 @@ function TextStudio({ props, setProps }: { props: ToolProps; setProps: (patch: P
 
 const PREVIEW_STROKE = 2;
 
+/** Symmetric N-gon: one radius on both axes keeps the preview geometric. */
+function polygonPreviewPoints(sides: number): string {
+  const count = Math.max(3, Math.round(sides));
+  return Array.from({ length: count }, (_, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    return `${120 + 24 * Math.cos(angle)},${34 + 24 * Math.sin(angle)}`;
+  }).join(" ");
+}
+
 function arrowTip(x: number, y: number, direction: 1 | -1, code: number, stroke: string) {
   if (!code) return null;
   const size = 10;
@@ -540,7 +553,11 @@ function ShapePreview({ tool, props }: { tool: ShapeTool; props: ToolProps }) {
         )}
         {tool === "rectangle" && <rect x="76" y="22" width="168" height="44" rx="3" {...common} />}
         {tool === "ellipse" && <ellipse cx="160" cy="44" rx="84" ry="22" {...common} />}
-        {tool === "polygon" && <path d="M160 18 L238 32 L258 62 L160 76 L62 62 L82 32 Z" {...common} />}
+        {tool === "polygon" && (
+          <svg x="40" y="9" width="240" height="68" viewBox="0 0 240 68">
+            <polygon points={polygonPreviewPoints(props.polygonSides ?? 6)} {...common} />
+          </svg>
+        )}
         {tool === "dimension" && (
           <g {...flat}>
             <line x1="46" y1="44" x2="274" y2="44" />

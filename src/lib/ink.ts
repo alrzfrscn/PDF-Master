@@ -19,6 +19,14 @@ export function penStyleOptions(style: PenStyle = "pro", pressureLevel = 55): Re
   };
 }
 
+/**
+ * Highlighter alpha: the stored 0..1 opacity maps to a vivid 0.22..0.90
+ * multiply curve, so even a faint highlight stays readable on white paper.
+ */
+export function markerOpacity(opacity: number): number {
+  return 0.22 + 0.68 * Math.min(1, Math.max(0, opacity));
+}
+
 function toStrokePoints(points: InkPoint[]) {
   return points.map(([x, y, pressure]) => ({ x, y, pressure }));
 }

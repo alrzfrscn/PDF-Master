@@ -28,7 +28,7 @@ import {
   translateAnnotation,
 } from "../../lib/annotationGeometry";
 import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
-import { inkPath, penStyleOptions, polylinePath, pointerPressure } from "../../lib/ink";
+import { inkPath, markerOpacity, penStyleOptions, polylinePath, pointerPressure } from "../../lib/ink";
 import { CANVAS_TOUCH_ACTION, drawsWithPointer } from "../../lib/canvasInput";
 import { PX_PER_MM } from "../../lib/paper";
 import { resolveStamp, useCustomStampStore } from "../../lib/customStamps";
@@ -245,7 +245,7 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
         strokeWidth={nib.width}
         strokeLinecap={nib.cap}
         strokeLinejoin="round"
-        opacity={annotation.opacity}
+        opacity={markerOpacity(annotation.opacity)}
         style={{ mixBlendMode: "multiply" }}
       />
     );
@@ -534,7 +534,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
             points: final,
             color: toolProps.color,
             thicknessMm: toolProps.thicknessMm,
-            opacity: toolProps.opacity === 1 ? 0.45 : toolProps.opacity,
+            opacity: toolProps.opacity,
             tipStyle: toolProps.tipStyle ?? "vertical",
           };
     addSilently(annotation);
@@ -1310,7 +1310,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
                   stroke={toolProps.color}
                   strokeWidth={nib.width}
                   strokeLinecap={nib.cap}
-                  opacity={toolProps.opacity}
+                  opacity={markerOpacity(toolProps.opacity)}
                   style={{ mixBlendMode: "multiply" }}
                 />
               );
