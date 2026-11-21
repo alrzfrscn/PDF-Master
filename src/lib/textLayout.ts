@@ -28,15 +28,11 @@ export function measureTextWidthMm(text: string, family: string, bold: boolean, 
   return em * fontSizePt * PT_TO_MM;
 }
 
-/** CSS stack that matches the PDF standard families. */
-export function textFontCss(family: string, bold: boolean, italic: boolean): string {
-  const stack =
-    family === "Courier"
-      ? "'Courier New', Courier, monospace"
-      : family === "TimesRoman"
-        ? "'Times New Roman', Times, serif"
-        : "Helvetica, Arial, 'Helvetica Neue', sans-serif";
-  return `${italic ? "italic " : ""}${bold ? "700 " : "400 "}${stack}`;
+/** Valid CSS font-family stack matching the PDF standard families (with Persian/Unicode fallback). */
+export function textFontCss(family: string, _bold = false, _italic = false): string {
+  if (family === "Courier") return "'Courier New', Courier, monospace";
+  if (family === "TimesRoman") return "'Times New Roman', Times, serif";
+  return "Helvetica, Arial, 'Helvetica Neue', 'Segoe UI', Tahoma, sans-serif";
 }
 
 function wrapParagraph(text: string, maxWidthMm: number, family: string, bold: boolean, fontSizePt: number): string[] {

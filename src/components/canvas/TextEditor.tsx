@@ -42,6 +42,8 @@ export function TextEditor({ draft, onPatch, onFit, onCommit, onCancel }: Props)
   return (
     <div
       className="absolute z-30"
+      onPointerDown={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
       style={{
         left: draft.xMm * PX_PER_MM,
         top: draft.yMm * PX_PER_MM,
@@ -60,6 +62,7 @@ export function TextEditor({ draft, onPatch, onFit, onCommit, onCancel }: Props)
       )}
       <textarea
         ref={inputRef}
+        dir="auto"
         value={value}
         aria-label="Edit text box"
         spellCheck={false}
@@ -101,7 +104,7 @@ export function TextEditor({ draft, onPatch, onFit, onCommit, onCancel }: Props)
           resize: "none",
           overflow: "hidden",
           padding: `${TEXT_PADDING_MM * PX_PER_MM}px`,
-          fontFamily: textFontCss(draft.fontFamily, draft.bold, draft.italic),
+          fontFamily: textFontCss(draft.fontFamily),
           fontSize: fontSizePx,
           fontStyle: draft.italic ? "italic" : "normal",
           fontWeight: draft.bold ? 700 : 400,
@@ -115,6 +118,9 @@ export function TextEditor({ draft, onPatch, onFit, onCommit, onCancel }: Props)
           outline: "none",
           caretColor: draft.textColor,
           boxShadow: draft.frameType === 0 ? "0 0 0 1px var(--accent-soft)" : undefined,
+          userSelect: "text",
+          WebkitUserSelect: "text",
+          touchAction: "auto",
         }}
       />
     </div>

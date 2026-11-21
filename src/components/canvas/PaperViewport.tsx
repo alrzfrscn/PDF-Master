@@ -192,8 +192,8 @@ function PageView({
         style={{
           width: baseW,
           height: baseH,
-          left: (displayW - baseW * scale) / 2,
-          top: (displayH - baseH * scale) / 2,
+          left: (displayW - baseW) / 2,
+          top: (displayH - baseH) / 2,
           transform: `scale(${scale})${page.rotation ? ` rotate(${page.rotation}deg)` : ""}`,
           transformOrigin: "center",
           touchAction: CANVAS_TOUCH_ACTION,
@@ -324,12 +324,13 @@ export function PaperViewport() {
   const clampPanRef = useRef(clampViewportPan);
   clampPanRef.current = clampViewportPan;
 
-  // Two-finger pinch pans and zooms around the midpoint; one finger cancels any draft.
+  // Two-finger touchscreen pinch pans and zooms around the midpoint; strictly ignores mouse/pen.
   useEffect(() => {
     const element = viewportRef.current;
     if (!element) return;
     const pointers = new Map<number, { x: number; y: number }>();
     let pinch: { distance: number; zoom: number; center: { x: number; y: number }; pan: { x: number; y: number } } | null = null;
+
     const midpoint = (): { x: number; y: number } => {
       const rect = element.getBoundingClientRect();
       const points = [...pointers.values()];
@@ -337,7 +338,15 @@ export function PaperViewport() {
       const y = (points[0].y + points[1].y) / 2 - rect.top - rect.height / 2;
       return { x, y };
     };
+
+    const endPinch = () => {
+      if (pinch) window.dispatchEvent(new Event("pm:pinch-end"));
+      pinch = null;
+      pinching.current = false;
+    };
+
     const onDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (pointers.size !== 2) return;
       window.dispatchEvent(new Event("pm:cancel-draft"));
@@ -352,38 +361,47 @@ export function PaperViewport() {
         pan: { ...panRef.current },
       };
     };
+
     const onMove = (event: PointerEvent) => {
-      if (!pointers.has(event.pointerId)) return;
+      if (event.pointerType !== "touch" || !pointers.has(event.pointerId)) return;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (!pinch || pointers.size < 2) return;
       event.preventDefault();
       const points = [...pointers.values()];
       const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
-      const zoom = clamp(pinch.zoom * (distance / pinch.distance), 0.1, 6);
-      const ratio = zoom / pinch.zoom;
+      const nextZoom = clamp(pinch.zoom * (distance / pinch.distance), 0.1, 6);
+      const ratio = nextZoom / pinch.zoom;
       const center = midpoint();
-      setPan(clampPanRef.current({
-        x: center.x - (pinch.center.x - pinch.pan.x) * ratio,
-        y: center.y - (pinch.center.y - pinch.pan.y) * ratio,
-      }));
-      useDocStore.setState({ zoom, fitMode: null });
+      setPan(
+        clampPanRef.current({
+          x: center.x - (pinch.center.x - pinch.pan.x) * ratio,
+          y: center.y - (pinch.center.y - pinch.pan.y) * ratio,
+        }),
+      );
+      useDocStore.setState({ zoom: nextZoom, fitMode: null });
     };
+
     const onUp = (event: PointerEvent) => {
-      pointers.delete(event.pointerId);
-      if (pointers.size >= 2) return;
-      if (pinch) window.dispatchEvent(new Event("pm:pinch-end"));
-      pinch = null;
-      pinching.current = false;
+      if (!pointers.delete(event.pointerId)) return;
+      if (pointers.size < 2) endPinch();
     };
+
+    const onBlur = () => {
+      pointers.clear();
+      endPinch();
+    };
+
     element.addEventListener("pointerdown", onDown);
-    element.addEventListener("pointermove", onMove, { passive: false });
-    element.addEventListener("pointerup", onUp);
-    element.addEventListener("pointercancel", onUp);
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("blur", onBlur);
     return () => {
       element.removeEventListener("pointerdown", onDown);
-      element.removeEventListener("pointermove", onMove);
-      element.removeEventListener("pointerup", onUp);
-      element.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("blur", onBlur);
     };
   }, []);
 
@@ -424,15 +442,15 @@ export function PaperViewport() {
     return () => observer.disconnect();
   }, [fitMode, twoPage, viewMode, leftInset, rightInset, continuous, rows, pageNumber]);
 
-  // A zoom change in a continuous view keeps the active row centred horizontally.
+  // Keep the active row centred horizontally when view layout or side rails change.
   useLayoutEffect(() => {
     if (!continuous) return;
     const element = scrollRef.current;
     if (!element) return;
-    const metrics = rowMetrics(activeRow(), zoom);
+    const metrics = rowMetrics(activeRow(), useDocStore.getState().zoom);
     const { safeWidth } = workspaceSafeArea(element.clientWidth, leftInset, rightInset);
     element.scrollLeft = Math.max(0, (metrics.width - safeWidth) / 2);
-  }, [zoom, continuous, leftInset, rightInset, rows, tab.id]);
+  }, [continuous, leftInset, rightInset, rows, tab.id]);
 
   useEffect(() => {
     setPan({ x: 0, y: 0 });
@@ -447,31 +465,132 @@ export function PaperViewport() {
     });
   }, [zoom, viewMode, leftInset, rightInset, continuous]);
 
-  // Ctrl/⌘ + wheel zooms about the cursor; a bare wheel scrolls the document.
+  // Touchpad two-finger pinch and Ctrl/⌘ + wheel zoom about the cursor; bare wheel scrolls.
   useEffect(() => {
     const element = viewportRef.current;
     if (!element) return;
-    const onWheel = (event: WheelEvent) => {
-      if (continuous && !(event.ctrlKey || event.metaKey)) return;
-      event.preventDefault();
-      if (event.ctrlKey || event.metaKey) {
+    let physicalCtrl = false;
+    let pendingScroll: {
+      baseZoom: number;
+      baseLeft: number;
+      baseTop: number;
+      relX: number;
+      relY: number;
+      raf: number;
+    } | null = null;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Control") physicalCtrl = true;
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === "Control") physicalCtrl = false;
+    };
+    const onBlur = () => {
+      physicalCtrl = false;
+    };
+
+    const applyZoomAt = (nextZoom: number, clientX: number, clientY: number) => {
+      const prevZoom = useDocStore.getState().zoom;
+      const clamped = clamp(nextZoom, 0.1, 6);
+      if (Math.abs(clamped - prevZoom) < 0.0001) return;
+
+      if (continuous && scrollRef.current) {
+        const scroller = scrollRef.current;
+        const rect = scroller.getBoundingClientRect();
+        const relX = clientX - rect.left;
+        const relY = clientY - rect.top;
+        if (!pendingScroll) {
+          pendingScroll = {
+            baseZoom: prevZoom,
+            baseLeft: scroller.scrollLeft,
+            baseTop: scroller.scrollTop,
+            relX,
+            relY,
+            raf: requestAnimationFrame(() => {
+              const snap = pendingScroll;
+              pendingScroll = null;
+              if (!snap || !scrollRef.current) return;
+              const finalZoom = useDocStore.getState().zoom;
+              const totalRatio = finalZoom / snap.baseZoom;
+              scrollRef.current.scrollLeft = Math.max(0, (snap.baseLeft + snap.relX) * totalRatio - snap.relX);
+              scrollRef.current.scrollTop = Math.max(0, (snap.baseTop + snap.relY) * totalRatio - snap.relY);
+            }),
+          };
+        } else {
+          pendingScroll.relX = relX;
+          pendingScroll.relY = relY;
+        }
+        useDocStore.setState({ zoom: clamped, fitMode: null });
+      } else {
+        const ratio = clamped / prevZoom;
         const rect = element.getBoundingClientRect();
-        const cursorX = event.clientX - rect.left - rect.width / 2;
-        const cursorY = event.clientY - rect.top - rect.height / 2;
-        const next = clamp(zoom * Math.exp(-event.deltaY * 0.0016), 0.1, 6);
-        const ratio = next / zoom;
-        setPan((current) => clampPanRef.current({
-          x: cursorX - (cursorX - current.x) * ratio,
-          y: cursorY - (cursorY - current.y) * ratio,
-        }));
-        useDocStore.setState({ zoom: next, fitMode: null });
+        const cursorX = clientX - rect.left - rect.width / 2;
+        const cursorY = clientY - rect.top - rect.height / 2;
+        setPan((current) =>
+          clampPanRef.current({
+            x: cursorX - (cursorX - current.x) * ratio,
+            y: cursorY - (cursorY - current.y) * ratio,
+          }),
+        );
+        useDocStore.setState({ zoom: clamped, fitMode: null });
+      }
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      const isZoomGesture = event.ctrlKey || event.metaKey;
+      if (continuous && !isZoomGesture) return;
+      event.preventDefault();
+
+      if (isZoomGesture) {
+        let dy = event.deltaY;
+        if (event.deltaMode === 1) dy *= 16;
+        else if (event.deltaMode === 2) dy *= 100;
+
+        // Touchpad pinch in Chromium/WebView2 emits ctrlKey=true with small/fractional deltas.
+        const isTrackpadPinch =
+          event.ctrlKey && (!physicalCtrl || !Number.isInteger(dy) || Math.abs(dy) < 40);
+        const sensitivity = isTrackpadPinch ? 0.01 : 0.002;
+        const currentZoom = useDocStore.getState().zoom;
+        applyZoomAt(currentZoom * Math.exp(-dy * sensitivity), event.clientX, event.clientY);
       } else {
         setPan((current) => clampPanRef.current({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
       }
     };
+
+    // Safari / WebKit trackpad pinch fallback
+    let gestureStartZoom = 1;
+    const onGestureStart = (event: Event) => {
+      event.preventDefault();
+      gestureStartZoom = useDocStore.getState().zoom;
+    };
+    const onGestureChange = (event: Event) => {
+      event.preventDefault();
+      const ge = event as Event & { scale?: number; clientX?: number; clientY?: number };
+      if (typeof ge.scale !== "number") return;
+      const rect = element.getBoundingClientRect();
+      applyZoomAt(
+        gestureStartZoom * ge.scale,
+        ge.clientX ?? rect.left + rect.width / 2,
+        ge.clientY ?? rect.top + rect.height / 2,
+      );
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
     element.addEventListener("wheel", onWheel, { passive: false });
-    return () => element.removeEventListener("wheel", onWheel);
-  }, [zoom, continuous]);
+    element.addEventListener("gesturestart", onGestureStart, { passive: false });
+    element.addEventListener("gesturechange", onGestureChange, { passive: false });
+    return () => {
+      if (pendingScroll) cancelAnimationFrame(pendingScroll.raf);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      element.removeEventListener("wheel", onWheel);
+      element.removeEventListener("gesturestart", onGestureStart);
+      element.removeEventListener("gesturechange", onGestureChange);
+    };
+  }, [continuous]);
 
   // Hold space to pan with any tool active.
   useEffect(() => {
@@ -487,11 +606,14 @@ export function PaperViewport() {
     const onKeyUp = (event: KeyboardEvent) => {
       if (event.code === "Space") setSpaceDown(false);
     };
+    const onBlur = () => setSpaceDown(false);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
     };
   }, []);
 
@@ -546,11 +668,24 @@ export function PaperViewport() {
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (pinching.current) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button, input, textarea, select, a, [role='button']")) return;
+
+    // Never hijack clicks on the native scrollbars of .doc-scroll.
+    if (continuous && scrollRef.current && target === scrollRef.current) {
+      const rect = scrollRef.current.getBoundingClientRect();
+      const onVScrollbar = event.clientX >= rect.left + scrollRef.current.clientWidth;
+      const onHScrollbar = event.clientY >= rect.top + scrollRef.current.clientHeight;
+      if (onVScrollbar || onHScrollbar) return;
+    }
+
     // Empty space beside a page is never a drawing surface: it always pans.
-    const onPaper = Boolean((event.target as HTMLElement).closest?.(".page-paper"));
+    const onPaper = Boolean(target?.closest?.(".page-paper"));
     const touchPan = pansFromBackground(event.pointerType, onPaper, touchDrawEnabled, canPan);
+    const allowPan = (touchPan && event.button === 0) || event.button === 1;
+    if (!allowPan) return;
+
     if (continuous) {
-      if (!touchPan && event.button !== 1) return;
       drag.current = {
         x: event.clientX,
         y: event.clientY,
@@ -561,7 +696,6 @@ export function PaperViewport() {
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
-    if (!touchPan && event.button !== 1) return;
     drag.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y, scroll: false };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -576,10 +710,12 @@ export function PaperViewport() {
       element.scrollTop = current.panY - (event.clientY - current.y);
       return;
     }
-    setPan(clampPanRef.current({
-      x: current.panX + event.clientX - current.x,
-      y: current.panY + event.clientY - current.y,
-    }));
+    setPan(
+      clampPanRef.current({
+        x: current.panX + event.clientX - current.x,
+        y: current.panY + event.clientY - current.y,
+      }),
+    );
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {

@@ -1,5 +1,14 @@
 import type { TextAnnotation } from "../../lib/annotationTypes";
-import { layoutText, measureTextWidthMm, PT_TO_MM, TEXT_PADDING_MM, textFontCss } from "../../lib/textLayout";
+import { layoutText, PT_TO_MM, TEXT_PADDING_MM, textFontCss } from "../../lib/textLayout";
+
+/** Matches HTML dir="auto": checks the first strong directional character. */
+function isRtlLine(text: string): boolean {
+  for (const ch of text) {
+    if (/[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/.test(ch)) return true;
+    if (/[A-Za-z]/.test(ch)) return false;
+  }
+  return false;
+}
 
 /** Vector text box: shared by the canvas and (mirrored in pdf-lib) the export. */
 export function TextView({ annotation }: { annotation: TextAnnotation }) {
@@ -11,6 +20,7 @@ export function TextView({ annotation }: { annotation: TextAnnotation }) {
   const frameStroke = annotation.frameType === 0 ? "none" : annotation.frameColor;
   const fill = annotation.boxFillTransparent ? "none" : annotation.boxFillColor;
   const radius = Math.min(3, annotation.widthMm / 4, annotation.heightMm / 4);
+  const decoration = `${annotation.underline ? "underline " : ""}${annotation.strikeOut ? "line-through" : ""}`.trim() || undefined;
 
   return (
     <g transform={`rotate(${annotation.rotation} ${cx} ${cy})`} opacity={annotation.opacity}>
@@ -37,39 +47,40 @@ export function TextView({ annotation }: { annotation: TextAnnotation }) {
       />
       {layout.lines.map((line, index) => {
         if (!line.text) return null;
-        const widthMm = measureTextWidthMm(line.text, annotation.fontFamily, annotation.bold, layout.fontSizePt);
+        const rtl = isRtlLine(line.text);
         let x = annotation.xMm + padding;
-        if (annotation.align === "center") x = annotation.xMm + (annotation.widthMm - widthMm) / 2;
-        if (annotation.align === "right") x = annotation.xMm + annotation.widthMm - padding - widthMm;
+        let anchor: "start" | "middle" | "end" = rtl ? "end" : "start";
+        if (annotation.align === "center") {
+          x = annotation.xMm + annotation.widthMm / 2;
+          anchor = "middle";
+        } else if (annotation.align === "right") {
+          x = annotation.xMm + annotation.widthMm - padding;
+          anchor = rtl ? "start" : "end";
+        }
         const scriptShift =
           annotation.script === "sub" ? fontSizeMm * 0.22 : annotation.script === "super" ? -fontSizeMm * 0.3 : 0;
         const baseline = annotation.yMm + padding + line.topMm + fontSizeMm * 0.82 + scriptShift;
         const size = annotation.script === "normal" ? fontSizeMm : fontSizeMm * 0.72;
         return (
-          <g key={index}>
-            <text
-              x={x}
-              y={baseline}
-              fontSize={size}
-              fill={annotation.textColor}
-              style={{ fontFamily: textFontCss(annotation.fontFamily, annotation.bold, annotation.italic), whiteSpace: "pre" }}
-            >
-              {line.text}
-            </text>
-            {annotation.underline && (
-              <line x1={x} y1={baseline + 0.55} x2={x + widthMm} y2={baseline + 0.55} stroke={annotation.textColor} strokeWidth={Math.max(0.25, fontSizeMm * 0.07)} />
-            )}
-            {annotation.strikeOut && (
-              <line
-                x1={x}
-                y1={baseline - fontSizeMm * 0.28}
-                x2={x + widthMm}
-                y2={baseline - fontSizeMm * 0.28}
-                stroke={annotation.textColor}
-                strokeWidth={Math.max(0.22, fontSizeMm * 0.06)}
-              />
-            )}
-          </g>
+          <text
+            key={index}
+            x={x}
+            y={baseline}
+            fontSize={size}
+            fontWeight={annotation.bold ? 700 : 400}
+            fontStyle={annotation.italic ? "italic" : "normal"}
+            textAnchor={anchor}
+            direction={rtl ? "rtl" : "ltr"}
+            textDecoration={decoration}
+            fill={annotation.textColor}
+            style={{
+              fontFamily: textFontCss(annotation.fontFamily),
+              unicodeBidi: "isolate",
+              whiteSpace: "pre",
+            }}
+          >
+            {line.text}
+          </text>
         );
       })}
     </g>

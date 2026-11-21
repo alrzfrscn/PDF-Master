@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   Annotation,
+  AnnotationPatch,
   BBox,
   FormulaAnnotation,
   InkPoint,
@@ -14,7 +15,6 @@ import type {
   StampAnnotation,
   TextAnnotation,
 } from "../../lib/annotationTypes";
-import type { AnnotationPatch } from "../../lib/annotationTypes";
 import {
   annotationBounds,
   detectScratchOut,
@@ -222,13 +222,15 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
   if (annotation.hidden) return null;
   if (annotation.type === "pen") {
     const style = annotation.penStyle ?? (annotation.sensitivity ? "pro" : "basic");
-    const options = penStyleOptions(style, annotation.pressureLevel ?? (annotation.sensitivity ? 55 : 0));
+    const effectiveLevel = annotation.sensitivity ? (annotation.pressureLevel ?? 55) : 0;
+    const options = penStyleOptions(style, effectiveLevel);
     return (
       <path
         d={inkPath(annotation.points, annotation.thicknessMm, {
           ...options,
           simulatePressure: false,
           smoothing: annotation.smoothed ? 0.85 : options.smoothing,
+          last: true,
         })}
         fill={annotation.color}
         opacity={annotation.opacity}
@@ -714,7 +716,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
         const ink: InkPoint = [
           point[0],
           point[1],
-          toolProps.pressureSensitive ? pointerPressure(event.pointerType, event.pressure, null, point, 0) : 0.5,
+          toolProps.pressureSensitive ? pointerPressure(event.pointerType, event.pressure, null, point, 0, 0.5) : 0.5,
         ];
         begin({ kind: "ink", points: [ink], tool: activeTool, start: point, last: point, lastTime: event.timeStamp });
         setDraft({ kind: "ink", points: [ink], tool: activeTool });
@@ -826,27 +828,49 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       }
     }
     if (!current) return;
-    const point = toMm(event.clientX, event.clientY);
 
     if (current.kind === "ink") {
-      if (distance(point, current.last) < 0.12) return;
-      const pressure = toolProps.pressureSensitive
-        ? pointerPressure(event.pointerType, event.pressure, current.last, point, event.timeStamp - current.lastTime)
-        : 0.5;
-      const first = current.points[0];
-      let points = [...current.points, [point[0], point[1], pressure] as InkPoint];
-      if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
-        points = [first, [point[0], point[1], pressure]];
-      } else if (event.shiftKey) {
-        const snapped = snapAngle([first[0], first[1]], point);
-        points = [first, [snapped[0], snapped[1], pressure]];
+      const coalesced = event.nativeEvent.getCoalescedEvents?.();
+      const samples = coalesced && coalesced.length > 0 ? coalesced : [event.nativeEvent];
+      let points = current.points;
+
+      for (const sample of samples) {
+        const pt = toMm(sample.clientX, sample.clientY);
+        if (distance(pt, current.last) < 0.12) continue;
+        const prevPressure = points[points.length - 1]?.[2] ?? 0.5;
+        const sampleTime = sample.timeStamp || event.timeStamp;
+        const pressure = toolProps.pressureSensitive
+          ? pointerPressure(
+              sample.pointerType || event.pointerType,
+              sample.pressure || event.pressure,
+              current.last,
+              pt,
+              sampleTime - current.lastTime,
+              prevPressure,
+            )
+          : 0.5;
+        const first = points[0];
+        if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
+          points = [first, [pt[0], pt[1], pressure]];
+        } else if (event.shiftKey) {
+          const snapped = snapAngle([first[0], first[1]], pt);
+          points = [first, [snapped[0], snapped[1], pressure]];
+        } else {
+          points = [...points, [pt[0], pt[1], pressure] as InkPoint];
+        }
+        current.last = pt;
+        current.lastTime = sampleTime;
       }
-      current.points = points;
-      current.last = point;
-      current.lastTime = event.timeStamp;
-      setDraft({ kind: "ink", points, tool: current.tool });
+
+      if (points !== current.points) {
+        current.points = points;
+        setDraft({ kind: "ink", points, tool: current.tool });
+      }
       return;
     }
+
+    const point = toMm(event.clientX, event.clientY);
+
     if (current.kind === "shape") {
       const boxy = current.tool === "rectangle" || current.tool === "ellipse" || current.tool === "polygon";
       const end = constrainEnd(current.start, point, event.shiftKey, event.ctrlKey || event.metaKey, boxy);
@@ -1265,6 +1289,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
             .reverse()
             .find((annotation) => !annotation.hidden && (annotation.type === "text" || annotation.type === "formula") && hitTest(annotation, point));
           if (!hit) return;
+          event.stopPropagation();
           if (hit.type === "text") setTextEdit({ draft: hit, isNew: false });
           else if (hit.type === "formula") setFormulaEdit({ annotation: hit, anchor: { x: event.clientX, y: event.clientY } });
         }}
@@ -1292,14 +1317,24 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
 
         {draft?.kind === "ink" &&
           (draft.tool === "pen" ? (
-            <path
-              d={inkPath(draft.points, toolProps.thicknessMm, {
-                ...penStyleOptions(toolProps.penStyle, toolProps.pressureLevel),
-                simulatePressure: false,
-              })}
-              fill={toolProps.color}
-              opacity={toolProps.opacity}
-            />
+            (() => {
+              const options = penStyleOptions(
+                toolProps.penStyle,
+                toolProps.pressureSensitive ? toolProps.pressureLevel : 0,
+              );
+              return (
+                <path
+                  d={inkPath(draft.points, toolProps.thicknessMm, {
+                    ...options,
+                    simulatePressure: false,
+                    smoothing: toolProps.smoothing ? 0.85 : options.smoothing,
+                    last: false,
+                  })}
+                  fill={toolProps.color}
+                  opacity={toolProps.opacity}
+                />
+              );
+            })()
           ) : (
             (() => {
               const nib = markerNib(toolProps.tipStyle, toolProps.thicknessMm);

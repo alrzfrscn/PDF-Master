@@ -28,12 +28,13 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("ابزار اسکن و ادغام پوشه‌ها در یک فایل متنی")
-        self.geometry("700x750")
-        self.minsize(600, 650)
+        self.geometry("700x770")
+        self.minsize(600, 670)
 
         self.root_path = Path.cwd()
         self.dir_check_vars = {}  # برای ذخیره وضعیت تیک چک‌باکس‌ها
         self.include_root_files_var = tk.BooleanVar(value=True)
+        self.paths_only_var = tk.BooleanVar(value=False)  # گزینه جدید: فقط مسیر فایل‌ها
 
         self._build_ui()
 
@@ -79,16 +80,26 @@ class App(tk.Tk):
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
 
-        # 3. فریم فایل خروجی
-        frame_output = ttk.LabelFrame(self, text=" ۳. فایل خروجی ", padding=10)
+        # 3. فریم فایل خروجی و تنظیمات آن
+        frame_output = ttk.LabelFrame(self, text=" ۳. فایل خروجی و حالت استخراج ", padding=10)
         frame_output.pack(fill="x", padx=10, pady=5)
 
-        self.entry_output = ttk.Entry(frame_output)
+        out_path_frame = ttk.Frame(frame_output)
+        out_path_frame.pack(fill="x")
+
+        self.entry_output = ttk.Entry(out_path_frame)
         self.entry_output.insert(0, str(self.root_path / "all_files.txt"))
         self.entry_output.pack(side="left", fill="x", expand=True, padx=(0, 5))
 
-        btn_browse_out = ttk.Button(frame_output, text="تغییر مقصد...", command=self.browse_output_file)
+        btn_browse_out = ttk.Button(out_path_frame, text="تغییر مقصد...", command=self.browse_output_file)
         btn_browse_out.pack(side="right")
+
+        # چک‌باکس جدید برای خروجی فقط مسیر فایل‌ها
+        ttk.Checkbutton(
+            frame_output,
+            text="فقط استخراج مسیر کامل فایل‌ها (بدون محتوای فایل‌ها)",
+            variable=self.paths_only_var
+        ).pack(anchor="w", pady=(8, 0))
 
         # 4. دکمه اجرا
         self.btn_run = tk.Button(
@@ -191,10 +202,12 @@ class App(tk.Tk):
 
             selected_dirs = {name for name, var in self.dir_check_vars.items() if var.get()}
             include_root_files = self.include_root_files_var.get()
+            paths_only = self.paths_only_var.get()
 
             self.log(f"شروع پردازش از: {root}")
             self.log(f"پوشه‌های انتخاب‌شده: {', '.join(selected_dirs) if selected_dirs else 'هیچ‌کدام'}")
             self.log(f"فایل‌های ریشه: {'بله' if include_root_files else 'خیر'}")
+            self.log(f"حالت استخراج: {'فقط مسیر فایل‌ها' if paths_only else 'مسیر + محتوای فایل‌ها'}")
             self.log("-" * 50)
 
             files_to_process = []
@@ -244,31 +257,36 @@ class App(tk.Tk):
                 messagebox.showwarning("هشدار", "هیچ فایلی برای کپی پیدا نشد!")
                 return
 
-            # ساخت هدر فایل متنی
-            lines = [
-                "=" * 80,
-                f"  Generated from: {root}",
-                f"  Total Files Included: {total_found}",
-                "=" * 80,
-                "",
-            ]
-
             read_errors = 0
-            for idx, filepath in enumerate(files_to_process, 1):
-                rel_str = filepath.relative_to(root).as_posix()
-                lines.append("=" * 80)
-                lines.append(f"FILE: {rel_str}")
-                lines.append("=" * 80)
 
-                try:
-                    # تلاش برای خواندن با utf-8
-                    content = filepath.read_text(encoding="utf-8", errors="replace")
-                    lines.append(content)
-                except Exception as e:
-                    read_errors += 1
-                    lines.append(f"[ERROR reading file: {e}]")
+            if paths_only:
+                # حالت فقط مسیر کامل فایل‌ها
+                lines = [str(filepath.resolve()) for filepath in files_to_process]
+            else:
+                # حالت معمول: هدر + محتوای فایل‌ها
+                lines = [
+                    "=" * 80,
+                    f"  Generated from: {root}",
+                    f"  Total Files Included: {total_found}",
+                    "=" * 80,
+                    "",
+                ]
 
-                lines.append("")
+                for idx, filepath in enumerate(files_to_process, 1):
+                    rel_str = filepath.relative_to(root).as_posix()
+                    lines.append("=" * 80)
+                    lines.append(f"FILE: {rel_str}")
+                    lines.append("=" * 80)
+
+                    try:
+                        # تلاش برای خواندن با utf-8
+                        content = filepath.read_text(encoding="utf-8", errors="replace")
+                        lines.append(content)
+                    except Exception as e:
+                        read_errors += 1
+                        lines.append(f"[ERROR reading file: {e}]")
+
+                    lines.append("")
 
             # نوشتن در فایل خروجی
             final_content = "\n".join(lines)
