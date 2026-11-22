@@ -7,6 +7,8 @@ interface PaperSheetProps {
   landscape?: boolean;
   /** Dashed margin and centre guides for aligning annotations. */
   aux?: boolean;
+  /** Off when an unscaled sheet frame already casts the shadow. */
+  shadow?: boolean;
   className?: string;
 }
 
@@ -14,7 +16,7 @@ interface PaperSheetProps {
  * Parametric paper engine: one SVG per recipe, drawn in millimetres so every
  * line width and margin survives zooming without re-rasterising.
  */
-export function PaperSheet({ template, landscape = false, aux = false, className = "" }: PaperSheetProps) {
+export function PaperSheet({ template, landscape = false, aux = false, shadow = true, className = "" }: PaperSheetProps) {
   const geometry = useMemo(() => paperGeometry(template, landscape), [template, landscape]);
   const page = pageMm(template, landscape);
   const widthPx = page.widthMm * PX_PER_MM;
@@ -23,7 +25,7 @@ export function PaperSheet({ template, landscape = false, aux = false, className
 
   return (
     <div
-      className={`paper-shadow overflow-hidden ${className}`}
+      className={`overflow-hidden ${shadow ? "paper-shadow" : ""} ${className}`}
       style={{ width: widthPx, height: heightPx }}
       data-template={template.id}
     >

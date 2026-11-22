@@ -184,6 +184,12 @@ textarea {
   background: var(--paper);
 }
 
+/* Keep the scaled sheet facing the viewer so Chromium never rasterises a
+   mirrored back face along the clipped frame edge. */
+.page-paper {
+  backface-visibility: hidden;
+}
+
 /* A stylus must draw, not scroll or select text. Chromium applies touch-action to
    pens too, so every canvas surface stays `none`; finger panning is done in code. */
 .viewport,

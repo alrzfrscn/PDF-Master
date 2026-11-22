@@ -145,6 +145,10 @@ function PageView({
   const baseH = size.heightMm * PX_PER_MM;
   const displayW = (rotated ? size.heightMm : size.widthMm) * PX_PER_MM * scale;
   const displayH = (rotated ? size.widthMm : size.heightMm) * PX_PER_MM * scale;
+  // Skia rasterises the scaled sheet on a device-pixel grid; a fractional frame
+  // leaves 1px damage seams on the backdrop along its edge.
+  const boxW = Math.round(displayW);
+  const boxH = Math.round(displayH);
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(!observe);
 
@@ -192,62 +196,66 @@ function PageView({
       }}
       data-page-index={index}
       data-page-number={index + 1}
-      className="relative shrink-0"
-      style={{ width: displayW, height: displayH }}
+      className="paper-shadow relative shrink-0 overflow-hidden rounded-[2px]"
+      style={{ width: boxW, height: boxH }}
       onPointerDownCapture={(event) => {
         if (event.button === 0) onActivate(index);
       }}
     >
-      <div
-        className="page-paper absolute"
-        style={{
-          width: baseW,
-          height: baseH,
-          left: 0,
-          top: 0,
-          transform: pageTransform,
-          transformOrigin: "0 0",
-          touchAction: CANVAS_TOUCH_ACTION,
-        }}
-      >
-        <div className="relative h-full w-full" style={{ clipPath, overflow: "hidden" }}>
-          {page.pdf ? (
-            <div className="paper-shadow relative h-full w-full overflow-hidden" style={{ background: "var(--paper)" }}>
-              <PdfBackground page={page.pdf} widthMm={size.widthMm} heightMm={size.heightMm} zoom={scale} />
-            </div>
-          ) : (
-            <PaperSheet template={template} landscape={tab.landscape} aux={auxLines} />
-          )}
-          <GridOverlay styleName={gridStyle} widthMm={size.widthMm} heightMm={size.heightMm} prefix={`${tab.id}-${page.id}`} />
-          <SearchHighlights pageIndex={index} widthMm={size.widthMm} heightMm={size.heightMm} />
-          {visible && (
-            <AnnotationLayer
-              tab={tab}
-              page={page}
+      {/* The scaled sheet is clipped to the integer frame so its raster damage
+          rectangles can never paint past the page onto the backdrop. */}
+      <div className="absolute inset-0 overflow-hidden" style={{ contain: "paint" }}>
+        <div
+          className="page-paper absolute"
+          style={{
+            width: baseW,
+            height: baseH,
+            left: 0,
+            top: 0,
+            transform: pageTransform,
+            transformOrigin: "0 0",
+            touchAction: CANVAS_TOUCH_ACTION,
+          }}
+        >
+          <div className="relative h-full w-full" style={{ clipPath, overflow: "hidden" }}>
+            {page.pdf ? (
+              <div className="relative h-full w-full overflow-hidden" style={{ background: "var(--paper)" }}>
+                <PdfBackground page={page.pdf} widthMm={size.widthMm} heightMm={size.heightMm} zoom={scale} />
+              </div>
+            ) : (
+              <PaperSheet template={template} landscape={tab.landscape} aux={auxLines} shadow={false} />
+            )}
+            <GridOverlay styleName={gridStyle} widthMm={size.widthMm} heightMm={size.heightMm} prefix={`${tab.id}-${page.id}`} />
+            <SearchHighlights pageIndex={index} widthMm={size.widthMm} heightMm={size.heightMm} />
+            {visible && (
+              <AnnotationLayer
+                tab={tab}
+                page={page}
+                widthMm={size.widthMm}
+                heightMm={size.heightMm}
+                zoom={scale}
+                panMode={panMode}
+                touchScroll={touchScroll}
+              />
+            )}
+          </div>
+          {activeTool === "crop" && activePageIndex === index && (
+            <CropOverlay
+              key={`${tab.id}:${page.id}:${page.cropBox ? `${page.cropBox.xMm},${page.cropBox.yMm},${page.cropBox.widthMm},${page.cropBox.heightMm}` : "full"}`}
               widthMm={size.widthMm}
               heightMm={size.heightMm}
+              cropBox={page.cropBox}
               zoom={scale}
-              panMode={panMode}
-              touchScroll={touchScroll}
+              onApply={(box) => {
+                const doc = useDocStore.getState();
+                doc.pushHistory(tab.id);
+                doc.updatePage(tab.id, index, { cropBox: box ?? undefined });
+                useToolStore.getState().setTool("select");
+              }}
+              onCancel={() => useToolStore.getState().setTool("select")}
             />
           )}
         </div>
-        {activeTool === "crop" && activePageIndex === index && (
-          <CropOverlay
-            key={`${tab.id}:${page.id}:${page.cropBox ? `${page.cropBox.xMm},${page.cropBox.yMm},${page.cropBox.widthMm},${page.cropBox.heightMm}` : "full"}`}
-            widthMm={size.widthMm}
-            heightMm={size.heightMm}
-            cropBox={page.cropBox}
-            zoom={scale}
-            onApply={(box) => {
-              const doc = useDocStore.getState();
-              doc.pushHistory(tab.id);
-              doc.updatePage(tab.id, index, { cropBox: box ?? undefined });
-              useToolStore.getState().setTool("select");
-            }}
-            onCancel={() => useToolStore.getState().setTool("select")}
-          />
-        )}
       </div>
     </div>
   );
