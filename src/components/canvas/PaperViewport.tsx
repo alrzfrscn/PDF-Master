@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { FileText, Image as ImageIcon } from "lucide-react";
+import { FilePlus, FileText, FolderOpen, Image as ImageIcon, MoveHorizontal, Play, Scan, Search, Settings } from "lucide-react";
 import { clamp, clampPan, getWorkspaceInsets, PX_PER_MM, workspaceSafeArea, type PanOffset } from "../../lib/paper";
 import { CANVAS_TOUCH_ACTION, pansFromBackground } from "../../lib/canvasInput";
 import { pageSizeMm, pageTemplate } from "../../lib/pageUtils";
@@ -8,6 +8,7 @@ import { readImageFile } from "../../lib/raster";
 import { useSearchStore } from "../../lib/pdfSearch";
 import { usePrefsStore } from "../../lib/prefs";
 import { useDocStore } from "../../stores/useDocStore";
+import { useContextMenuStore, keepsNativeMenu } from "../../stores/useContextMenuStore";
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore, type GridStyle } from "../../stores/useUIStore";
 import type { DocumentPage, DocumentTab, ToolId } from "../../lib/types";
@@ -761,6 +762,29 @@ export function PaperViewport() {
       onPointerUp={onPointerUp}
       onPointerCancel={() => {
         drag.current = null;
+      }}
+      onContextMenu={(event) => {
+        if (keepsNativeMenu(event.target)) return;
+        event.preventDefault();
+        // Inside a sheet the annotation layer owns the menu.
+        if ((event.target as HTMLElement).closest?.(".page-paper")) return;
+        const ui = useUIStore.getState();
+        useContextMenuStore.getState().openAt(event.clientX, event.clientY, "Workspace", [
+          {
+            label: "Open PDF...",
+            icon: FolderOpen,
+            shortcut: "Ctrl+O",
+            onSelect: () => document.getElementById("pm-pdf-input")?.click(),
+          },
+          { label: "New Paper Document...", icon: FilePlus, onSelect: () => ui.setNewDocOpen(true) },
+          "divider",
+          { label: "Fit to Page", icon: Scan, onSelect: () => useDocStore.getState().setFit("page") },
+          { label: "Fit to Width", icon: MoveHorizontal, onSelect: () => useDocStore.getState().setFit("width") },
+          { label: "Search in Document", icon: Search, shortcut: "Ctrl+F", onSelect: () => ui.setSearchOpen(true) },
+          { label: "Full Screen Presentation", icon: Play, onSelect: () => ui.setPresentation(true) },
+          "divider",
+          { label: "Settings", icon: Settings, shortcut: "Ctrl+,", onSelect: () => ui.setSettingsOpen(true) },
+        ]);
       }}
       onDoubleClick={() => useDocStore.getState().setFit("page")}
       onDragOver={(event) => {

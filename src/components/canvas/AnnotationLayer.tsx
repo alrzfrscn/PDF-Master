@@ -1,4 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  BookmarkPlus,
+  BringToFront,
+  ClipboardPaste,
+  Copy,
+  CopyPlus,
+  Crop,
+  Eraser,
+  FilePlus,
+  FlipHorizontal2,
+  FlipVertical2,
+  Group,
+  Image as ImageIcon,
+  Layers,
+  Lock,
+  MoveHorizontal,
+  RotateCw,
+  Save,
+  Scan,
+  Scissors,
+  SendToBack,
+  Sigma,
+  SlidersHorizontal,
+  Trash2,
+  Type,
+  Ungroup,
+  Unlock,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 import type {
   Annotation,
@@ -37,7 +65,8 @@ import { addImageStamp } from "../../lib/images";
 import { usePrefsStore } from "../../lib/prefs";
 import { fitTextBox } from "../../lib/textLayout";
 import { makeId, useDocStore } from "../../stores/useDocStore";
-import { applySelectionTransform, useAnnotationStore } from "../../stores/useAnnotationStore";
+import { applySelectionTransform, selectionForAnnotation, useAnnotationStore } from "../../stores/useAnnotationStore";
+import { useContextMenuStore, keepsNativeMenu, type MenuEntry } from "../../stores/useContextMenuStore";
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore } from "../../stores/useUIStore";
 import type { DocumentPage, DocumentTab } from "../../lib/types";
@@ -1228,8 +1257,189 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     (measureMode === "angle" && measure.points.length >= 3);
   const editingId = textEdit && !textEdit.isNew ? textEdit.draft.id : null;
 
+  const formulaAt = (xMm: number, yMm: number): FormulaAnnotation => {
+    const now = useToolStore.getState().props.formula ?? useToolStore.getState().props.pen;
+    return {
+      id: makeId("a"),
+      type: "formula",
+      latex: "E = mc^2",
+      xMm,
+      yMm,
+      widthMm: 60,
+      heightMm: 24,
+      color: now.color,
+      fontSizePt: Math.max(10, now.fontSize || 14),
+      fillColor: now.fill ?? "#ffffff",
+      fillTransparent: now.fill === null,
+      rotation: 0,
+      opacity: now.opacity,
+    };
+  };
+
+  const openAnnotationMenu = (event: React.MouseEvent, point: Pt, hit: Annotation) => {
+    const { clientX, clientY } = event;
+    const state = useAnnotationStore.getState();
+    // A right-click on something already selected keeps the whole selection.
+    const ids = state.selection.includes(hit.id) ? state.selection : selectionForAnnotation(page.annotations, hit);
+    if (!state.selection.includes(hit.id)) state.select(ids);
+    const selected = page.annotations.filter((annotation) => ids.includes(annotation.id));
+    const box = selectionBounds(selected);
+    const center: Pt = box ? [box.x + box.width / 2, box.y + box.height / 2] : point;
+    const allLocked = selected.length > 0 && selected.every((annotation) => annotation.locked);
+    const anyGrouped = selected.some((annotation) => annotation.groupId);
+    const single = selected.length === 1 ? selected[0] : null;
+    const entries: MenuEntry[] = [];
+
+    if (single?.type === "text" && !single.locked) {
+      entries.push({ label: "Edit Text", icon: Type, onSelect: () => setTextEdit({ draft: single, isNew: false }) });
+    }
+    if (single?.type === "formula" && !single.locked) {
+      entries.push({
+        label: "Edit Formula (LaTeX)",
+        icon: Sigma,
+        onSelect: () => setFormulaEdit({ annotation: single, anchor: { x: clientX, y: clientY } }),
+      });
+    }
+    entries.push({ label: "Style & Properties...", icon: SlidersHorizontal, onSelect: () => useUIStore.getState().openToolPopover() });
+    entries.push("divider");
+    entries.push({ label: "Cut", icon: Scissors, shortcut: "Ctrl+X", disabled: allLocked, onSelect: () => state.cutSelection() });
+    entries.push({ label: "Copy", icon: Copy, shortcut: "Ctrl+C", onSelect: () => state.copySelection() });
+    entries.push({ label: "Duplicate", icon: CopyPlus, shortcut: "Ctrl+D", disabled: allLocked, onSelect: () => state.duplicateSelection() });
+    entries.push({
+      label: "Save as Custom Stamp",
+      icon: Save,
+      disabled: !box,
+      onSelect: () => {
+        if (box) void saveStampFrom(box, `Selection ${new Date().toLocaleTimeString()}`);
+      },
+    });
+    entries.push({
+      label: "Duplicate to All Pages",
+      icon: Layers,
+      disabled: allLocked || tab.pages.length < 2,
+      onSelect: () => state.duplicateSelectionToAllPages(),
+    });
+    entries.push("divider");
+    entries.push({ label: "Bring to Front", icon: BringToFront, disabled: allLocked, onSelect: () => state.bringToFront() });
+    entries.push({ label: "Send to Back", icon: SendToBack, disabled: allLocked, onSelect: () => state.sendToBack() });
+    entries.push({
+      label: "Rotate 90°",
+      icon: RotateCw,
+      disabled: allLocked,
+      onSelect: () => {
+        useDocStore.getState().pushHistory(tab.id);
+        applySelectionTransform("rotate", { origin: center, degrees: 90 });
+      },
+    });
+    entries.push({
+      label: "Flip Horizontal",
+      icon: FlipHorizontal2,
+      disabled: allLocked,
+      onSelect: () => {
+        useDocStore.getState().pushHistory(tab.id);
+        applySelectionTransform("flip", { origin: center, axis: "h" });
+      },
+    });
+    entries.push({
+      label: "Flip Vertical",
+      icon: FlipVertical2,
+      disabled: allLocked,
+      onSelect: () => {
+        useDocStore.getState().pushHistory(tab.id);
+        applySelectionTransform("flip", { origin: center, axis: "v" });
+      },
+    });
+    if (selected.length >= 2) entries.push({ label: "Group", icon: Group, onSelect: () => state.groupSelection() });
+    if (anyGrouped) entries.push({ label: "Ungroup", icon: Ungroup, onSelect: () => state.ungroupSelection() });
+    entries.push({
+      label: allLocked ? "Unlock" : "Lock",
+      icon: allLocked ? Unlock : Lock,
+      onSelect: () => state.setLocked(!allLocked),
+    });
+    entries.push("divider");
+    entries.push({ label: "Delete", icon: Trash2, shortcut: "Del", danger: true, disabled: allLocked, onSelect: () => state.deleteSelection() });
+
+    useContextMenuStore.getState().openAt(clientX, clientY, "Annotation actions", entries);
+  };
+
+  const openPageMenu = (event: React.MouseEvent, point: Pt) => {
+    const { clientX, clientY } = event;
+    const pageIndex = tab.pages.indexOf(page);
+    const doc = useDocStore.getState();
+    const state = useAnnotationStore.getState();
+    useContextMenuStore.getState().openAt(
+      clientX,
+      clientY,
+      "Page actions",
+      [
+        {
+          label: "Paste",
+          icon: ClipboardPaste,
+          shortcut: "Ctrl+V",
+          disabled: state.clipboard.length === 0,
+          onSelect: () => state.paste(point),
+        },
+        { label: "Insert Text Here", icon: Type, onSelect: () => setTextEdit({ draft: defaultText(point, point), isNew: true }) },
+        {
+          label: "Insert Formula Here",
+          icon: Sigma,
+          onSelect: () => setFormulaEdit({ annotation: formulaAt(point[0], point[1]), anchor: { x: clientX, y: clientY } }),
+        },
+        {
+          label: "Insert Image...",
+          icon: ImageIcon,
+          onSelect: () => {
+            imagePoint.current = point;
+            imageInput.current?.click();
+          },
+        },
+        "divider",
+        {
+          label: "Bookmark This Page",
+          icon: BookmarkPlus,
+          disabled: !tab.pdf,
+          onSelect: () => {
+            doc.setPage(pageIndex + 1);
+            doc.addBookmark(`Page ${pageIndex + 1}`);
+          },
+        },
+        { label: "Add Blank Page After", icon: FilePlus, onSelect: () => doc.addPage(undefined, pageIndex + 1) },
+        { label: "Duplicate Page", icon: CopyPlus, onSelect: () => doc.duplicatePage(pageIndex) },
+        { label: "Rotate Page 90°", icon: RotateCw, onSelect: () => doc.rotatePage(pageIndex) },
+        {
+          label: "Crop Page",
+          icon: Crop,
+          onSelect: () => {
+            doc.setPage(pageIndex + 1);
+            useToolStore.getState().setTool("crop");
+          },
+        },
+        {
+          label: "Clear Page Annotations",
+          icon: Eraser,
+          disabled: page.annotations.length === 0,
+          onSelect: () => state.mutate(() => []),
+        },
+        "divider",
+        { label: "Fit to Page", icon: Scan, onSelect: () => doc.setFit("page") },
+        { label: "Fit to Width", icon: MoveHorizontal, onSelect: () => doc.setFit("width") },
+      ],
+      ["pen", "marker", "text", "eraser", "select", "hand"],
+    );
+  };
+
+  const onContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (keepsNativeMenu(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const point = toMm(event.clientX, event.clientY);
+    const hit = [...page.annotations].reverse().find((annotation) => !annotation.hidden && hitTest(annotation, point));
+    if (hit) openAnnotationMenu(event, point, hit);
+    else openPageMenu(event, point);
+  };
+
   return (
-    <div className="absolute inset-0" style={{ cursor }}>
+    <div className="absolute inset-0" style={{ cursor }} onContextMenu={onContextMenu}>
       <input
         ref={imageInput}
         type="file"

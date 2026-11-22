@@ -96,6 +96,7 @@ export function FavoriteToolsBar() {
               title={item.label}
               onContextMenu={(event) => {
                 event.preventDefault();
+                event.stopPropagation();
                 remove(item.id);
               }}
               onClick={() => activate(item)}

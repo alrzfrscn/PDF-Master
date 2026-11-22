@@ -67,7 +67,10 @@ interface DocState {
   lastClosedTab: { tab: DocumentTab; index: number } | null;
   setActive: (id: string) => void;
   newTab: (templateId: string, title: string, landscape?: boolean) => void;
+  duplicateTab: (id?: string) => void;
+  renameTab: (id: string, title: string) => void;
   closeTab: (id: string) => void;
+  closeOtherTabs: (id?: string) => void;
   undoCloseTab: () => void;
   applyTemplate: (templateId: string, title: string, landscape?: boolean) => void;
   setLandscape: (landscape: boolean) => void;
@@ -75,7 +78,8 @@ interface DocState {
   zoomBy: (direction: 1 | -1) => void;
   setFit: (mode: "page" | "width" | null) => void;
   setPage: (page: number) => void;
-  addPage: (templateId?: string) => void;
+  /** Without an index, inserts after the current page; `index` inserts before that page. */
+  addPage: (templateId?: string, index?: number) => void;
   duplicatePage: (index?: number) => void;
   rotatePage: (index?: number, delta?: number) => void;
   reorderPage: (from: number, to: number) => void;
@@ -160,6 +164,56 @@ export const useDocStore = create<DocState>((set, get) => ({
     };
     set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, fitMode: "page", page: 1 }));
   },
+  duplicateTab: (id) => {
+    const source = tabOf(get(), id);
+    if (!source) return;
+    const pageIds = new Map<string, string>();
+    const groups = new Map<string, string>();
+    const pages = source.pages.map((page) => {
+      const copy = structuredClone(page);
+      copy.id = makeId("page");
+      pageIds.set(page.id, copy.id);
+      copy.annotations = copy.annotations.map((annotation) => {
+        const next = { ...annotation, id: makeId("a") };
+        if (annotation.groupId) {
+          const groupId = groups.get(annotation.groupId) ?? makeId("g");
+          groups.set(annotation.groupId, groupId);
+          next.groupId = groupId;
+        }
+        return next;
+      });
+      return copy;
+    });
+    // A shared object URL would be revoked while the other tab still shows it.
+    const pdf = source.pdf
+      ? {
+          ...source.pdf,
+          url:
+            source.pdf.bytes && typeof URL.createObjectURL === "function"
+              ? URL.createObjectURL(new Blob([new Uint8Array(source.pdf.bytes)], { type: "application/pdf" }))
+              : source.pdf.url,
+          bookmarks: source.pdf.bookmarks.map((bookmark) => ({
+            ...bookmark,
+            id: makeId("bm"),
+            pageId: bookmark.pageId ? pageIds.get(bookmark.pageId) ?? bookmark.pageId : undefined,
+          })),
+        }
+      : null;
+    const tab: DocumentTab = {
+      ...source,
+      id: makeId("doc"),
+      title: `${source.title} copy`,
+      pages: pdf ? pages.map((page) => (page.pdf ? { ...page, pdf: { ...page.pdf, url: pdf.url } } : page)) : pages,
+      pageCount: pages.length,
+      ...(pdf ? { pdf } : {}),
+    };
+    set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, fitMode: "page", page: 1 }));
+  },
+  renameTab: (id, title) => {
+    const next = title.trim();
+    if (!next) return;
+    set((state) => ({ tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, title: next } : tab)) }));
+  },
   closeTab: (id) => {
     const { tabs, activeId, history, lastClosedTab } = get();
     const index = tabs.findIndex((tab) => tab.id === id);
@@ -212,6 +266,13 @@ export const useDocStore = create<DocState>((set, get) => ({
       disposeTab(state.lastClosedTab.tab, state.tabs.map((tab) => tab.id));
       set({ lastClosedTab: null });
     }, 15000);
+  },
+  closeOtherTabs: (id) => {
+    const state = get();
+    const keep = id ?? state.activeId;
+    if (!state.tabs.some((tab) => tab.id === keep)) return;
+    for (const tab of state.tabs) if (tab.id !== keep) get().closeTab(tab.id);
+    set({ activeId: keep, page: 1 });
   },
   undoCloseTab: () => {
     const closed = get().lastClosedTab;
@@ -281,22 +342,22 @@ export const useDocStore = create<DocState>((set, get) => ({
     }
   },
 
-  addPage: (templateId) => {
+  addPage: (templateId, index) => {
     const tab = tabOf(get());
     if (!tab) return;
+    const at = index === undefined ? get().page : Math.max(0, Math.min(index, tab.pages.length));
     get().pushHistory(tab.id);
-    const source = tab.pages[get().page - 1];
+    const source = tab.pages[at - 1] ?? tab.pages[0];
     const page = newPage(templateId ?? source?.templateId ?? tab.templateId);
     const pages = [...tab.pages];
-    const index = get().page;
-    pages.splice(index, 0, page);
+    pages.splice(at, 0, page);
     set((state) => ({
       tabs: state.tabs.map((item) =>
         item.id === tab.id
-          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "add", index }), pages)
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "add", index: at }), pages)
           : item,
       ),
-      page: index + 1,
+      page: at + 1,
     }));
   },
   duplicatePage: (index) => {

@@ -3,9 +3,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Combine,
+  CopyPlus,
   FileDown,
   FilePlus,
   FolderOpen,
+  Pencil,
   Play,
   Plus,
   Printer,
@@ -17,6 +19,8 @@ import {
 } from "lucide-react";
 import { combinePdfs, exportInputFromTab, exportPdf } from "../lib/pdfEngine";
 import { printActiveDocument, saveActiveDocument } from "../lib/save";
+import type { DocumentTab } from "../lib/types";
+import { useContextMenuStore, keepsNativeMenu } from "../stores/useContextMenuStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -92,6 +96,8 @@ export function TopBar() {
 
   const [filesOpen, setFilesOpen] = useState(false);
   const [combineOpen, setCombineOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const [selectedTabIds, setSelectedTabIds] = useState<string[]>([]);
   const [combineFiles, setCombineFiles] = useState<File[]>([]);
   const filesRef = useRef<HTMLDivElement>(null);
@@ -160,6 +166,54 @@ export function TopBar() {
     if (useDocStore.getState().lastClosedTab?.tab.id === id) {
       setToast(`Closed "${tab.title}"`, () => useDocStore.getState().undoCloseTab());
     }
+  };
+
+  const commitRename = (id: string) => {
+    useDocStore.getState().renameTab(id, renameDraft);
+    setRenamingId(null);
+  };
+
+  const openTabMenu = (event: React.MouseEvent, tab: DocumentTab) => {
+    if (keepsNativeMenu(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const doc = useDocStore.getState();
+    useContextMenuStore.getState().openAt(event.clientX, event.clientY, tab.title, [
+      {
+        label: "Rename Tab...",
+        icon: Pencil,
+        onSelect: () => {
+          setRenamingId(tab.id);
+          setRenameDraft(tab.title);
+        },
+      },
+      {
+        label: "Save",
+        icon: Save,
+        shortcut: "Ctrl+S",
+        onSelect: () => {
+          doc.setActive(tab.id);
+          void saveActiveDocument("editable");
+        },
+      },
+      {
+        label: "Save As...",
+        icon: Save,
+        onSelect: () => {
+          doc.setActive(tab.id);
+          void saveActiveDocument("editable", true);
+        },
+      },
+      { label: "Duplicate Tab", icon: CopyPlus, onSelect: () => doc.duplicateTab(tab.id) },
+      "divider",
+      { label: "Close Tab", icon: X, onSelect: () => closeWithUndo(tab.id) },
+      {
+        label: "Close Other Tabs",
+        icon: X,
+        disabled: tabs.length <= 1,
+        onSelect: () => doc.closeOtherTabs(tab.id),
+      },
+    ]);
   };
 
   return (
@@ -261,16 +315,39 @@ export function TopBar() {
                 className={`group flex h-8 shrink-0 items-center gap-1 rounded-[10px] border pr-1 transition-colors ${
                   selected ? "border-[var(--border)] bg-[var(--glass-strong)] shadow-sm" : "border-transparent hover:bg-[var(--hover)]"
                 }`}
+                onContextMenu={(event) => openTabMenu(event, tab)}
               >
-                <button
-                  type="button"
-                  className="max-w-[190px] truncate pl-2.5 pr-1 text-[11.5px] font-medium"
-                  style={{ color: selected ? "var(--fg)" : "var(--muted)" }}
-                  onClick={() => setActive(tab.id)}
-                  title={tab.title}
-                >
-                  {tab.title}
-                </button>
+                {renamingId === tab.id ? (
+                  <input
+                    className="h-7 w-[150px] rounded-md border border-[var(--border)] bg-[var(--panel)] px-1.5 text-[11.5px] outline-none"
+                    aria-label="Tab name"
+                    value={renameDraft}
+                    autoFocus
+                    onFocus={(event) => event.currentTarget.select()}
+                    onChange={(event) => setRenameDraft(event.target.value)}
+                    onBlur={() => commitRename(tab.id)}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        commitRename(tab.id);
+                      } else if (event.key === "Escape") {
+                        event.preventDefault();
+                        setRenamingId(null);
+                      }
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="max-w-[190px] truncate pl-2.5 pr-1 text-[11.5px] font-medium"
+                    style={{ color: selected ? "var(--fg)" : "var(--muted)" }}
+                    onClick={() => setActive(tab.id)}
+                    title={tab.title}
+                  >
+                    {tab.title}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="grid h-5 w-5 place-items-center rounded-md text-muted opacity-0 transition-opacity hover:bg-[var(--active)] hover:text-fg group-hover:opacity-100"

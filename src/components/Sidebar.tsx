@@ -1,14 +1,16 @@
-import { ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronLeft, ChevronRight, CopyPlus, Eye, EyeOff, FileText, Hand, Heart, Highlighter, LayoutGrid, MessageSquareText, PenLine, Pin, Plus, RotateCw, Search, Sigma, Square, Stamp, Star, Trash2, Type, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bookmark, BookmarkPlus, ChevronLeft, ChevronRight, CopyPlus, Download, Eye, EyeOff, FilePlus, FileText, Hand, Heart, Highlighter, LayoutGrid, MessageSquareText, PenLine, Pin, Plus, RotateCw, Search, Sigma, Square, Stamp, Star, Trash2, Type, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { stampById, stamps, userStamps } from "../lib/data";
 import { PX_PER_MM } from "../lib/paper";
 import { pageSizeMm, pageTemplate } from "../lib/pageUtils";
 import { renderPdfPage } from "../lib/pdfEngine";
+import { captureRegion } from "../lib/raster";
 import { SHAPE_LABEL, type Annotation } from "../lib/annotationTypes";
 import type { DocumentPage, DocumentTab } from "../lib/types";
 import { usePrefsStore } from "../lib/prefs";
 import type { GridStyle, SidebarTab, ViewMode } from "../stores/useUIStore";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
+import { useContextMenuStore, keepsNativeMenu } from "../stores/useContextMenuStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
 import { useUIStore } from "../stores/useUIStore";
@@ -32,6 +34,28 @@ function EmptyState({ Icon, title, body }: { Icon: typeof FileText; title: strin
       <p className="max-w-[180px] text-[10.5px] leading-relaxed text-muted">{body}</p>
     </div>
   );
+}
+
+async function exportPagePng(tab: DocumentTab, index: number): Promise<void> {
+  const doc = useDocStore.getState();
+  const page = doc.tabs.find((item) => item.id === tab.id)?.pages[index];
+  if (!page) return;
+  // A page that is not on screen has no DOM to capture, so navigate to it first.
+  doc.setPage(index + 1);
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  const element = document.querySelector<HTMLElement>(`[data-page-index="${index}"] .page-paper`);
+  const size = pageSizeMm(tab, page);
+  const image = await captureRegion(element, { x: 0, y: 0, width: size.widthMm, height: size.heightMm }, 200);
+  if (!image) {
+    useUIStore.getState().setToast("That page could not be captured");
+    return;
+  }
+  const anchor = document.createElement("a");
+  anchor.href = image.dataUrl;
+  anchor.download = `page-${index + 1}.png`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 function PageThumb({ tab, page, active, index, onClick }: { tab: DocumentTab; page: DocumentPage; active: boolean; index: number; onClick: () => void }) {
@@ -81,6 +105,35 @@ function PageThumb({ tab, page, active, index, onClick }: { tab: DocumentTab; pa
       aria-pressed={active}
       title={`Page ${index + 1}${page.annotations.length ? ` · ${page.annotations.length} annotations` : ""}`}
       onClick={onClick}
+      onContextMenu={(event) => {
+        if (keepsNativeMenu(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const doc = useDocStore.getState();
+        useContextMenuStore.getState().openAt(event.clientX, event.clientY, `Page ${index + 1}`, [
+          { label: "Insert Blank Page Before", icon: FilePlus, onSelect: () => doc.addPage(undefined, index) },
+          { label: "Insert Blank Page After", icon: FilePlus, onSelect: () => doc.addPage(undefined, index + 1) },
+          { label: "Duplicate Page", icon: CopyPlus, onSelect: () => doc.duplicatePage(index) },
+          { label: "Rotate 90°", icon: RotateCw, onSelect: () => doc.rotatePage(index) },
+          { label: "Move Up", icon: ArrowUp, disabled: index === 0, onSelect: () => doc.reorderPage(index, index - 1) },
+          {
+            label: "Move Down",
+            icon: ArrowDown,
+            disabled: index === tab.pages.length - 1,
+            onSelect: () => doc.reorderPage(index, index + 1),
+          },
+          "divider",
+          { label: "Export Page as PNG...", icon: Download, onSelect: () => void exportPagePng(tab, index) },
+          "divider",
+          {
+            label: "Delete Page",
+            icon: Trash2,
+            danger: true,
+            disabled: tab.pages.length <= 1,
+            onSelect: () => doc.deletePage(index),
+          },
+        ]);
+      }}
     >
       <span
         ref={holderRef}

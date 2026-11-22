@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { CommandPalette } from "./components/CommandPalette";
+import { ContextMenu } from "./components/ContextMenu";
 import { FavoriteToolsBar } from "./components/FavoriteToolsBar";
 import { Inspector } from "./components/Inspector";
 import { NewDocumentModal } from "./components/NewDocumentModal";
@@ -22,6 +23,7 @@ import { loadWorkspace, saveWorkspace } from "./lib/storage";
 import { TOOL_BY_ID } from "./lib/tools";
 import type { ToolId } from "./lib/types";
 import { useAnnotationStore } from "./stores/useAnnotationStore";
+import { keepsNativeMenu } from "./stores/useContextMenuStore";
 import { useDocStore } from "./stores/useDocStore";
 import { useToolStore } from "./stores/useToolStore";
 import { useUIStore } from "./stores/useUIStore";
@@ -152,6 +154,15 @@ export default function App() {
     const timer = window.setTimeout(() => useUIStore.getState().setToast(null), 3400);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  // The workspace owns its context menus; only text fields keep the browser's.
+  useEffect(() => {
+    const onContextMenu = (event: MouseEvent) => {
+      if (!keepsNativeMenu(event.target)) event.preventDefault();
+    };
+    window.addEventListener("contextmenu", onContextMenu);
+    return () => window.removeEventListener("contextmenu", onContextMenu);
+  }, []);
 
   // An unpinned tool popover collapses as soon as the next stroke starts.
   useEffect(() => {
@@ -383,6 +394,7 @@ export default function App() {
           <SettingsModal />
         </>
       )}
+      <ContextMenu />
       {toast && (
         <div className={`fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 ${toastAction ? "pointer-events-auto" : "pointer-events-none"}`}>
           <div className="glass-strong flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11.5px] shadow-lg">

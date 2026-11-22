@@ -70,9 +70,11 @@ interface AnnotationState {
   remove: (ids: string[]) => void;
   deleteSelection: () => void;
   duplicateSelection: () => void;
+  /** Copies the selection onto every other page of the active tab, in one undo step. */
+  duplicateSelectionToAllPages: () => void;
   copySelection: () => void;
   cutSelection: () => void;
-  paste: () => void;
+  paste: (at?: Pt) => void;
   groupSelection: () => void;
   ungroupSelection: () => void;
   setLocked: (locked: boolean) => void;
@@ -185,6 +187,32 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     get().addMany(copies);
   },
 
+  duplicateSelectionToAllPages: () => {
+    const ctx = activeContext();
+    if (!ctx) return;
+    const chosen = selectedAnnotations(get(), ctx);
+    if (chosen.length === 0 || ctx.pages.length < 2) return;
+    withHistory(ctx);
+    const pages = ctx.pages.map((page, index) => {
+      if (index === ctx.pageIndex) return page;
+      // Each page gets its own ids, and its own group ids, so pages stay independent.
+      const groups = new Map<string, string>();
+      const copies = chosen.map((annotation) => {
+        const copy = structuredClone(annotation);
+        copy.id = makeId("a");
+        copy.locked = false;
+        if (annotation.groupId) {
+          const groupId = groups.get(annotation.groupId) ?? makeId("g");
+          groups.set(annotation.groupId, groupId);
+          copy.groupId = groupId;
+        }
+        return copy;
+      });
+      return { ...page, annotations: [...page.annotations, ...copies] };
+    });
+    useDocStore.getState().setPages(ctx.tabId, pages);
+  },
+
   copySelection: () => {
     const ctx = activeContext();
     if (!ctx) return;
@@ -195,10 +223,18 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     get().copySelection();
     get().deleteSelection();
   },
-  paste: () => {
+  paste: (at) => {
     const source = get().clipboard;
     if (source.length === 0) return;
     const groups = new Map<string, string>();
+    let dx = 5;
+    let dy = 5;
+    // A click-to-paste drops the copied block's top-left corner on the cursor.
+    const sourceBounds = at ? selectionBounds(source) : null;
+    if (at && sourceBounds) {
+      dx = at[0] - sourceBounds.x;
+      dy = at[1] - sourceBounds.y;
+    }
     const copies = source.map((annotation) => {
       const copy = structuredClone(annotation);
       copy.id = makeId("a");
@@ -207,7 +243,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         groups.set(annotation.groupId, groupId);
         copy.groupId = groupId;
       }
-      return translateAnnotation(copy, 5, 5);
+      return translateAnnotation(copy, dx, dy);
     });
     get().addMany(copies);
   },
