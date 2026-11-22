@@ -4,6 +4,7 @@ import { BASE_PROPS, presetPatch, presetsFor } from "../lib/presets";
 import { applyToolPatch } from "../lib/sync";
 import { isShapeTool, TOOLS } from "../lib/tools";
 import type { Preset, ShapeTool, ToolId, ToolProps } from "../lib/types";
+import { useFavoritesStore } from "./useFavoritesStore";
 
 function initialProps(): Record<ToolId, ToolProps> {
   const map = {} as Record<ToolId, ToolProps>;
@@ -45,15 +46,19 @@ export const useToolStore = create<ToolState>((set, get) => ({
   activePreset: {},
   selectedStampId: stamps[0]?.id ?? null,
   recentStamps: [],
-  setTool: (activeTool) =>
-    set(isShapeTool(activeTool) ? { activeTool, lastShapeTool: activeTool } : { activeTool }),
+  setTool: (activeTool) => {
+    useFavoritesStore.getState().setActiveFavorite(null);
+    set(isShapeTool(activeTool) ? { activeTool, lastShapeTool: activeTool } : { activeTool });
+  },
   setProps: (patch) => {
     const { props, activeTool, sync } = get();
+    useFavoritesStore.getState().setActiveFavorite(null);
     set({ props: applyToolPatch(props, activeTool, patch, sync), activePreset: { ...get().activePreset, [activeTool]: "" } });
   },
   setSync: (sync) => set({ sync }),
   selectPreset: (preset) => {
     const { props, sync } = get();
+    useFavoritesStore.getState().setActiveFavorite(null);
     // Graphical presets are filtered by type, so they always belong to the active shape tool.
     const target: ToolId = preset.family === "graphical" ? get().activeTool : (preset.family as ToolId);
     const stampId = stampPresetId(preset);
@@ -63,11 +68,13 @@ export const useToolStore = create<ToolState>((set, get) => ({
       selectedStampId: stampId ?? get().selectedStampId,
     });
   },
-  selectStamp: (selectedStampId) =>
+  selectStamp: (selectedStampId) => {
+    useFavoritesStore.getState().setActiveFavorite(null);
     set((state) => ({
       selectedStampId,
       activeTool: "stamp",
       recentStamps: [selectedStampId, ...state.recentStamps.filter((id) => id !== selectedStampId)].slice(0, 8),
-    })),
+    }));
+  },
   setStamp: (selectedStampId) => set({ selectedStampId }),
 }));

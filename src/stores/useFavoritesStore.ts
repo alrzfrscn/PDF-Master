@@ -49,14 +49,21 @@ function persist(favorites: FavoriteTool[]): void {
 
 interface FavoritesState {
   favorites: FavoriteTool[];
+  /** The favourite currently applied from the dock; cleared by any manual tool edit. */
+  activeFavoriteId: string | null;
+  setActiveFavorite: (id: string | null) => void;
   add: (favorite: Omit<FavoriteTool, "id">) => void;
   remove: (id: string) => void;
+  /** Moves a dock item and keeps the localStorage/backup order in sync. */
+  reorder: (fromIndex: number, toIndex: number) => void;
   /** Replaces the dock from a workspace backup. */
   restore: (favorites: FavoriteTool[]) => void;
 }
 
 export const useFavoritesStore = create<FavoritesState>((set, get) => ({
   favorites: readFavorites(),
+  activeFavoriteId: null,
+  setActiveFavorite: (activeFavoriteId) => set({ activeFavoriteId }),
   add: (favorite) => {
     const created: FavoriteTool = {
       ...favorite,
@@ -69,11 +76,20 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
   remove: (id) => {
     const favorites = get().favorites.filter((item) => item.id !== id);
     persist(favorites);
+    set({ favorites, activeFavoriteId: get().activeFavoriteId === id ? null : get().activeFavoriteId });
+  },
+  reorder: (fromIndex, toIndex) => {
+    const favorites = [...get().favorites];
+    if (fromIndex < 0 || fromIndex >= favorites.length || toIndex < 0 || toIndex >= favorites.length) return;
+    if (fromIndex === toIndex) return;
+    const [moved] = favorites.splice(fromIndex, 1);
+    favorites.splice(toIndex, 0, moved);
+    persist(favorites);
     set({ favorites });
   },
   restore: (favorites) => {
     const valid = favorites.filter((item) => item?.id && item?.tool && item?.label);
     persist(valid);
-    set({ favorites: valid });
+    set({ favorites: valid, activeFavoriteId: null });
   },
 }));

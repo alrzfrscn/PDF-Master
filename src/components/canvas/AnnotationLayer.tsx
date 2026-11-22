@@ -56,7 +56,15 @@ import {
   translateAnnotation,
 } from "../../lib/annotationGeometry";
 import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
-import { inkPath, markerOpacity, penStyleOptions, polylinePath, pointerPressure } from "../../lib/ink";
+import {
+  initialInkPressure,
+  inkPath,
+  markerOpacity,
+  penStyleOptions,
+  polylinePath,
+  pointerPressure,
+  smoothPressure,
+} from "../../lib/ink";
 import { CANVAS_TOUCH_ACTION, drawsWithPointer } from "../../lib/canvasInput";
 import { PX_PER_MM } from "../../lib/paper";
 import { resolveStamp, useCustomStampStore } from "../../lib/customStamps";
@@ -257,7 +265,6 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
         d={inkPath(annotation.points, annotation.thicknessMm, {
           ...options,
           simulatePressure: false,
-          smoothing: annotation.smoothed ? 0.85 : options.smoothing,
         })}
         fill={annotation.color}
         opacity={annotation.opacity}
@@ -517,8 +524,10 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
 
   const commitInk = (points: InkPoint[], tool: "pen" | "marker", shift: boolean) => {
     if (points.length < 1) return;
-    // A tap is a dot: two points give it a visible nib mark.
-    let final: InkPoint[] = points.length === 1 ? [points[0], [points[0][0] + 0.01, points[0][1], points[0][2]]] : points;
+    // A pen tap stays exactly one point: inkPath draws it as a clean proportional dot.
+    // A marker needs a second point before its polyline nib becomes visible.
+    let final: InkPoint[] =
+      tool === "marker" && points.length === 1 ? [points[0], [points[0][0] + 0.01, points[0][1], points[0][2]]] : points;
     if (tool === "marker" && (toolProps.straightHighlight || shift)) {
       const first = final[0];
       const last = final[final.length - 1];
@@ -743,7 +752,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
         const ink: InkPoint = [
           point[0],
           point[1],
-          toolProps.pressureSensitive ? pointerPressure(event.pointerType, event.pressure, null, point, 0) : 0.5,
+          toolProps.pressureSensitive ? initialInkPressure(event.pointerType, event.pressure) : 0.5,
         ];
         begin({ kind: "ink", points: [ink], tool: activeTool, start: point, last: point, lastTime: event.timeStamp });
         setDraft({ kind: "ink", points: [ink], tool: activeTool });
@@ -858,21 +867,43 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     const point = toMm(event.clientX, event.clientY);
 
     if (current.kind === "ink") {
-      if (distance(point, current.last) < 0.12) return;
-      const pressure = toolProps.pressureSensitive
-        ? pointerPressure(event.pointerType, event.pressure, current.last, point, event.timeStamp - current.lastTime)
-        : 0.5;
+      // Browsers batch high-frequency stylus/mouse samples; replay every one of
+      // them so a fast curve stays round instead of turning into jagged segments.
+      const native = event.nativeEvent;
+      const coalesced = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
+      const samples = coalesced.length > 0 ? coalesced : [native];
       const first = current.points[0];
-      let points = [...current.points, [point[0], point[1], pressure] as InkPoint];
-      if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
-        points = [first, [point[0], point[1], pressure]];
-      } else if (event.shiftKey) {
-        const snapped = snapAngle([first[0], first[1]], point);
-        points = [first, [snapped[0], snapped[1], pressure]];
+      let points = current.points;
+      let changed = false;
+      for (const sample of samples) {
+        const samplePoint = toMm(sample.clientX, sample.clientY);
+        // Stacked start points are what turn perfect-freehand's cap into a half-moon.
+        if (distance(samplePoint, current.last) < 0.25) continue;
+        const sampleTime = sample.timeStamp || event.timeStamp;
+        const target = toolProps.pressureSensitive
+          ? pointerPressure(
+              sample.pointerType || event.pointerType,
+              sample.pressure,
+              current.last,
+              samplePoint,
+              sampleTime - current.lastTime,
+            )
+          : 0.5;
+        const pressure = smoothPressure(points[points.length - 1][2], target);
+        if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
+          points = [first, [samplePoint[0], samplePoint[1], pressure]];
+        } else if (event.shiftKey) {
+          const snapped = snapAngle([first[0], first[1]], samplePoint);
+          points = [first, [snapped[0], snapped[1], pressure]];
+        } else {
+          points = [...points, [samplePoint[0], samplePoint[1], pressure] as InkPoint];
+        }
+        current.last = samplePoint;
+        current.lastTime = sampleTime;
+        changed = true;
       }
+      if (!changed) return;
       current.points = points;
-      current.last = point;
-      current.lastTime = event.timeStamp;
       setDraft({ kind: "ink", points, tool: current.tool });
       return;
     }
@@ -986,8 +1017,12 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
   };
 
   const capture = async (region: BBox, status: string | null = null) => {
-    const pageElement = svgRef.current?.parentElement ?? null;
-    const image = await captureRegion(pageElement, region, snapshotDpi);
+    const pageElement = svgRef.current?.closest<HTMLElement>(".page-paper") ?? null;
+    const image = await captureRegion(pageElement, region, snapshotDpi, {
+      pageWidthMm: widthMm,
+      pageHeightMm: heightMm,
+      pdfPage: page.pdf,
+    });
     setSnap({ region, image, status });
     return image;
   };

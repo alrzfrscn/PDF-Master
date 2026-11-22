@@ -297,7 +297,15 @@ export function PaperViewport() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef(new Map<number, HTMLDivElement>());
-  const zoomAnchorRef = useRef<{ pageIndex: number; u: number; v: number; clientX: number; clientY: number } | null>(null);
+  const zoomAnchorRef = useRef<{
+    pageIndex: number;
+    u: number;
+    v: number;
+    clientX: number;
+    clientY: number;
+    targetX: number;
+    targetY: number;
+  } | null>(null);
   const drag = useRef<{ x: number; y: number; panX: number; panY: number; scroll: boolean } | null>(null);
   const programmaticScrollUntil = useRef(0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -361,8 +369,12 @@ export function PaperViewport() {
     scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + nodeRect.top - scrollerRect.top - 20), behavior });
   };
 
-  /** Remembers the page point under the cursor/fingers before the zoom changes. */
-  const captureZoomAnchor = (clientX: number, clientY: number) => {
+  /**
+   * Remembers the page point under the cursor/fingers before the zoom changes.
+   * `targetX/Y` may differ from `clientX/Y` during a pinch: the same page point
+   * then lands under the live midpoint, so zoom and two-finger pan move together.
+   */
+  const captureZoomAnchor = (clientX: number, clientY: number, targetX = clientX, targetY = clientY) => {
     const entries = [...pageRefs.current.entries()];
     if (entries.length === 0) return;
     let hit = entries.find(([, node]) => {
@@ -397,6 +409,8 @@ export function PaperViewport() {
       v: (clientY - rect.top) / Math.max(1, rect.height),
       clientX,
       clientY,
+      targetX,
+      targetY,
     };
   };
 
@@ -412,27 +426,32 @@ export function PaperViewport() {
     return () => observer.disconnect();
   }, [continuous]);
 
-  // Two-finger pinch zooms around the live midpoint; one finger cancels any draft.
+  // Two-finger pinch zooms and pans around the live midpoint. Capture phase is
+  // essential: finger #1 may start inside AnnotationLayer, which stops bubbling.
   useEffect(() => {
     const element = viewportRef.current;
     if (!element) return;
     const pointers = new Map<number, { x: number; y: number }>();
-    let pinch: { distance: number; zoom: number } | null = null;
+    let pinch: { distance: number; zoom: number; center: { x: number; y: number } } | null = null;
     const midpoint = (): { x: number; y: number } => {
       const points = [...pointers.values()];
       return { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
     };
     const onDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (pointers.size !== 2) return;
+      event.preventDefault();
       window.dispatchEvent(new Event("pm:cancel-draft"));
       window.dispatchEvent(new Event("pm:pinch-start"));
       drag.current = null;
       pinching.current = true;
+      const center = midpoint();
       const points = [...pointers.values()];
       pinch = {
         distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1,
         zoom: useDocStore.getState().zoom,
+        center,
       };
     };
     const onMove = (event: PointerEvent) => {
@@ -442,9 +461,28 @@ export function PaperViewport() {
       event.preventDefault();
       const points = [...pointers.values()];
       const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
-      const zoom = clamp(pinch.zoom * (distance / pinch.distance), 0.1, 6);
       const center = midpoint();
-      captureZoomAnchor(center.x, center.y);
+      const zoom = clamp(pinch.zoom * (distance / pinch.distance), 0.1, 6);
+      if (zoom === useDocStore.getState().zoom) {
+        // Constant finger distance is a pure pan; zoom subscribers would not fire.
+        const dx = center.x - pinch.center.x;
+        const dy = center.y - pinch.center.y;
+        pinch.center = center;
+        if (continuous) {
+          const scroller = scrollRef.current;
+          if (scroller) {
+            scroller.scrollLeft -= dx;
+            scroller.scrollTop -= dy;
+          }
+        } else {
+          setPan((current) => clampPanRef.current({ x: current.x + dx, y: current.y + dy }));
+        }
+        return;
+      }
+      // Anchor the point under the old midpoint, then land it under the new one:
+      // that single change makes pinch zoom and two-finger pan one smooth gesture.
+      captureZoomAnchor(pinch.center.x, pinch.center.y, center.x, center.y);
+      pinch.center = center;
       useDocStore.setState({ zoom, fitMode: null });
     };
     const onUp = (event: PointerEvent) => {
@@ -454,16 +492,27 @@ export function PaperViewport() {
       pinch = null;
       pinching.current = false;
     };
-    element.addEventListener("pointerdown", onDown);
-    element.addEventListener("pointermove", onMove, { passive: false });
-    element.addEventListener("pointerup", onUp);
-    element.addEventListener("pointercancel", onUp);
+    element.addEventListener("pointerdown", onDown, { capture: true });
+    element.addEventListener("pointermove", onMove, { capture: true, passive: false });
+    element.addEventListener("pointerup", onUp, { capture: true });
+    element.addEventListener("pointercancel", onUp, { capture: true });
     return () => {
-      element.removeEventListener("pointerdown", onDown);
-      element.removeEventListener("pointermove", onMove);
-      element.removeEventListener("pointerup", onUp);
-      element.removeEventListener("pointercancel", onUp);
+      element.removeEventListener("pointerdown", onDown, true);
+      element.removeEventListener("pointermove", onMove, true);
+      element.removeEventListener("pointerup", onUp, true);
+      element.removeEventListener("pointercancel", onUp, true);
     };
+  }, [continuous]);
+
+  // WebView2 must never turn a two-finger canvas pinch into browser page scaling.
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) return;
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length >= 2) event.preventDefault();
+    };
+    element.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
+    return () => element.removeEventListener("touchmove", onTouchMove, true);
   }, []);
 
   // Fit to the safe workspace between the floating side rails whenever that fit
@@ -518,16 +567,22 @@ export function PaperViewport() {
           const rect = node.getBoundingClientRect();
           const nextX = rect.left + anchor.u * rect.width;
           const nextY = rect.top + anchor.v * rect.height;
-          scroller.scrollLeft += nextX - anchor.clientX;
-          scroller.scrollTop += nextY - anchor.clientY;
+          scroller.scrollLeft += nextX - anchor.targetX;
+          scroller.scrollTop += nextY - anchor.targetY;
         }
       }
       // A row that fits has no horizontal range; keep it dead-centre. With no
-      // anchor (a plain zoom change), centre the active page as well.
+      // anchor (a plain zoom change), centre the active page as well. A moving
+      // pinch target is a pan, so it must not be pulled back to the centre.
       const active = useDocStore.getState().page - 1;
       const row = rows.find((item) => item.includes(active)) ?? [active];
       const { safeWidth } = workspaceSafeArea(scroller.clientWidth, leftInset, rightInset);
-      if (!anchor || rowMetrics(row, useDocStore.getState().zoom).width <= safeWidth) centerPage(active, scroller);
+      const pinchPan = Boolean(
+        anchor && (Math.abs(anchor.targetX - anchor.clientX) > 0.5 || Math.abs(anchor.targetY - anchor.clientY) > 0.5),
+      );
+      if (!anchor || (!pinchPan && rowMetrics(row, useDocStore.getState().zoom).width <= safeWidth)) {
+        centerPage(active, scroller);
+      }
       return;
     }
     if (!anchor) return;
@@ -538,8 +593,8 @@ export function PaperViewport() {
     const nextX = rect.left + anchor.u * rect.width;
     const nextY = rect.top + anchor.v * rect.height;
     setPan((prev) => clampPanRef.current({
-      x: prev.x - (nextX - anchor.clientX),
-      y: prev.y - (nextY - anchor.clientY),
+      x: prev.x - (nextX - anchor.targetX),
+      y: prev.y - (nextY - anchor.targetY),
     }));
   }, [zoom, continuous, leftInset, rightInset, rows]);
 
@@ -556,23 +611,39 @@ export function PaperViewport() {
     });
   }, [zoom, viewMode, leftInset, rightInset, continuous]);
 
-  // Ctrl/⌘ + wheel zooms about the cursor; a bare wheel scrolls the document.
+  // Touchpad pinch (Ctrl+wheel) and Ctrl/⌘ + wheel zoom about the cursor; a bare
+  // wheel scrolls in continuous mode and pans in single-page mode.
   useEffect(() => {
     const element = viewportRef.current;
     if (!element) return;
-    const onWheel = (event: WheelEvent) => {
-      if (continuous && !(event.ctrlKey || event.metaKey)) return;
+    const zoomWithWheel = (event: WheelEvent): boolean => {
+      if (!event.ctrlKey && !event.metaKey) return false;
       event.preventDefault();
-      if (event.ctrlKey || event.metaKey) {
-        captureZoomAnchor(event.clientX, event.clientY);
-        const next = clamp(useDocStore.getState().zoom * Math.exp(-event.deltaY * 0.0016), 0.1, 6);
-        useDocStore.setState({ zoom: next, fitMode: null });
-      } else {
-        setPan((current) => clampPanRef.current({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
-      }
+      captureZoomAnchor(event.clientX, event.clientY);
+      // A precision touchpad sends many tiny fractional deltas; a mouse notch is
+      // large. Different gains keep both from feeling either sticky or violent.
+      const trackpad = event.deltaMode === 0 && Math.abs(event.deltaY) < 12;
+      const factor = Math.exp(-event.deltaY * (trackpad ? 0.012 : 0.0025));
+      useDocStore.setState({ zoom: clamp(useDocStore.getState().zoom * factor, 0.1, 6), fitMode: null });
+      return true;
     };
-    element.addEventListener("wheel", onWheel, { passive: false });
-    return () => element.removeEventListener("wheel", onWheel);
+    const onWheel = (event: WheelEvent) => {
+      if (zoomWithWheel(event)) return;
+      if (continuous) return;
+      event.preventDefault();
+      setPan((current) => clampPanRef.current({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
+    };
+    // Chromium/WebView2 otherwise consumes touchpad pinch for browser UI scaling
+    // before the canvas can see it. The window-level guard wins the zoom race.
+    const onWindowWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) event.preventDefault();
+    };
+    element.addEventListener("wheel", onWheel, { capture: true, passive: false });
+    window.addEventListener("wheel", onWindowWheel, { capture: true, passive: false });
+    return () => {
+      element.removeEventListener("wheel", onWheel, true);
+      window.removeEventListener("wheel", onWindowWheel, true);
+    };
   }, [continuous]);
 
   // +/− buttons and keyboard steps anchor at the centre of the safe viewport.

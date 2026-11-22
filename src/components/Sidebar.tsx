@@ -45,7 +45,11 @@ async function exportPagePng(tab: DocumentTab, index: number): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   const element = document.querySelector<HTMLElement>(`[data-page-index="${index}"] .page-paper`);
   const size = pageSizeMm(tab, page);
-  const image = await captureRegion(element, { x: 0, y: 0, width: size.widthMm, height: size.heightMm }, 200);
+  const image = await captureRegion(element, { x: 0, y: 0, width: size.widthMm, height: size.heightMm }, 200, {
+    pageWidthMm: size.widthMm,
+    pageHeightMm: size.heightMm,
+    pdfPage: page.pdf,
+  });
   if (!image) {
     useUIStore.getState().setToast("That page could not be captured");
     return;
@@ -271,6 +275,7 @@ export function Sidebar() {
   const railRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
+  const viewButtonRef = useRef<HTMLButtonElement>(null);
 
   // An unpinned drawer closes on the first click anywhere on the page.
   useEffect(() => {
@@ -287,7 +292,11 @@ export function Sidebar() {
   useEffect(() => {
     if (!viewOpen) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!viewRef.current?.contains(event.target as Node)) setViewOpen(false);
+      const target = event.target as Node;
+      // The button's own onClick toggles the popover. Treating its pointerdown
+      // as an outside click closes it first, then the click reopens it.
+      if (viewRef.current?.contains(target) || viewButtonRef.current?.contains(target)) return;
+      setViewOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
@@ -306,6 +315,7 @@ export function Sidebar() {
     <div ref={railRef} className="sidebar absolute left-3 top-3 z-40">
       <div className="glass flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
         <button
+          ref={viewButtonRef}
           type="button"
           className="icon-btn"
           aria-label="View settings"

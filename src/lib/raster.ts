@@ -1,5 +1,6 @@
 import { PX_PER_MM } from "./paper";
 import type { BBox } from "./annotationTypes";
+import type { PdfPageSource } from "./types";
 
 export interface RasterImage {
   dataUrl: string;
@@ -126,14 +127,24 @@ export function computeCanvasCropRect(
   };
 }
 
+export interface CaptureRegionOptions {
+  pageWidthMm: number;
+  pageHeightMm: number;
+  /** The active PDF page, so an empty on-screen canvas can be re-rendered. */
+  pdfPage?: PdfPageSource;
+}
+
 /**
- * Snapshots a page region (paper or PDF background + annotations) at a chosen
- * DPI. Returns null when there is no live page DOM, as in unit tests.
+ * Snapshots a page region at a chosen DPI. `pageElement` must be the active
+ * `.page-paper`: its PDF canvas is sampled directly, and the outer viewport's
+ * blue/cream theme background can never leak into the image.
+ * Returns null when there is no live page DOM, as in unit tests.
  */
 export async function captureRegion(
   pageElement: HTMLElement | null,
   region: BBox,
   dpi = 150,
+  options?: CaptureRegionOptions,
 ): Promise<RasterImage | null> {
   if (typeof document === "undefined" || !pageElement) return null;
   const pxPerMm = dpi / 25.4;
@@ -145,23 +156,51 @@ export async function captureRegion(
   const context = canvas.getContext("2d");
   if (!context) return null;
 
-  context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#fffdf8";
+  const pageWidthMm = options?.pageWidthMm ?? (pageElement.clientWidth || 1) / PX_PER_MM;
+  const pageHeightMm = options?.pageHeightMm ?? (pageElement.clientHeight || 1) / PX_PER_MM;
+  const liveCanvas = pageElement.querySelector<HTMLCanvasElement>('canvas[aria-label^="PDF page"]') ?? pageElement.querySelector("canvas");
+  const isPdf = Boolean(options?.pdfPage || liveCanvas);
+
+  // PDF pages always sit on crisp white; only parametric paper uses the theme
+  // paper colour. Never the viewport background.
+  context.fillStyle = isPdf
+    ? "#ffffff"
+    : getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() || "#fffdf8";
   context.fillRect(0, 0, widthPx, heightPx);
 
-  const paper = pageElement.querySelector<SVGSVGElement>('svg[role="img"]');
-  if (paper) await drawSvgElement(context, paper, region, widthPx, heightPx);
+  // A parametric paper sheet is vector; a PDF page is already painted by its canvas.
+  if (!isPdf) {
+    const paper = pageElement.querySelector<SVGSVGElement>('svg[role="img"]');
+    if (paper) await drawSvgElement(context, paper, region, widthPx, heightPx);
+  }
 
-  const pageWidthMm = (pageElement.clientWidth || 1) / PX_PER_MM;
-  const pageHeightMm = (pageElement.clientHeight || 1) / PX_PER_MM;
-  for (const source of pageElement.querySelectorAll("canvas")) {
-    const { sx, sy, sw, sh } = computeCanvasCropRect(region, source.width, source.height, pageWidthMm, pageHeightMm);
+  let pdfCanvas = liveCanvas;
+  if (isPdf && (!pdfCanvas || pdfCanvas.width === 0 || pdfCanvas.height === 0) && options?.pdfPage) {
+    // The on-screen canvas has not painted yet: render the page offscreen at the
+    // snapshot DPI so a snapshot of any raw PDF page is always crisp content.
+    const { renderPdfPage } = await import("./pdfEngine");
+    const offscreen = document.createElement("canvas");
+    await renderPdfPage(
+      options.pdfPage.url,
+      options.pdfPage.pageNumber,
+      offscreen,
+      pageWidthMm * PX_PER_MM,
+      pageHeightMm * PX_PER_MM,
+      Math.max(1, dpi / 96),
+    );
+    pdfCanvas = offscreen;
+  }
+  if (pdfCanvas && pdfCanvas.width > 0 && pdfCanvas.height > 0) {
+    const { sx, sy, sw, sh } = computeCanvasCropRect(region, pdfCanvas.width, pdfCanvas.height, pageWidthMm, pageHeightMm);
     try {
-      context.drawImage(source, sx, sy, sw, sh, 0, 0, widthPx, heightPx);
+      context.drawImage(pdfCanvas, sx, sy, sw, sh, 0, 0, widthPx, heightPx);
     } catch {
-      // A PDF canvas that has not painted yet simply stays transparent.
+      // A canvas that cannot be sampled leaves the white page base visible.
     }
   }
 
+  // Only the annotation SVG is composited; selection handles and crop chrome are
+  // separate DOM siblings and therefore never enter the snapshot.
   const annotations = pageElement.querySelector<SVGSVGElement>("svg[data-annotation-layer]");
   if (annotations) {
     await drawSvgElement(context, annotations, region, widthPx, heightPx);

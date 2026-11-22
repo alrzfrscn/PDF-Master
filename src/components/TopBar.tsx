@@ -17,12 +17,12 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { combinePdfs, exportInputFromTab, exportPdf } from "../lib/pdfEngine";
 import { printActiveDocument, saveActiveDocument } from "../lib/save";
 import type { DocumentTab } from "../lib/types";
 import { useContextMenuStore, keepsNativeMenu } from "../stores/useContextMenuStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
+import { CombineModal } from "./CombineModal";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { ZoomPill } from "./ZoomPill";
 
@@ -98,13 +98,8 @@ export function TopBar() {
   const [combineOpen, setCombineOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
-  const [selectedTabIds, setSelectedTabIds] = useState<string[]>([]);
-  const [combineFiles, setCombineFiles] = useState<File[]>([]);
   const filesRef = useRef<HTMLDivElement>(null);
-  const combineRef = useRef<HTMLInputElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
-
-  const pdfTabs = tabs;
 
   useEffect(() => {
     if (!filesOpen) return;
@@ -128,36 +123,6 @@ export function TopBar() {
     strip.addEventListener("wheel", onWheel, { passive: false });
     return () => strip.removeEventListener("wheel", onWheel);
   }, []);
-
-  useEffect(() => {
-    if (!combineOpen) return;
-    setSelectedTabIds(pdfTabs.map((tab) => tab.id));
-    setCombineFiles([]);
-    // Only the tab list at opening time matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combineOpen]);
-
-  const combine = async () => {
-    const parts: Uint8Array[] = [];
-    try {
-      for (const id of selectedTabIds) {
-        const tab = tabs.find((item) => item.id === id);
-        // Export each tab so annotations, crops, page order and paper pages survive.
-        if (tab) parts.push(await exportPdf(exportInputFromTab(tab, "flattened")));
-      }
-      for (const file of combineFiles) parts.push(new Uint8Array(await file.arrayBuffer()));
-      if (parts.length < 2) {
-        setToast("Choose at least two documents to combine");
-        return;
-      }
-      const bytes = await combinePdfs(parts);
-      await useDocStore.getState().openPdfBytes(bytes, `Combined ${parts.length} documents`);
-      setCombineOpen(false);
-      setToast(`Combined ${parts.length} documents`);
-    } catch (error) {
-      setToast(`Could not combine: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
 
   const closeWithUndo = (id: string) => {
     const tab = tabs.find((item) => item.id === id);
@@ -430,91 +395,7 @@ export function TopBar() {
         </div>
       </header>
 
-      {combineOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4 backdrop-blur-[3px]"
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) setCombineOpen(false);
-          }}
-        >
-          <div className="glass-strong anim-in flex w-full max-w-[440px] flex-col overflow-hidden rounded-2xl" role="dialog" aria-modal="true" aria-label="Combine documents">
-            <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
-              <Combine size={16} />
-              <span className="flex-1 text-[13px] font-semibold">Combine documents</span>
-              <button type="button" className="icon-btn h-7 w-7" aria-label="Close combine dialog" onClick={() => setCombineOpen(false)}>
-                <X size={14} />
-              </button>
-            </div>
-            <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-4 py-3">
-              <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">Open tabs</span>
-              {pdfTabs.length === 0 ? (
-                <p className="text-[11px] text-muted">No tabs are open. Choose files below.</p>
-              ) : (
-                pdfTabs.map((tab) => (
-                  <label key={tab.id} className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-[11.5px] hover:bg-[var(--hover)]">
-                    <input
-                      type="checkbox"
-                      checked={selectedTabIds.includes(tab.id)}
-                      onChange={(event) =>
-                        setSelectedTabIds((ids) =>
-                          event.target.checked ? [...ids, tab.id] : ids.filter((id) => id !== tab.id),
-                        )
-                      }
-                    />
-                    <span className="min-w-0 flex-1 truncate">{tab.title}</span>
-                    <span className="text-[10px] text-muted">{tab.pages.length} pages</span>
-                  </label>
-                ))
-              )}
-
-              <div className="divider" />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">PDF files</span>
-                <button type="button" className="chip h-7" onClick={() => combineRef.current?.click()}>
-                  <FilePlus size={12} /> Choose files
-                </button>
-              </div>
-              {combineFiles.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  {combineFiles.map((file, index) => (
-                    <div key={`${file.name}-${index}`} className="flex items-center gap-2 text-[11.5px]">
-                      <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                      <button
-                        type="button"
-                        className="icon-btn h-5 w-5"
-                        aria-label={`Remove ${file.name}`}
-                        onClick={() => setCombineFiles((list) => list.filter((_, position) => position !== index))}
-                      >
-                        <X size={11} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <input
-                ref={combineRef}
-                type="file"
-                multiple
-                accept="application/pdf,.pdf"
-                className="hidden"
-                aria-label="Choose PDF files to combine"
-                onChange={(event) => {
-                  setCombineFiles((list) => [...list, ...Array.from(event.target.files ?? [])]);
-                  event.target.value = "";
-                }}
-              />
-            </div>
-            <div className="flex justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
-              <button type="button" className="chip h-8" onClick={() => setCombineOpen(false)}>
-                Cancel
-              </button>
-              <button type="button" className="chip h-8" aria-pressed="true" onClick={() => void combine()}>
-                <Combine size={13} /> Combine
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CombineModal open={combineOpen} onClose={() => setCombineOpen(false)} />
     </>
   );
 }
