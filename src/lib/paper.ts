@@ -126,8 +126,9 @@ export interface PanOffset {
 }
 
 /**
- * Keeps a panned page on screen: a row that fits the safe strip may drift at
- * most 35 % of it, a larger row keeps 48 px of itself inside the strip.
+ * Keeps a panned page on screen: a row that fits keeps a 12 px horizontal and
+ * 16 px vertical margin, a larger row keeps 24 px beside the rail and 32 px
+ * below the top bar.
  */
 export function clampPan(
   pan: PanOffset,
@@ -139,8 +140,10 @@ export function clampPan(
   rightInset: number,
 ): PanOffset {
   const { safeWidth } = workspaceSafeArea(viewportWidth, leftInset, rightInset);
-  const maxX = rowWidthPx <= safeWidth ? safeWidth * 0.35 : (rowWidthPx - safeWidth) / 2 + 48;
-  const maxY = rowHeightPx <= viewportHeight ? viewportHeight * 0.35 : (rowHeightPx - viewportHeight) / 2 + 48;
+  const fitWidth = safeWidth - 24;
+  const fitHeight = viewportHeight - 32;
+  const maxX = rowWidthPx <= fitWidth ? (fitWidth - rowWidthPx) / 2 : (rowWidthPx - safeWidth) / 2 + 24;
+  const maxY = rowHeightPx <= fitHeight ? (fitHeight - rowHeightPx) / 2 : (rowHeightPx - viewportHeight) / 2 + 32;
   return { x: clamp(pan.x, -maxX, maxX), y: clamp(pan.y, -maxY, maxY) };
 }
 

@@ -81,14 +81,14 @@ describe("pan clamping", () => {
       leftInset,
       rightInset,
     );
-    expect(clamped.x).toBeCloseTo(safeWidth * 0.35);
-    expect(clamped.y).toBeCloseTo(-viewportHeight * 0.35);
+    expect(clamped.x).toBeCloseTo((safeWidth - 24 - pageWidth) / 2);
+    expect(clamped.y).toBeCloseTo(-(viewportHeight - 32 - pageHeight) / 2);
   });
 
   it("lets a zoomed page pan but never off the safe strip", () => {
     const rowWidth = safeWidth * 2;
     const clamped = clampPan({ x: 99999, y: 0 }, rowWidth, 2000, viewportWidth, viewportHeight, leftInset, rightInset);
-    expect(clamped.x).toBeCloseTo((rowWidth - safeWidth) / 2 + 48);
+    expect(clamped.x).toBeCloseTo((rowWidth - safeWidth) / 2 + 24);
   });
 
   it("leaves a pan inside the bounds untouched", () => {
@@ -99,6 +99,24 @@ describe("pan clamping", () => {
   it("clamps both axes symmetrically", () => {
     const rowHeight = viewportHeight * 2;
     const clamped = clampPan({ x: 0, y: -99999 }, 100, rowHeight, viewportWidth, viewportHeight, leftInset, rightInset);
-    expect(clamped.y).toBeCloseTo(-((rowHeight - viewportHeight) / 2 + 48));
+    expect(clamped.y).toBeCloseTo(-((rowHeight - viewportHeight) / 2 + 32));
+  });
+
+  it("keeps a fitted page 12px inside the horizontal rails and 16px from the top and bottom", () => {
+    const pageWidth = 1000;
+    const pageHeight = 600;
+    const clamped = clampPan({ x: 9999, y: 9999 }, pageWidth, pageHeight, viewportWidth, viewportHeight, leftInset, rightInset);
+    const { safeCenterX } = workspaceSafeArea(viewportWidth, leftInset, rightInset);
+    expect(safeCenterX + pageWidth / 2 + clamped.x).toBeCloseTo(viewportWidth - rightInset - 12);
+    expect(viewportHeight / 2 + pageHeight / 2 + clamped.y).toBeCloseTo(viewportHeight - 16);
+  });
+
+  it("stops an oversized page with 24px beside the rail and 32px below the top bar", () => {
+    const rowWidth = safeWidth * 2;
+    const rowHeight = viewportHeight * 2;
+    const clamped = clampPan({ x: 99999, y: 99999 }, rowWidth, rowHeight, viewportWidth, viewportHeight, leftInset, rightInset);
+    const { safeCenterX } = workspaceSafeArea(viewportWidth, leftInset, rightInset);
+    expect(safeCenterX - rowWidth / 2 + clamped.x).toBeCloseTo(leftInset + 24);
+    expect(viewportHeight / 2 - rowHeight / 2 + clamped.y).toBeCloseTo(32);
   });
 });

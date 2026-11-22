@@ -16,7 +16,7 @@ import { parseBootArgs, resolvePaperTarget } from "./lib/bootArgs";
 import { paperTemplates } from "./lib/data";
 import { loadMirroredStamps, useCustomStampStore } from "./lib/customStamps";
 import { readImageFile } from "./lib/raster";
-import { saveActiveDocument } from "./lib/save";
+import { printActiveDocument, saveActiveDocument } from "./lib/save";
 import { bindingFromEvent, normalizeBinding, useShortcutStore } from "./lib/shortcuts";
 import { loadWorkspace, saveWorkspace } from "./lib/storage";
 import { TOOL_BY_ID } from "./lib/tools";
@@ -194,7 +194,7 @@ export default function App() {
           return;
         case "print":
           event.preventDefault();
-          window.print();
+          void printActiveDocument();
           return;
         case "undo":
           event.preventDefault();
@@ -354,7 +354,7 @@ export default function App() {
           <div className="relative flex min-h-0 flex-1">
             <Sidebar />
             <FavoriteToolsBar />
-            <main className="relative min-w-0 flex-1">
+            <main className="relative h-full min-w-0 flex-1 overflow-hidden">
               <PaperViewport />
               <ToolBar />
               <Inspector />
