@@ -36,14 +36,19 @@ function isTyping(target: EventTarget | null): boolean {
   );
 }
 
+/** The desktop shell bridge, present only when this page runs inside Tauri. */
+function tauriBridge(): { invoke?: (command: string) => Promise<unknown> } | undefined {
+  return (window as unknown as {
+    __TAURI_INTERNALS__?: { invoke?: (command: string) => Promise<unknown> };
+  }).__TAURI_INTERNALS__;
+}
+
 /**
  * A `.pdf` opened from Windows Explorer reaches the Rust shell as a positional
  * argument; it reads the file once and this bridge turns it into a tab.
  */
 async function openStartupPdf(): Promise<void> {
-  const bridge = (window as unknown as {
-    __TAURI_INTERNALS__?: { invoke?: (command: string) => Promise<unknown> };
-  }).__TAURI_INTERNALS__;
+  const bridge = tauriBridge();
   if (!bridge?.invoke) return;
   try {
     const pdf = (await bridge.invoke("get_startup_pdf")) as { name: string; base64: string } | null;
@@ -54,6 +59,17 @@ async function openStartupPdf(): Promise<void> {
     await useDocStore.getState().openPdfBytes(bytes, pdf.name);
   } catch {
     // No document was requested, or this is not the desktop shell.
+  }
+}
+
+/** `--new` / `--print` / `--fullscreen` from the shell, or the URL query in a browser. */
+async function readBootQuery(): Promise<string> {
+  const bridge = tauriBridge();
+  if (!bridge?.invoke) return window.location.search;
+  try {
+    return (await bridge.invoke("get_boot_query")) as string;
+  } catch {
+    return window.location.search;
   }
 }
 
@@ -73,8 +89,8 @@ export default function App() {
 
   // Restore the last workspace, then autosave every change to IndexedDB.
   useEffect(() => {
-    const boot = parseBootArgs(typeof window === "undefined" ? "" : window.location.search);
-    void loadWorkspace().then((saved) => {
+    void Promise.all([readBootQuery(), loadWorkspace()]).then(([query, saved]) => {
+      const boot = parseBootArgs(query);
       if (saved) useDocStore.getState().restore(saved.tabs, saved.activeId);
       // The IndexedDB mirror survives a cleared localStorage.
       void loadMirroredStamps().then((mirrored) => {

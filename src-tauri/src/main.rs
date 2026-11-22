@@ -97,27 +97,21 @@ fn get_startup_pdf() -> Option<StartupPdf> {
     STARTUP_PDF.lock().ok().and_then(|mut slot| slot.take())
 }
 
+/// The boot query is read by the frontend once it mounts. Navigating the window
+/// from `setup` instead would race the first load and can leave it blank.
+#[tauri::command]
+fn get_boot_query() -> String {
+    boot_query(&std::env::args().skip(1).collect::<Vec<_>>())
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let query = boot_query(&args);
     if let Ok(mut slot) = STARTUP_PDF.lock() {
         *slot = find_startup_pdf(&args);
     }
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_startup_pdf])
-        .setup(move |app| {
-            if query.is_empty() {
-                return Ok(());
-            }
-            if let Some(window) = tauri::Manager::get_webview_window(app, "main") {
-                if let Ok(mut url) = window.url() {
-                    url.set_query(Some(&query));
-                    window.navigate(url)?;
-                }
-            }
-            Ok(())
-        })
+        .invoke_handler(tauri::generate_handler![get_startup_pdf, get_boot_query])
         .run(tauri::generate_context!())
         .expect("error while running PDF Master");
 }
