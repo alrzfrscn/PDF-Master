@@ -1,8 +1,16 @@
+import "./polyfills";
 import "@fontsource-variable/inter";
 import { Component, StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+
+declare global {
+  interface Window {
+    /** Flipped once React owns #root; public/boot-guard.js stops its watchdog on it. */
+    __PM_BOOTED__?: boolean;
+  }
+}
 
 const container = document.getElementById("root");
 if (!container) throw new Error("Missing #root element");
@@ -109,6 +117,10 @@ function render(): void {
       </ErrorBoundary>
     </StrictMode>,
   );
+  // Any boot diagnostic shown by the watchdog is replaced by the real app now.
+  window.__PM_BOOTED__ = true;
+  // A watchdog card painted during a slow boot must not sit above the app.
+  document.getElementById("pm-boot-guard")?.remove();
 }
 
 if (isTauri) {

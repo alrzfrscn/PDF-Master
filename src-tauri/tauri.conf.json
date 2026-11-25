@@ -23,11 +23,12 @@
         "decorations": true,
         "dragDropEnabled": false,
         "theme": "Light",
-        "backgroundColor": "#dfe5ef"
+        "backgroundColor": "#dfe5ef",
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --no-proxy-server"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost data: blob: https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+      "csp": "default-src 'self' http://tauri.localhost https://tauri.localhost tauri: blob: data:; script-src 'self' 'wasm-unsafe-eval' http://tauri.localhost https://tauri.localhost tauri: blob:; style-src 'self' 'unsafe-inline' http://tauri.localhost https://tauri.localhost tauri:; img-src 'self' http://tauri.localhost https://tauri.localhost tauri: asset: http://asset.localhost https://asset.localhost blob: data:; font-src 'self' http://tauri.localhost https://tauri.localhost tauri: data:; worker-src 'self' http://tauri.localhost https://tauri.localhost tauri: blob:; connect-src 'self' ipc: http://ipc.localhost http://tauri.localhost https://tauri.localhost tauri: blob: data: https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     }
   },
   "bundle": {

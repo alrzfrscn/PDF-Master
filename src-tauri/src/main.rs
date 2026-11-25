@@ -104,6 +104,13 @@ fn get_boot_query() -> String {
     boot_query(&std::env::args().skip(1).collect::<Vec<_>>())
 }
 
+/// Last-resort recovery for a stuck WebView2 profile: the boot guard calls this
+/// before reloading so a stale HTTP cache or service worker cannot survive.
+#[tauri::command]
+fn clear_webview_cache(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.clear_all_browsing_data().map_err(|error| error.to_string())
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if let Ok(mut slot) = STARTUP_PDF.lock() {
@@ -111,7 +118,11 @@ fn main() {
     }
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_startup_pdf, get_boot_query])
+        .invoke_handler(tauri::generate_handler![
+            get_startup_pdf,
+            get_boot_query,
+            clear_webview_cache
+        ])
         .run(tauri::generate_context!())
         .expect("error while running PDF Master");
 }
