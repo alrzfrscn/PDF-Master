@@ -1,5 +1,6 @@
 import { PX_PER_MM } from "./paper";
-import type { BBox } from "./annotationTypes";
+import type { BBox, TextAnnotation } from "./annotationTypes";
+import { layoutText, TEXT_PADDING_MM } from "./textLayout";
 import type { PdfPageSource } from "./types";
 
 export interface RasterImage {
@@ -37,6 +38,53 @@ export async function readImageFile(file: File): Promise<RasterImage> {
   if (!context) throw new Error("canvas unavailable");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   return { dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height };
+}
+
+const PT_TO_MM_RASTER = 25.4 / 72;
+
+function cssFontFamily(name: string): string {
+  if (name === "Courier") return "monospace";
+  if (name === "TimesRoman") return "serif";
+  return "sans-serif";
+}
+
+/**
+ * Draws a text box with the browser's own font stack. Standard PDF fonts only
+ * support WinAnsi, so Persian, CJK, Cyrillic and emoji text is embedded as a
+ * transparent PNG instead of aborting the export.
+ */
+export async function rasterizeTextAnnotation(annotation: TextAnnotation): Promise<RasterImage | null> {
+  if (typeof document === "undefined") return null;
+  const widthMm = Math.max(1, annotation.widthMm);
+  const heightMm = Math.max(1, annotation.heightMm);
+  const pxPerMm = Math.max(2, Math.min(8, 2048 / Math.max(widthMm, heightMm)));
+  const width = Math.max(1, Math.ceil(widthMm * pxPerMm));
+  const height = Math.max(1, Math.ceil(heightMm * pxPerMm));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  const layout = layoutText(annotation);
+  const fontPx = Math.max(1, layout.fontSizePt * PT_TO_MM_RASTER * pxPerMm);
+  const family = cssFontFamily(annotation.fontFamily);
+  context.font = `${annotation.italic ? "italic " : ""}${annotation.bold ? "600 " : ""}${fontPx}px ${family}`;
+  context.fillStyle = annotation.textColor;
+  context.textBaseline = "alphabetic";
+  const padding = TEXT_PADDING_MM * pxPerMm;
+  for (const line of layout.lines) {
+    if (!line.text) continue;
+    const lineWidth = context.measureText(line.text).width;
+    const x =
+      annotation.align === "center"
+        ? (width - lineWidth) / 2
+        : annotation.align === "right"
+          ? width - padding - lineWidth
+          : padding;
+    const baseline = (TEXT_PADDING_MM + line.topMm + layout.fontSizePt * PT_TO_MM_RASTER * 0.82) * pxPerMm;
+    context.fillText(line.text, x, baseline);
+  }
+  return { dataUrl: canvas.toDataURL("image/png"), width, height };
 }
 
 /** Renders an HTML fragment (used for KaTeX) to a PNG via an SVG foreignObject. */
@@ -132,6 +180,15 @@ export interface CaptureRegionOptions {
   pageHeightMm: number;
   /** The active PDF page, so an empty on-screen canvas can be re-rendered. */
   pdfPage?: PdfPageSource;
+  /** Renderer injected by the caller; keeps this module free of a circular import. */
+  renderPage?: (
+    url: string,
+    pageNumber: number,
+    canvas: HTMLCanvasElement,
+    cssWidthPx: number,
+    cssHeightPx: number,
+    quality: number,
+  ) => Promise<void>;
 }
 
 /**
@@ -175,12 +232,11 @@ export async function captureRegion(
   }
 
   let pdfCanvas = liveCanvas;
-  if (isPdf && (!pdfCanvas || pdfCanvas.width === 0 || pdfCanvas.height === 0) && options?.pdfPage) {
+  if (isPdf && (!pdfCanvas || pdfCanvas.width === 0 || pdfCanvas.height === 0) && options?.pdfPage && options.renderPage) {
     // The on-screen canvas has not painted yet: render the page offscreen at the
     // snapshot DPI so a snapshot of any raw PDF page is always crisp content.
-    const { renderPdfPage } = await import("./pdfEngine");
     const offscreen = document.createElement("canvas");
-    await renderPdfPage(
+    await options.renderPage(
       options.pdfPage.url,
       options.pdfPage.pageNumber,
       offscreen,

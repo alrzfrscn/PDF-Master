@@ -261,7 +261,9 @@ export function NewDocumentModal() {
             <button
               type="button"
               className="h-8 rounded-[10px] px-3.5 text-[12px] font-semibold"
-              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              style={{ background: "var(--accent)", color: "var(--accent-ink)", opacity: tab.pdf ? 0.5 : 1 }}
+              disabled={Boolean(tab.pdf)}
+              title={tab.pdf ? "A PDF page keeps its source size" : undefined}
               onClick={() => place(false)}
             >
               Use template

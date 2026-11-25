@@ -267,6 +267,19 @@ describe("PDF engine", () => {
     expect(sidecar?.pages[0].pdfPageIndex).toBe(1);
   });
 
+  it("exports a landscape page with a landscape MediaBox", async () => {
+    const pt = 72 / 25.4;
+    const bytes = await exportPdf({
+      title: "Landscape",
+      mode: "flattened",
+      pages: [{ templateId: "paper-000", landscape: true, rotation: 0, widthMm: 297, heightMm: 210, annotations: [] }],
+    });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPage(0).getWidth()).toBeCloseTo(841.89, 1);
+    expect(pdf.getPage(0).getHeight()).toBeCloseTo(595.28, 1);
+    expect(pdf.getPage(0).getWidth()).toBeCloseTo(297 * pt, 1);
+  });
+
   it("exports text and formula annotations and keeps both in the sidecar", async () => {
     const bytes = await exportPdf({
       title: "Typography",
@@ -288,6 +301,34 @@ describe("PDF engine", () => {
     expect(sidecar?.pages[0].annotations.map((annotation) => annotation.id)).toEqual(["text-1", "formula-1"]);
     expect(sidecar?.pages[0].annotations[0]).toMatchObject({ type: "text", text: "Round trip" });
     expect(sidecar?.pages[0].annotations[1]).toMatchObject({ type: "formula", latex: "E = mc^2" });
+  });
+
+  it("exports non-WinAnsi text without aborting the save", async () => {
+    const samples = ["بیوشیمی کلیه", "中文", "Привет"];
+    const annotations = samples.map((value, index) => ({
+      ...text,
+      id: `text-unicode-${index}`,
+      text: value,
+      yMm: 30 + index * 25,
+    }));
+    const page = { templateId: "paper-000", landscape: false, rotation: 0 as const, widthMm: 210, heightMm: 297 };
+    const editable = await exportPdf({
+      title: "Unicode",
+      mode: "editable",
+      pages: [{ ...page, annotations }],
+    });
+    const sidecar = await loadSidecar(editable);
+    expect(sidecar?.pages[0].annotations.map((annotation) => (annotation.type === "text" ? annotation.text : ""))).toEqual(
+      samples,
+    );
+    // Flattening has no canvas in the test runtime, so the raster fallback is a
+    // no-op there; the export must still finish.
+    const flattened = await exportPdf({
+      title: "Unicode flat",
+      mode: "flattened",
+      pages: [{ ...page, annotations }],
+    });
+    expect(flattened.byteLength).toBeGreaterThan(100);
   });
 
   it("keeps bookmarks in the sidecar across an export round-trip", async () => {
@@ -334,8 +375,8 @@ describe("PDF engine", () => {
       templateId: "paper-000",
       landscape: true,
       rotation: 90,
-      widthMm: 210,
-      heightMm: 297,
+      widthMm: 297,
+      heightMm: 210,
       cropBox: { xMm: 5, yMm: 6, widthMm: 200, heightMm: 280 },
       annotations: [rectangle],
     });

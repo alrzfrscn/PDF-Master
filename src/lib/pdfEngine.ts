@@ -18,8 +18,12 @@ import { annotationBounds, formatDimension } from "./annotationGeometry";
 import { inkPath, markerOpacity, penStyleOptions, polylinePath } from "./ink";
 import { layoutText, measureTextWidthMm, TEXT_PADDING_MM, PT_TO_MM } from "./textLayout";
 import { latexToPng } from "./formula";
+import { rasterizeTextAnnotation } from "./raster";
 import { paperById } from "./data";
 import { paperGeometry } from "./paper";
+import { pageSizeMm } from "./pageUtils";
+import { resolveStamp } from "./customStamps";
+import { base64ToBytes, bytesToBase64 } from "./base64";
 import type { LineStyleName } from "./types";
 
 export const PT_PER_MM = 72 / 25.4;
@@ -120,12 +124,39 @@ export function getPdfDocument(url: string) {
 
 /** Drop a cached document (and its worker memory) when its tab closes. */
 export function releasePdfDocument(url: string): void {
+  for (const key of [...pageTextCache.keys()]) {
+    if (key.startsWith(`${url}#`)) pageTextCache.delete(key);
+  }
   const cached = documentCache.get(url);
   if (!cached) return;
   documentCache.delete(url);
   void cached
     .then((doc) => (doc as unknown as { destroy?: () => Promise<void> }).destroy?.())
     .catch(() => undefined);
+}
+
+export interface PdfPageText {
+  items: unknown[];
+  viewportHeight: number;
+}
+
+/** Extracted text per page, keyed `${url}#${pageNumber}`; released with the document. */
+const pageTextCache = new Map<string, Promise<PdfPageText>>();
+
+export function getPdfPageText(url: string, pageNumber: number): Promise<PdfPageText> {
+  const key = `${url}#${pageNumber}`;
+  let cached = pageTextCache.get(key);
+  if (!cached) {
+    cached = getPdfDocument(url).then(async (doc) => {
+      const page = await doc.getPage(pageNumber);
+      const content = await page.getTextContent();
+      return { items: content.items as unknown[], viewportHeight: page.getViewport({ scale: 1 }).height };
+    });
+    // A failed extraction must not poison the cache.
+    cached.catch(() => pageTextCache.delete(key));
+    pageTextCache.set(key, cached);
+  }
+  return cached;
 }
 
 /** Rasterise one page into a canvas at `quality` device pixels per CSS pixel. */
@@ -200,29 +231,14 @@ export interface SerializedDocument {
   bookmarks?: PdfBookmark[];
 }
 
-function base64Encode(bytes: Uint8Array): string {
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-  }
-  return btoa(binary);
-}
-
-function base64Decode(text: string): Uint8Array {
-  const binary = atob(text);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
-}
-
 export function encodeSidecar(document: SerializedDocument): string {
-  return SIDECAR_PREFIX + base64Encode(new TextEncoder().encode(JSON.stringify(document)));
+  return SIDECAR_PREFIX + bytesToBase64(new TextEncoder().encode(JSON.stringify(document)));
 }
 
 export function decodeSidecar(value: string): SerializedDocument | null {
   if (!value.startsWith(SIDECAR_PREFIX)) return null;
   try {
-    const json = new TextDecoder().decode(base64Decode(value.slice(SIDECAR_PREFIX.length)));
+    const json = new TextDecoder().decode(base64ToBytes(value.slice(SIDECAR_PREFIX.length)));
     const parsed = JSON.parse(json) as SerializedDocument;
     return parsed.version === 1 && Array.isArray(parsed.pages) ? parsed : null;
   } catch {
@@ -230,8 +246,22 @@ export function decodeSidecar(value: string): SerializedDocument | null {
   }
 }
 
+/** Cheap ASCII scan: most PDFs have no sidecar, so avoid parsing those entirely. */
+function containsAscii(bytes: Uint8Array, text: string): boolean {
+  const needle = new TextEncoder().encode(text);
+  const limit = bytes.length - needle.length;
+  outer: for (let index = 0; index <= limit; index += 1) {
+    for (let offset = 0; offset < needle.length; offset += 1) {
+      if (bytes[index + offset] !== needle[offset]) continue outer;
+    }
+    return true;
+  }
+  return false;
+}
+
 /** Async sidecar reader used by the import path and tests. */
 export async function loadSidecar(bytes: Uint8Array): Promise<SerializedDocument | null> {
+  if (!containsAscii(bytes, SIDECAR_KEY)) return null;
   const doc = await PDFDocument.load(bytes, { updateMetadata: false });
   const value = doc.catalog.lookup(PDFName.of(SIDECAR_KEY));
   return value instanceof PDFString ? decodeSidecar(value.decodeText()) : null;
@@ -343,6 +373,11 @@ function rotatedLowerLeft(
 
 const STAMP_URL_PREFIXES = ["data:image/", "blob:", "/assets/"];
 
+/** An annotation keeps no copy when its library stamp still resolves. */
+function stampImageUrl(annotation: Extract<Annotation, { type: "stamp" }>): string | undefined {
+  return annotation.imageUrl || resolveStamp(annotation.stampId)?.imageUrl;
+}
+
 async function embedStampImage(pdf: PDFDocument, imageUrl: string): Promise<PDFImage | null> {
   // Only self-produced stamps may be fetched; anything else is ignored.
   if (!STAMP_URL_PREFIXES.some((prefix) => imageUrl.startsWith(prefix))) return null;
@@ -364,13 +399,6 @@ async function embedStampImage(pdf: PDFDocument, imageUrl: string): Promise<PDFI
   } catch {
     return null;
   }
-}
-
-function base64ToBytes(payload: string): Uint8Array {
-  const binary = atob(payload);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
 }
 
 async function drawAnnotation(context: DrawContext, annotation: Annotation): Promise<void> {
@@ -409,7 +437,8 @@ async function drawAnnotation(context: DrawContext, annotation: Annotation): Pro
       return;
     }
     case "stamp": {
-      const image = await context.images.get(annotation.imageUrl);
+      const url = stampImageUrl(annotation);
+      const image = url ? await context.images.get(url) : null;
       if (!image) return;
       const width = annotation.widthMm * PT_PER_MM;
       const height = annotation.heightMm * PT_PER_MM;
@@ -496,6 +525,18 @@ function drawBoxFill(
   });
 }
 
+const WINANSI_EXTRA = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
+
+/** pdf-lib's standard fonts only encode WinAnsi; anything else needs a raster. */
+export function isWinAnsiText(text: string): boolean {
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if ((code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff) || WINANSI_EXTRA.has(char)) continue;
+    return false;
+  }
+  return true;
+}
+
 async function drawTextBox(context: DrawContext, annotation: TextAnnotation): Promise<void> {
   const { page, heightMm } = context;
   const box: BoxFrame = {
@@ -532,6 +573,30 @@ async function drawTextBox(context: DrawContext, annotation: TextAnnotation): Pr
 
   if (!annotation.text) return;
   const layout = layoutText(annotation);
+  if (layout.lines.some((line) => line.text && !isWinAnsiText(line.text))) {
+    // Persian, CJK, Cyrillic and emoji cannot be written with a standard font.
+    const raster = await rasterizeTextAnnotation(annotation);
+    if (!raster) return;
+    try {
+      const image = await context.pdf.embedPng(raster.dataUrl);
+      const corner = rotatedLowerLeft(
+        { xMm: annotation.xMm, yMm: annotation.yMm, widthMm: annotation.widthMm, heightMm: annotation.heightMm },
+        annotation.rotation,
+        heightMm,
+      );
+      page.drawImage(image, {
+        x: corner.x,
+        y: corner.y,
+        width: annotation.widthMm * PT_PER_MM,
+        height: annotation.heightMm * PT_PER_MM,
+        opacity,
+        rotate: degrees(-annotation.rotation),
+      });
+    } catch {
+      // A page that cannot take the raster still saves the vector frame.
+    }
+    return;
+  }
   const font = await fontFor(context, standardFontFor(annotation));
   const padding = TEXT_PADDING_MM;
   const fontSizeMm = layout.fontSizePt * PT_TO_MM;
@@ -914,9 +979,9 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
   if (flatten) {
     for (const pageInput of input.pages) {
       for (const annotation of pageInput.annotations) {
-        if (annotation.type === "stamp" && !images.has(annotation.imageUrl)) {
-          images.set(annotation.imageUrl, embedStampImage(pdf, annotation.imageUrl));
-        }
+        if (annotation.type !== "stamp") continue;
+        const url = stampImageUrl(annotation);
+        if (url && !images.has(url)) images.set(url, embedStampImage(pdf, url));
       }
     }
   }
@@ -959,10 +1024,14 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
 
     if (!flatten) continue;
     for (const annotation of pageInput.annotations) {
-      await drawAnnotation(
-        { pdf, page, widthMm: pageInput.widthMm, heightMm: pageInput.heightMm, fonts, images, formulas },
-        annotation,
-      );
+      try {
+        await drawAnnotation(
+          { pdf, page, widthMm: pageInput.widthMm, heightMm: pageInput.heightMm, fonts, images, formulas },
+          annotation,
+        );
+      } catch {
+        // One unencodable annotation must never abort the whole save or print.
+      }
     }
   }
 
@@ -971,7 +1040,8 @@ export async function exportPdf(input: PdfExportInput): Promise<Uint8Array> {
     pdf.catalog.set(PDFName.of(SIDECAR_KEY), PDFString.of(encodeSidecar(serializedFromInput(input, copied))));
   }
 
-  return pdf.save();
+  // Object streams would hide the sidecar key from the cheap byte scan on import.
+  return pdf.save({ useObjectStreams: false });
 }
 
 /** Merges PDFs page by page into one flat document, in the order given. */
@@ -995,15 +1065,14 @@ export function exportInputFromTab(tab: DocumentTab, mode: PersistenceMode): Pdf
     sourceBytes: tab.pdf?.bytes,
     bookmarks: tab.pdf?.bookmarks,
     pages: tab.pages.map((page) => {
-      const template = paperById.get(page.templateId);
-      const pdf = page.pdf;
+      const size = pageSizeMm(tab, page);
       return {
         templateId: page.templateId,
         landscape: tab.landscape,
         rotation: page.rotation,
-        widthMm: pdf?.widthMm ?? template?.page.widthMm ?? 210,
-        heightMm: pdf?.heightMm ?? template?.page.heightMm ?? 297,
-        pdfPageIndex: pdf?.pageNumber,
+        widthMm: size.widthMm,
+        heightMm: size.heightMm,
+        pdfPageIndex: page.pdf?.pageNumber,
         ...(page.cropBox ? { cropBox: page.cropBox } : {}),
         annotations: page.annotations,
       };

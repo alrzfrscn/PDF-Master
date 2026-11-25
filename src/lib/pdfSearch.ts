@@ -1,9 +1,8 @@
 import { create } from "zustand";
-import { getPdfDocument } from "./pdfEngine";
+import { getPdfPageText } from "./pdfEngine";
 import type { DocumentPage, DocumentTab } from "./types";
 
 const PDF_PT_TO_MM = 25.4 / 72;
-const MAX_PAGES = 500;
 
 export interface SearchMatch {
   /** 0-based page index inside the tab. */
@@ -161,25 +160,23 @@ function pdfPageMatches(
 
 async function pageMatches(page: DocumentPage, pageIndex: number, needle: string, wholeWord: boolean): Promise<SearchMatch[]> {
   if (!page.pdf) return pdfPageMatches(page, pageIndex, needle, 0, [], wholeWord);
-  const pdf = await getPdfDocument(page.pdf.url);
-  const pdfPage = await pdf.getPage(page.pdf.pageNumber);
-  const viewport = pdfPage.getViewport({ scale: 1 });
-  const content = await pdfPage.getTextContent();
-  return pdfPageMatches(page, pageIndex, needle, viewport.height, content.items as PdfTextItem[], wholeWord);
+  const content = await getPdfPageText(page.pdf.url, page.pdf.pageNumber);
+  return pdfPageMatches(page, pageIndex, needle, content.viewportHeight, content.items as PdfTextItem[], wholeWord);
 }
 
 /** Every text hit in the tab, in page order. PDF text and text-box annotations both count. */
 export async function searchTab(
   tab: DocumentTab,
   query: string,
-  options: { wholeWord?: boolean } = {},
+  options: { wholeWord?: boolean; signal?: AbortSignal } = {},
 ): Promise<SearchMatch[]> {
   const needle = normalizeSearchText(query);
   if (!needle) return [];
   const wholeWord = Boolean(options.wholeWord);
   const matches: SearchMatch[] = [];
-  const limit = Math.min(tab.pages.length, MAX_PAGES);
-  for (let index = 0; index < limit; index += 1) {
+  for (let index = 0; index < tab.pages.length; index += 1) {
+    // A newer keystroke cancels this run; the caller discards partial results.
+    if (options.signal?.aborted) break;
     try {
       matches.push(...(await pageMatches(tab.pages[index], index, needle, wholeWord)));
     } catch {

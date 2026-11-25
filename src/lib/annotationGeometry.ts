@@ -58,19 +58,6 @@ export function boundsIntersect(a: BBox, b: BBox): boolean {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
-export function boundsContain(outer: BBox, inner: BBox): boolean {
-  return (
-    inner.x >= outer.x &&
-    inner.y >= outer.y &&
-    inner.x + inner.width <= outer.x + outer.width &&
-    inner.y + inner.height <= outer.y + outer.height
-  );
-}
-
-export function boxCenter(box: BBox): Pt {
-  return [box.x + box.width / 2, box.y + box.height / 2];
-}
-
 /** Corners of a rotated box, in page-local millimetres. */
 export function boxCorners(xMm: number, yMm: number, widthMm: number, heightMm: number, rotation: number): Pt[] {
   const cx = xMm + widthMm / 2;
@@ -86,12 +73,6 @@ export function boxCorners(xMm: number, yMm: number, widthMm: number, heightMm: 
     [hw, hh],
     [-hw, hh],
   ].map(([x, y]) => [cx + x * cos - y * sin, cy + x * sin + y * cos] as Pt);
-}
-
-export function isBoxAnnotation(
-  annotation: Annotation,
-): annotation is Extract<Annotation, { type: "stamp" | "text" | "formula" }> {
-  return annotation.type === "stamp" || annotation.type === "text" || annotation.type === "formula";
 }
 
 export function annotationBounds(annotation: Annotation): BBox {

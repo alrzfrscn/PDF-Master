@@ -87,6 +87,8 @@ export function SliderRow({
   step = 0.1,
   unit,
   onChange,
+  onDragStart,
+  onDragEnd,
 }: {
   label: string;
   value: number;
@@ -95,6 +97,9 @@ export function SliderRow({
   step?: number;
   unit?: string;
   onChange: (value: number) => void;
+  /** A pointer drag is one edit; the caller records history once. */
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }) {
   const fill = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
   return (
@@ -114,6 +119,10 @@ export function SliderRow({
         step={step}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
+        onPointerDown={onDragStart}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
+        onBlur={onDragEnd}
         style={{ "--fill": `${fill}%` } as CSSProperties}
       />
     </label>

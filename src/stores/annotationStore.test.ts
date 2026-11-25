@@ -155,6 +155,21 @@ describe("annotation store", () => {
     expect(annotations().map((annotation) => annotation.id)).toEqual(["ink-1", "ink-2"]);
   });
 
+  it("records one history entry for a whole slider drag", () => {
+    useAnnotationStore.getState().add(shape("a1"));
+    useAnnotationStore.getState().select(["a1"]);
+    const update = useAnnotationStore.getState().update;
+
+    // The first change of a drag opens the undo step; the rest ride along.
+    update(["a1"], { opacity: 0.9 }, true);
+    update(["a1"], { opacity: 0.8 }, false);
+    update(["a1"], { opacity: 0.7 }, false);
+    expect(annotations()[0].opacity).toBe(0.7);
+
+    useDocStore.getState().undo();
+    expect(annotations()[0].opacity).toBe(1);
+  });
+
   it("selects only the clicked annotation when it has no group", () => {
     useAnnotationStore.getState().addMany([shape("a1", 10, 10), shape("a2", 40, 10), shape("a3", 70, 10)]);
     const hit = annotations()[0];

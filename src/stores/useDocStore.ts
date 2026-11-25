@@ -7,6 +7,17 @@ import { ZOOM_STEPS } from "../lib/tools";
 import type { DocumentPage, DocumentTab, PdfBookmark } from "../lib/types";
 import { inspectPdf, loadSidecar, mergeSidecarPages, releasePdfDocument, type InspectedPdf } from "../lib/pdfEngine";
 import { remapBookmarksOnPageOp, type PageOp } from "../lib/bookmarks";
+import { clearSaveHandle } from "../lib/save";
+
+/**
+ * useAnnotationStore registers this at import time. A direct import here would
+ * close a module cycle: that store subscribes to this one while loading.
+ */
+let resetSelection: (() => void) | null = null;
+
+export function setSelectionResetHook(fn: () => void): void {
+  resetSelection = fn;
+}
 
 const MILLIMETER_TEMPLATE_ID = "paper-103";
 
@@ -107,12 +118,16 @@ function releaseTab(tab: DocumentTab): void {
   const urls = new Set<string>();
   if (tab.pdf?.url) urls.add(tab.pdf.url);
   for (const page of tab.pages) if (page.pdf?.url) urls.add(page.pdf.url);
-  for (const url of urls) releasePdfDocument(url);
+  for (const url of urls) {
+    releasePdfDocument(url);
+    if (url.startsWith("blob:") && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(url);
+  }
 }
 
 /** Permanent close: free the rendered document and its autosaved blob. */
 function disposeTab(tab: DocumentTab, keepIds: string[]): void {
   releaseTab(tab);
+  clearSaveHandle(tab.id);
   void deleteWorkspaceBlob(tab.id, keepIds);
 }
 
@@ -219,6 +234,8 @@ export const useDocStore = create<DocState>((set, get) => ({
     const index = tabs.findIndex((tab) => tab.id === id);
     const closing = tabs[index];
     if (!closing) return;
+    // A closed tab forgets its target file; undo-close starts from a fresh picker.
+    clearSaveHandle(id);
     // The previous closed tab is now beyond undo: free its document and blob.
     if (lastClosedTab) disposeTab(lastClosedTab.tab, tabs.filter((tab) => tab.id !== lastClosedTab.tab.id).map((tab) => tab.id));
     const nextHistory = { ...history };
@@ -288,7 +305,8 @@ export const useDocStore = create<DocState>((set, get) => ({
   applyTemplate: (templateId, title, landscape = false) => {
     const state = get();
     const tab = tabOf(state);
-    if (!tab) return;
+    // A PDF page's size comes from the source document, not from a paper recipe.
+    if (!tab || tab.pdf) return;
     state.pushHistory(tab.id);
     const nextTemplate = paperById.get(templateId);
     const pages = tab.pages.map((page) => {
@@ -315,7 +333,8 @@ export const useDocStore = create<DocState>((set, get) => ({
   },
   setLandscape: (landscape) => {
     const tab = tabOf(get());
-    if (!tab) return;
+    // PDF pages keep the source orientation; flipping them would be a no-op undo entry.
+    if (!tab || tab.pdf) return;
     get().pushHistory(tab.id);
     set((state) => ({
       tabs: state.tabs.map((item) => (item.id === tab.id ? { ...item, landscape } : item)),
@@ -526,7 +545,8 @@ export const useDocStore = create<DocState>((set, get) => ({
     });
   },
 
-  restore: (tabs, activeId) => {    const previousTabs = get().tabs;
+  restore: (tabs, activeId) => {
+    const previousTabs = get().tabs;
     const restored = tabs.map((tab) => {
       const pages = tab.pages?.length ? tab.pages : [newPage(tab.templateId)];
       if (!tab.pdf?.bytes) return { ...tab, pages, pageCount: pages.length };
@@ -538,14 +558,21 @@ export const useDocStore = create<DocState>((set, get) => ({
         pdf: { ...tab.pdf, url },
       };
     });
-    for (const tab of previousTabs) releaseTab(tab);
+    for (const tab of previousTabs) {
+      releaseTab(tab);
+      clearSaveHandle(tab.id);
+    }
+    // Restored pages are a new starting point: old undo entries point at dead URLs.
+    resetSelection?.();
     set({
       tabs: restored,
       activeId: restored.some((tab) => tab.id === activeId) ? activeId : restored[0].id,
       page: 1,
       fitMode: "page",
       zoom: 0.8,
+      history: {},
       lastClosedTab: null,
+      lastError: null,
     });
   },
 

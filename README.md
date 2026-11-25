@@ -13,7 +13,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # type-check + production bundle in dist/
 npm run preview    # serve dist/ on http://localhost:4173
-npm test           # 79 unit tests
+npm test           # 143 unit tests
 ```
 
 Requires Node 20+ (developed on Node 26, Windows 11).
@@ -227,7 +227,7 @@ public/                    manifest.webmanifest, icon.svg, stamp assets
 
 | Layer | Key / file | Holds |
 |---|---|---|
-| IndexedDB `pdf-master/workspace/current` | `current` | tabs, pages, annotations, active tab |
+| IndexedDB `pdf-master/workspace/current` | `current` meta + one record per tab id | tab order/active id, then each tab's pages and annotations |
 | IndexedDB `pdf-master/pdf-blobs` | tab id | imported PDF bytes, kept out of the structural save |
 | `localStorage` | `pm.customStamps`, `pm.measure.scales`, `pm.measure.active`, `pm.shortcuts`, `pm.prefs`, `pa.theme` | studio preferences |
 | PDF sidecar | `/PDFMasterAnnotations` info key, `pm1:` + base64 JSON | page map, annotations, bookmarks |
@@ -242,14 +242,14 @@ Version 1 backups (tabs only) still import; missing stores are left untouched.
 | Check | Command | Result |
 |---|---|---|
 | Type-check | `npx tsc -b` | clean |
-| Unit tests | `npm test` | 14 files, 79 tests passing |
+| Unit tests | `npm test` | 21 files, 143 tests passing |
 | Production build | `npm run build` | clean, no warnings, 997 ms |
 | Tauri shell | `cargo check` (in `src-tauri`) | `Finished dev profile` |
 | Headless E2E | Chromium via Playwright | 28/28 checks, 0 console/page errors |
 
 The E2E pass covers: PWA manifest, drawing ink, selection → save as stamp, stamp-tool switch, v2 backup export, backup import restoring stamps/scales/shortcuts/preferences/theme, `Ctrl+P` firing print, `@media print` hiding the chrome, `?new=Letter+Landscape&fullscreen=1` boot, and `?print=1`.
 
-Unit coverage includes annotation geometry, text layout, ink paths, measurement conversion, shortcut normalisation/conflicts, PDF export and sidecar round-trips (including bookmarks), boot-argument parsing, workspace backup round-trips, and store-level undo/selection.
+Unit coverage includes annotation geometry, text layout, ink paths, measurement conversion, shortcut normalisation/conflicts, PDF export and sidecar round-trips (including bookmarks and non-WinAnsi text), boot-argument parsing, workspace backup round-trips and malformed/remote-URL rejection, document-wide search and cancellation, per-mode save handles, custom-stamp conflict resolution, and store-level undo/selection.
 
 ---
 
@@ -263,6 +263,7 @@ Unit coverage includes annotation geometry, text layout, ink paths, measurement 
 - **Snapshot capture is best-effort** for PDF pages that have not painted yet.
 - **Desktop windows are Chromium** (WebView2 for Tauri, Edge/Chrome for the launcher); Safari/Firefox are untested.
 - **Stamp catalogue is one ~569 kB chunk** (59 kB gzip); the Vite warning limit is raised to 600 kB rather than lazy-loading synchronous stamp lookup everywhere.
+- **Older compressed exports may lose annotations on import.** The sidecar byte scan only finds the `PDFMasterAnnotations` key in uncompressed exports; files written before this change can open without their editable annotations.
 
 ---
 
@@ -278,6 +279,8 @@ Unit coverage includes annotation geometry, text layout, ink paths, measurement 
 | [`PHASE_6_AUDIT_FIX_REPORT.md`](./PHASE_6_AUDIT_FIX_REPORT.md) | Audit fixes, persistence hardening, export correctness |
 | [`PHASE_7_UI_OVERHAUL_REPORT.md`](./PHASE_7_UI_OVERHAUL_REPORT.md) | Tool rail, popovers, drawers, favorites dock, ink studio |
 | [`PHASE_8_REPORT.md`](./PHASE_8_REPORT.md) | Popover polish, shapes studio, crop bar, 15 audit fixes |
+| [`PHASE_17_REPORT.md`](./PHASE_17_REPORT.md) | Ink, pinch zoom, favourites, snapshot capture, combine dialog |
+| [`PHASE_18_REPORT.md`](./PHASE_18_REPORT.md) | 20 audit fixes: save modes, landscape export, virtualization, Unicode, persistence |
 | [`.impeccable.md`](./.impeccable.md) | Design direction, tokens, component grammar, anti-patterns |
 | [`src/data/migration_manifest.json`](./src/data/migration_manifest.json) | Provenance and checksums for every migrated asset |
 

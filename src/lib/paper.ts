@@ -146,18 +146,3 @@ export function clampPan(
   const maxY = rowHeightPx <= fitHeight ? (fitHeight - rowHeightPx) / 2 : (rowHeightPx - viewportHeight) / 2 + 32;
   return { x: clamp(pan.x, -maxX, maxX), y: clamp(pan.y, -maxY, maxY) };
 }
-
-/** Zoom that fits the whole page (or just its width) inside a viewport. */
-export function fitScale(
-  viewportWidth: number,
-  viewportHeight: number,
-  page: { widthMm: number; heightMm: number },
-  mode: "page" | "width",
-  padding = 64,
-): number {
-  const pageWidthPx = page.widthMm * PX_PER_MM;
-  const pageHeightPx = page.heightMm * PX_PER_MM;
-  const byWidth = (viewportWidth - padding) / pageWidthPx;
-  const byHeight = (viewportHeight - padding) / pageHeightPx;
-  return clamp(mode === "width" ? byWidth : Math.min(byWidth, byHeight), 0.1, 6);
-}

@@ -106,4 +106,73 @@ describe("workspace backup", () => {
 
     expect(parseWorkspaceBackup(legacy)?.tabs[0].pdf?.bytes).toEqual(new Uint8Array([37, 80, 68]));
   });
+
+  it("rejects a PDF tab whose bytes cannot be decoded", () => {
+    const bad = JSON.stringify({
+      version: 2,
+      savedAt: "2025-01-01",
+      activeId: "doc-pdf",
+      tabs: [
+        {
+          ...tabs[0],
+          id: "doc-pdf",
+          pdf: { url: "", name: "source.pdf", pageCount: 1, bookmarks: [], bytesBase64: "!!!" },
+        },
+      ],
+    });
+    expect(parseWorkspaceBackup(bad)).toBeNull();
+  });
+
+  it("rejects a tab with a malformed page or annotation list", () => {
+    const badPage = JSON.stringify({
+      version: 2,
+      savedAt: "2025-01-01",
+      activeId: "doc-a",
+      tabs: [{ ...tabs[0], pages: [{}] }],
+    });
+    const badAnnotations = JSON.stringify({
+      version: 2,
+      savedAt: "2025-01-01",
+      activeId: "doc-a",
+      tabs: [{ ...tabs[0], pages: [{ ...tabs[0].pages[0], annotations: "nope" }] }],
+    });
+    expect(parseWorkspaceBackup(badPage)).toBeNull();
+    expect(parseWorkspaceBackup(badAnnotations)).toBeNull();
+  });
+
+  it("drops a remote image URL from a stamp annotation", () => {
+    const remote = JSON.stringify({
+      version: 2,
+      savedAt: "2025-01-01",
+      activeId: "doc-a",
+      tabs: [
+        {
+          ...tabs[0],
+          pages: [
+            {
+              ...tabs[0].pages[0],
+              annotations: [
+                { id: "stamp-remote", type: "stamp", stampId: "factory-1", imageUrl: "https://evil.example/x.png" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const parsed = parseWorkspaceBackup(remote);
+    const annotation = parsed?.tabs[0].pages[0].annotations[0];
+    expect(annotation).toMatchObject({ id: "stamp-remote", stampId: "factory-1" });
+    expect(annotation).not.toHaveProperty("imageUrl");
+  });
+
+  it("drops a remote image URL from a restored custom stamp", () => {
+    const remote = JSON.stringify({
+      version: 2,
+      savedAt: "2025-01-01",
+      activeId: "doc-a",
+      tabs,
+      stores: { ...stores, customStamps: [{ ...stores.customStamps[0], imageUrl: "https://evil.example/x.png" }] },
+    });
+    expect(parseWorkspaceBackup(remote)?.stores?.customStamps).toEqual([]);
+  });
 });

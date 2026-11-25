@@ -43,9 +43,10 @@ export function SearchBar() {
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     useSearchStore.getState().setSearching(true);
     const timer = window.setTimeout(() => {
-      void searchTab(tab, value, { wholeWord })
+      void searchTab(tab, value, { wholeWord, signal: controller.signal })
         .then((found) => {
           if (cancelled) return;
           useSearchStore.getState().setQuery(value);
@@ -60,6 +61,7 @@ export function SearchBar() {
     }, 220);
     return () => {
       cancelled = true;
+      controller.abort();
       window.clearTimeout(timer);
     };
   }, [open, text, tab?.id, wholeWord]);

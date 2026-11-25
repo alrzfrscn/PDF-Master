@@ -18,8 +18,23 @@ function fileName(title: string, mode: PersistenceMode): string {
   return `${clean}${mode === "flattened" ? "-flattened" : ""}.pdf`;
 }
 
-/** Reused by Save and Ctrl+S so a saved tab writes in place instead of reopening the picker. */
+/**
+ * Reused by Save and Ctrl+S so a saved tab writes in place instead of reopening
+ * the picker. Keyed per tab and mode: an editable save and a flattened export
+ * are different files.
+ */
 const saveHandles = new Map<string, SaveFileHandle>();
+
+function handleKey(tabId: string, mode: PersistenceMode): string {
+  return `${tabId}:${mode}`;
+}
+
+/** Forgets a tab's saved targets (close, restore, permanent dispose). */
+export function clearSaveHandle(tabId: string): void {
+  for (const key of [...saveHandles.keys()]) {
+    if (key.startsWith(`${tabId}:`)) saveHandles.delete(key);
+  }
+}
 
 async function writeHandle(handle: SaveFileHandle, bytes: Uint8Array): Promise<void> {
   const writable = await handle.createWritable();
@@ -28,14 +43,21 @@ async function writeHandle(handle: SaveFileHandle, bytes: Uint8Array): Promise<v
 }
 
 /** Native save dialog where available, otherwise a download. */
-async function writeFile(bytes: Uint8Array, name: string, alwaysAsk = false, tabId?: string): Promise<boolean> {
-  const cached = tabId && !alwaysAsk ? saveHandles.get(tabId) : undefined;
+async function writeFile(
+  bytes: Uint8Array,
+  name: string,
+  mode: PersistenceMode,
+  alwaysAsk = false,
+  tabId?: string,
+): Promise<boolean> {
+  const key = tabId ? handleKey(tabId, mode) : undefined;
+  const cached = key && !alwaysAsk ? saveHandles.get(key) : undefined;
   if (cached) {
     try {
       await writeHandle(cached, bytes);
       return true;
     } catch {
-      if (tabId) saveHandles.delete(tabId);
+      if (key) saveHandles.delete(key);
     }
   }
   const picker = (window as unknown as SaveFilePickerWindow).showSaveFilePicker;
@@ -46,7 +68,7 @@ async function writeFile(bytes: Uint8Array, name: string, alwaysAsk = false, tab
         types: [{ description: "PDF document", accept: { "application/pdf": [".pdf"] } }],
       });
       await writeHandle(handle, bytes);
-      if (tabId) saveHandles.set(tabId, handle);
+      if (key) saveHandles.set(key, handle);
       return true;
     } catch (error) {
       if ((error as DOMException | undefined)?.name === "AbortError") return false;
@@ -76,7 +98,7 @@ export async function saveActiveDocument(mode: PersistenceMode, alwaysAsk = fals
   try {
     const bytes = await exportPdf(exportInputFromTab(tab, mode));
     const name = fileName(tab.title, mode);
-    const saved = await writeFile(bytes, name, alwaysAsk, tab.id);
+    const saved = await writeFile(bytes, name, mode, alwaysAsk, tab.id);
     useUIStore.getState().setToast(saved ? `Saved ${name}` : "Save cancelled");
   } catch (error) {
     useUIStore

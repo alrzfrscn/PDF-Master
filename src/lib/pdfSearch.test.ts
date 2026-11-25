@@ -1,7 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { findTextMatches, normalizeSearchText, pdfTextRect, searchTextContains } from "./pdfSearch";
+import { findTextMatches, normalizeSearchText, pdfTextRect, searchTab, searchTextContains } from "./pdfSearch";
+import type { TextAnnotation } from "./annotationTypes";
+import type { DocumentTab } from "./types";
 
 const PT_TO_MM = 25.4 / 72;
+
+function textAnnotation(text: string, id = "text-1"): TextAnnotation {
+  return {
+    id,
+    type: "text",
+    xMm: 20,
+    yMm: 30,
+    widthMm: 60,
+    heightMm: 16,
+    text,
+    fontFamily: "Helvetica",
+    fontSizePt: 12,
+    textColor: "#101114",
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeOut: false,
+    align: "left",
+    script: "normal",
+    boxFillColor: "#ffffff",
+    boxFillTransparent: true,
+    frameType: 0,
+    frameColor: "#000000",
+    lineWidthMm: 0.4,
+    autoFit: false,
+    rotation: 0,
+    opacity: 1,
+  };
+}
 
 // "باکتری‌شناسی" with a ZWNJ between the two words.
 const ZWNJ_WORD = "\u0628\u0627\u06A9\u062A\u0631\u06CC\u200C\u0634\u0646\u0627\u0633\u06CC";
@@ -72,5 +103,31 @@ describe("word-level search", () => {
     const left = pdfTextRect(item, 2, 5, 792);
     expect(left.xMm).toBeCloseTo(200 * PT_TO_MM);
     expect(left.widthMm).toBeCloseTo((3 / 5) * 50 * PT_TO_MM);
+  });
+});
+
+describe("document-wide search", () => {
+  it("searches every page and stops on abort", async () => {
+    const pageCount = 520;
+    const tab: DocumentTab = {
+      id: "doc-many",
+      title: "Many",
+      templateId: "paper-000",
+      landscape: false,
+      pageCount,
+      pages: Array.from({ length: pageCount }, (_, index) => ({
+        id: `page-${index}`,
+        templateId: "paper-000",
+        rotation: 0 as const,
+        annotations: [textAnnotation("needle", `text-${index}`)],
+      })),
+    };
+
+    const matches = await searchTab(tab, "needle");
+    expect(matches).toHaveLength(pageCount);
+
+    const controller = new AbortController();
+    controller.abort();
+    expect(await searchTab(tab, "needle", { signal: controller.signal })).toHaveLength(0);
   });
 });

@@ -69,6 +69,7 @@ import { CANVAS_TOUCH_ACTION, drawsWithPointer } from "../../lib/canvasInput";
 import { PX_PER_MM } from "../../lib/paper";
 import { resolveStamp, useCustomStampStore } from "../../lib/customStamps";
 import { captureRegion, readImageFile, type RasterImage } from "../../lib/raster";
+import { renderPdfPage } from "../../lib/pdfEngine";
 import { addImageStamp } from "../../lib/images";
 import { usePrefsStore } from "../../lib/prefs";
 import { fitTextBox } from "../../lib/textLayout";
@@ -77,7 +78,7 @@ import { applySelectionTransform, selectionForAnnotation, useAnnotationStore } f
 import { useContextMenuStore, keepsNativeMenu, type MenuEntry } from "../../stores/useContextMenuStore";
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore } from "../../stores/useUIStore";
-import type { DocumentPage, DocumentTab } from "../../lib/types";
+import type { DocumentPage } from "../../lib/types";
 import { SelectionOverlay, handlePoints, type HandleId, type SelectionAction } from "./SelectionOverlay";
 import { TextView } from "./TextView";
 import { FormulaView } from "./FormulaView";
@@ -87,8 +88,11 @@ import { MeasureOverlay, measureSummary, type MeasureState } from "./MeasureOver
 import { SnapshotBar } from "./SnapshotBar";
 
 interface Props {
-  tab: DocumentTab;
+  tabId: string;
   page: DocumentPage;
+  pageIndex: number;
+  pageCount: number;
+  hasPdf: boolean;
   widthMm: number;
   heightMm: number;
   zoom: number;
@@ -329,11 +333,15 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
 }
 
 function StampView({ stamp }: { stamp: StampAnnotation }) {
+  // The library copy wins; the annotation only carries bytes for a stamp that
+  // no longer resolves.
+  const href = stamp.imageUrl || resolveStamp(stamp.stampId)?.imageUrl;
+  if (!href) return null;
   const cx = stamp.xMm + stamp.widthMm / 2;
   const cy = stamp.yMm + stamp.heightMm / 2;
   return (
     <image
-      href={stamp.imageUrl}
+      href={href}
       x={stamp.xMm}
       y={stamp.yMm}
       width={stamp.widthMm}
@@ -345,7 +353,7 @@ function StampView({ stamp }: { stamp: StampAnnotation }) {
   );
 }
 
-export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, touchScroll = false }: Props) {
+export function AnnotationLayer({ tabId, page, pageIndex, pageCount, hasPdf, widthMm, heightMm, zoom, panMode, touchScroll = false }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const interaction = useRef<Interaction>(null);
   const [draft, setDraft] = useState<Draft>(null);
@@ -604,7 +612,8 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       id: makeId("a"),
       type: "stamp",
       stampId: selectedStampId ?? art.name,
-      imageUrl: art.imageUrl ?? "",
+      // Resolvable stamps keep one copy in the library, not one per annotation.
+      ...(resolveStamp(selectedStampId) ? {} : { imageUrl: art.imageUrl }),
       xMm,
       yMm,
       widthMm,
@@ -951,7 +960,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       const dx = point[0] - current.last[0];
       const dy = point[1] - current.last[1];
       if (!current.pushed) {
-        useDocStore.getState().pushHistory(tab.id);
+        useDocStore.getState().pushHistory(tabId);
         current.pushed = true;
       }
       useAnnotationStore.getState().transform((annotation) => translateAnnotation(annotation, dx, dy));
@@ -980,7 +989,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
         sy = factor;
       }
       if (!current.pushed && (Math.abs(sx - 1) > 0.001 || Math.abs(sy - 1) > 0.001)) {
-        useDocStore.getState().pushHistory(tab.id);
+        useDocStore.getState().pushHistory(tabId);
         current.pushed = true;
       }
       const initial = new Map(current.initial.map((annotation) => [annotation.id, annotation]));
@@ -999,7 +1008,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       let delta = angle - current.startAngle;
       if (event.shiftKey) delta = Math.round(delta / 15) * 15;
       if (!current.pushed && Math.abs(delta) > 0.01) {
-        useDocStore.getState().pushHistory(tab.id);
+        useDocStore.getState().pushHistory(tabId);
         current.pushed = true;
       }
       const initial = current.initial;
@@ -1022,6 +1031,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       pageWidthMm: widthMm,
       pageHeightMm: heightMm,
       pdfPage: page.pdf,
+      renderPage: renderPdfPage,
     });
     setSnap({ region, image, status });
     return image;
@@ -1122,11 +1132,11 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     if (action === "front") store.bringToFront();
     if (action === "back") store.sendToBack();
     if (action === "rotate") {
-      useDocStore.getState().pushHistory(tab.id);
+      useDocStore.getState().pushHistory(tabId);
       applySelectionTransform("rotate", { origin: center, degrees: 90 });
     }
     if (action === "flip-h" || action === "flip-v") {
-      useDocStore.getState().pushHistory(tab.id);
+      useDocStore.getState().pushHistory(tabId);
       applySelectionTransform("flip", { origin: center, axis: action === "flip-h" ? "h" : "v" });
     }
     if (action === "save-stamp" && bounds) {
@@ -1351,7 +1361,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
     entries.push({
       label: "Duplicate to All Pages",
       icon: Layers,
-      disabled: allLocked || tab.pages.length < 2,
+      disabled: allLocked || pageCount < 2,
       onSelect: () => state.duplicateSelectionToAllPages(),
     });
     entries.push("divider");
@@ -1362,7 +1372,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       icon: RotateCw,
       disabled: allLocked,
       onSelect: () => {
-        useDocStore.getState().pushHistory(tab.id);
+        useDocStore.getState().pushHistory(tabId);
         applySelectionTransform("rotate", { origin: center, degrees: 90 });
       },
     });
@@ -1371,7 +1381,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       icon: FlipHorizontal2,
       disabled: allLocked,
       onSelect: () => {
-        useDocStore.getState().pushHistory(tab.id);
+        useDocStore.getState().pushHistory(tabId);
         applySelectionTransform("flip", { origin: center, axis: "h" });
       },
     });
@@ -1380,7 +1390,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
       icon: FlipVertical2,
       disabled: allLocked,
       onSelect: () => {
-        useDocStore.getState().pushHistory(tab.id);
+        useDocStore.getState().pushHistory(tabId);
         applySelectionTransform("flip", { origin: center, axis: "v" });
       },
     });
@@ -1399,7 +1409,6 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
 
   const openPageMenu = (event: React.MouseEvent, point: Pt) => {
     const { clientX, clientY } = event;
-    const pageIndex = tab.pages.indexOf(page);
     const doc = useDocStore.getState();
     const state = useAnnotationStore.getState();
     useContextMenuStore.getState().openAt(
@@ -1432,7 +1441,7 @@ export function AnnotationLayer({ tab, page, widthMm, heightMm, zoom, panMode, t
         {
           label: "Bookmark This Page",
           icon: BookmarkPlus,
-          disabled: !tab.pdf,
+          disabled: !hasPdf,
           onSelect: () => {
             doc.setPage(pageIndex + 1);
             doc.addBookmark(`Page ${pageIndex + 1}`);

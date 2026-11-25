@@ -1,10 +1,12 @@
-import type { DocumentTab, ThemeName } from "./types";
+import type { DocumentPage, DocumentTab, ThemeName } from "./types";
+import type { Annotation } from "./annotationTypes";
 import { useCustomStampStore, type CustomStamp } from "./customStamps";
 import { useScaleStore, type MeasurementScale } from "./measure";
 import { useShortcutStore, type ShortcutAction } from "./shortcuts";
 import { usePrefsStore, type Prefs } from "./prefs";
 import { useFavoritesStore, type FavoriteTool } from "../stores/useFavoritesStore";
 import { useUIStore } from "../stores/useUIStore";
+import { base64ToBytes, bytesToBase64 } from "./base64";
 
 /** Everything a `.pmbackup.json` carries besides tabs, pages and annotations. */
 export interface WorkspaceStores {
@@ -33,11 +35,19 @@ const BLOB_STORE = "pdf-blobs";
 const KEY = "current";
 const THEMES: ThemeName[] = ["light", "dark", "sepia"];
 
+/** Legacy single-record shape; current saves write one record per tab. */
 export interface SavedWorkspaceRecord {
   version: 1 | 2;
   savedAt: string;
   activeId: string;
   tabs: DocumentTab[];
+}
+
+interface WorkspaceMeta {
+  version: 2;
+  savedAt: string;
+  activeId: string;
+  tabIds: string[];
 }
 
 function openDb(): Promise<IDBDatabase | null> {
@@ -59,40 +69,45 @@ function openDb(): Promise<IDBDatabase | null> {
  * annotation edit no longer rewrites every page of every document.
  */
 const savedBlobs = new Map<string, Uint8Array>();
+/** Last saved object per tab, so an unchanged tab is not serialised again. */
+const savedTabRefs = new Map<string, DocumentTab>();
 
-/** PDF bytes cannot survive `JSON.stringify`, so a backup carries base64 text. */
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(text: string): Uint8Array {
-  const binary = atob(text);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
+function requestValue<T>(store: IDBObjectStore, key: IDBValidKey): Promise<T | undefined> {
+  return new Promise((resolve) => {
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result as T | undefined);
+    request.onerror = () => resolve(undefined);
+  });
 }
 
 /** Frees a closed tab's blob and any orphan key no open tab owns. */
 export async function deleteWorkspaceBlob(tabId: string, keepIds?: string[]): Promise<void> {
   savedBlobs.delete(tabId);
+  savedTabRefs.delete(tabId);
   const db = await openDb();
   if (!db) return;
   await new Promise<void>((resolve) => {
-    const transaction = db.transaction(BLOB_STORE, "readwrite");
-    const store = transaction.objectStore(BLOB_STORE);
-    store.delete(tabId);
+    const transaction = db.transaction([STORE_NAME, BLOB_STORE], "readwrite");
+    const tabStore = transaction.objectStore(STORE_NAME);
+    const blobStore = transaction.objectStore(BLOB_STORE);
+    tabStore.delete(tabId);
+    blobStore.delete(tabId);
     if (keepIds) {
-      const keys = store.getAllKeys();
+      const keys = blobStore.getAllKeys();
       keys.onsuccess = () => {
         for (const key of keys.result) {
           if (typeof key === "string" && !keepIds.includes(key)) {
-            store.delete(key);
+            blobStore.delete(key);
             savedBlobs.delete(key);
+          }
+        }
+      };
+      const tabKeys = tabStore.getAllKeys();
+      tabKeys.onsuccess = () => {
+        for (const key of tabKeys.result) {
+          if (typeof key === "string" && key !== KEY && !keepIds.includes(key)) {
+            tabStore.delete(key);
+            savedTabRefs.delete(key);
           }
         }
       };
@@ -108,59 +123,74 @@ export async function saveWorkspace(tabs: DocumentTab[], activeId: string): Prom
   const db = await openDb();
   if (!db) return false;
   const blobs = new Map<string, Uint8Array>();
-  const stripped = tabs.map((tab) => {
-    if (!tab.pdf?.bytes) return tab;
-    blobs.set(tab.id, tab.pdf.bytes);
-    return { ...tab, pdf: { ...tab.pdf, bytes: undefined } };
-  });
+  const changed: DocumentTab[] = [];
+  const tabIds = tabs.map((tab) => tab.id);
+  for (const tab of tabs) {
+    if (savedTabRefs.get(tab.id) === tab) continue;
+    if (tab.pdf?.bytes) {
+      blobs.set(tab.id, tab.pdf.bytes);
+      changed.push({ ...tab, pdf: { ...tab.pdf, bytes: undefined } });
+    } else {
+      changed.push(tab);
+    }
+  }
+  const meta: WorkspaceMeta = { version: 2, savedAt: new Date().toISOString(), activeId, tabIds };
   const ok = await new Promise<boolean>((resolve) => {
     const transaction = db.transaction([STORE_NAME, BLOB_STORE], "readwrite");
-    transaction.objectStore(STORE_NAME).put(
-      { version: 2, savedAt: new Date().toISOString(), activeId, tabs: stripped } satisfies SavedWorkspaceRecord,
-      KEY,
-    );
+    const tabStore = transaction.objectStore(STORE_NAME);
+    tabStore.put(meta, KEY);
+    for (const tab of changed) tabStore.put(tab, tab.id);
+    // Prune records for tabs that are no longer open.
+    const tabKeys = tabStore.getAllKeys();
+    tabKeys.onsuccess = () => {
+      for (const key of tabKeys.result) {
+        if (typeof key === "string" && key !== KEY && !tabIds.includes(key)) {
+          tabStore.delete(key);
+          savedTabRefs.delete(key);
+        }
+      }
+    };
     const blobStore = transaction.objectStore(BLOB_STORE);
     for (const [id, bytes] of blobs) {
       if (savedBlobs.get(id) === bytes) continue;
       blobStore.put(bytes, id);
     }
+    const blobKeys = blobStore.getAllKeys();
+    blobKeys.onsuccess = () => {
+      for (const key of blobKeys.result) {
+        if (typeof key === "string" && !tabIds.includes(key)) {
+          blobStore.delete(key);
+          savedBlobs.delete(key);
+        }
+      }
+    };
     transaction.oncomplete = () => resolve(true);
     transaction.onerror = () => resolve(false);
     transaction.onabort = () => resolve(false);
   });
   db.close();
-  if (ok) for (const [id, bytes] of blobs) savedBlobs.set(id, bytes);
+  if (ok) {
+    for (const tab of tabs) savedTabRefs.set(tab.id, tab);
+    for (const [id, bytes] of blobs) savedBlobs.set(id, bytes);
+  }
   return ok;
 }
 
-export async function loadWorkspace(): Promise<SavedWorkspaceRecord | null> {
-  const db = await openDb();
-  if (!db) return null;
+async function attachPdfBytes(db: IDBDatabase, tabs: DocumentTab[]): Promise<DocumentTab[]> {
+  const transaction = db.transaction(BLOB_STORE, "readonly");
+  const blobStore = transaction.objectStore(BLOB_STORE);
   const blobs = new Map<string, Uint8Array>();
-  const saved = await new Promise<SavedWorkspaceRecord | null>((resolve) => {
-    const transaction = db.transaction([STORE_NAME, BLOB_STORE], "readonly");
-    const blobStore = transaction.objectStore(BLOB_STORE);
-    let record: SavedWorkspaceRecord | null = null;
-    transaction.oncomplete = () => resolve(record);
-    transaction.onabort = () => resolve(null);
-    const request = transaction.objectStore(STORE_NAME).get(KEY);
-    request.onsuccess = () => {
-      record = (request.result as SavedWorkspaceRecord | undefined) ?? null;
-      if (!record) return;
-      for (const tab of record.tabs) {
-        if (!tab.pdf || tab.pdf.bytes) continue;
-        const blobRequest = blobStore.get(tab.id);
-        blobRequest.onsuccess = () => {
-          if (blobRequest.result instanceof Uint8Array) blobs.set(tab.id, blobRequest.result);
-        };
-      }
-    };
-  });
-  db.close();
-  if (!saved || !Array.isArray(saved.tabs) || saved.tabs.length === 0) return null;
-  saved.tabs = saved.tabs.map((tab) => {
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (!tab.pdf || tab.pdf.bytes) return;
+      const value = await requestValue<Uint8Array>(blobStore, tab.id);
+      if (value instanceof Uint8Array) blobs.set(tab.id, value);
+    }),
+  );
+  return tabs.map((tab) => {
     const bytes = blobs.get(tab.id) ?? tab.pdf?.bytes;
     if (!bytes) return tab;
+    savedBlobs.set(tab.id, bytes);
     return {
       ...tab,
       pdf: {
@@ -172,7 +202,38 @@ export async function loadWorkspace(): Promise<SavedWorkspaceRecord | null> {
       },
     };
   });
-  return saved;
+}
+
+export async function loadWorkspace(): Promise<SavedWorkspaceRecord | null> {
+  const db = await openDb();
+  if (!db) return null;
+  const store = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME);
+  const meta = await requestValue<WorkspaceMeta | SavedWorkspaceRecord>(store, KEY);
+  if (!meta) {
+    db.close();
+    return null;
+  }
+  let tabs: DocumentTab[];
+  if ("tabs" in meta && Array.isArray(meta.tabs)) {
+    // A workspace written before per-tab records.
+    tabs = meta.tabs;
+  } else {
+    tabs = [];
+    for (const id of (meta as WorkspaceMeta).tabIds) {
+      const tab = await requestValue<DocumentTab>(store, id);
+      if (tab) tabs.push(tab);
+    }
+  }
+  const withBytes = await attachPdfBytes(db, tabs);
+  db.close();
+  if (withBytes.length === 0) return null;
+  for (const tab of withBytes) savedTabRefs.set(tab.id, tab);
+  return {
+    version: meta.version,
+    savedAt: meta.savedAt,
+    activeId: meta.activeId,
+    tabs: withBytes,
+  };
 }
 
 /** Browser-quota figures for the autosave store; null where the API is missing. */
@@ -234,6 +295,75 @@ export function workspaceBackup(
   return new Blob([JSON.stringify(payload)], { type: "application/json" });
 }
 
+/** Downloads the current workspace; shared by Settings and the autosave banner. */
+export function downloadWorkspaceBackup(tabs: DocumentTab[], activeId: string): void {
+  if (typeof document === "undefined") return;
+  const anchor = document.createElement("a");
+  const url = URL.createObjectURL(workspaceBackup(tabs, activeId));
+  anchor.href = url;
+  anchor.download = `pdf-master-${new Date().toISOString().slice(0, 10)}.pmbackup.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  // Revoking immediately can cancel the download in some browsers.
+  window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+const ALLOWED_IMAGE_PREFIXES = ["data:image/", "blob:", "/assets/"];
+const ANNOTATION_TYPES = new Set(["pen", "marker", "shape", "stamp", "text", "formula"]);
+const ROTATIONS = new Set([0, 90, 180, 270]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A backup may only point images at data, blob or bundled assets. */
+function safeImageUrl(value: unknown): string | undefined {
+  return typeof value === "string" && ALLOWED_IMAGE_PREFIXES.some((prefix) => value.startsWith(prefix))
+    ? value
+    : undefined;
+}
+
+function sanitizeAnnotation(value: unknown): Annotation | null {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.type !== "string") return null;
+  if (!ANNOTATION_TYPES.has(value.type)) return null;
+  const annotation = { ...value };
+  if (value.type === "stamp") {
+    const imageUrl = safeImageUrl(value.imageUrl);
+    if (imageUrl) annotation.imageUrl = imageUrl;
+    else delete annotation.imageUrl;
+  }
+  return annotation as unknown as Annotation;
+}
+
+function sanitizePage(value: unknown): DocumentPage | null {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.templateId !== "string") return null;
+  if (!Array.isArray(value.annotations)) return null;
+  const rotation = typeof value.rotation === "number" && ROTATIONS.has(value.rotation) ? value.rotation : 0;
+  const annotations = value.annotations.map(sanitizeAnnotation).filter((item): item is Annotation => item !== null);
+  return { ...(value as unknown as DocumentPage), rotation: rotation as DocumentPage["rotation"], annotations };
+}
+
+function sanitizeTab(value: unknown): DocumentTab | null {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.title !== "string") return null;
+  if (!Array.isArray(value.pages) || value.pages.length === 0) return null;
+  const pages = value.pages.map(sanitizePage);
+  if (pages.some((page) => page === null)) return null;
+  const valid = pages as DocumentPage[];
+  return { ...(value as unknown as DocumentTab), pages: valid, pageCount: valid.length };
+}
+
+function sanitizeStores(value: unknown): WorkspaceStores | undefined {
+  if (!isRecord(value)) return undefined;
+  const stores = { ...value } as unknown as WorkspaceStores;
+  if (Array.isArray(stores.customStamps)) {
+    stores.customStamps = stores.customStamps.filter(
+      (stamp) => isRecord(stamp) && safeImageUrl(stamp.imageUrl) !== undefined,
+    );
+  }
+  return stores;
+}
+
 /** A `.pmbackup` JSON file, checked before it is handed to the store. */
 export function parseWorkspaceBackup(text: string): SavedWorkspace | null {
   try {
@@ -241,29 +371,44 @@ export function parseWorkspaceBackup(text: string): SavedWorkspace | null {
     if ((parsed?.version !== 1 && parsed?.version !== 2) || !Array.isArray(parsed.tabs) || parsed.tabs.length === 0) {
       return null;
     }
-    const tabs = parsed.tabs.map((tab) => {
-      const pdf = tab.pdf as
-        | (NonNullable<DocumentTab["pdf"]> & { bytesBase64?: string; bytes?: unknown })
-        | undefined;
-      if (!pdf) return tab;
-      const { bytesBase64, bytes, ...rest } = pdf;
-      let decoded: Uint8Array | undefined;
-      if (typeof bytesBase64 === "string" && bytesBase64) {
-        try {
-          decoded = base64ToBytes(bytesBase64);
-        } catch {
-          decoded = undefined;
+    const tabs: DocumentTab[] = [];
+    for (const value of parsed.tabs) {
+      const tab = sanitizeTab(value);
+      if (!tab) return null;
+      const pdf = (tab as { pdf?: Record<string, unknown> }).pdf;
+      if (pdf) {
+        const { bytesBase64, bytes, ...rest } = pdf;
+        let decoded: Uint8Array | undefined;
+        if (bytesBase64 !== undefined) {
+          if (typeof bytesBase64 !== "string" || !bytesBase64) return null;
+          try {
+            decoded = base64ToBytes(bytesBase64);
+          } catch {
+            return null;
+          }
+          if (decoded.length === 0) return null;
+        } else if (bytes instanceof Uint8Array) {
+          decoded = bytes;
+        } else if (isRecord(bytes)) {
+          // Legacy backups stringified the typed array into {"0":37,"1":80,...}.
+          const values = Object.values(bytes);
+          if (!values.every((item) => typeof item === "number")) return null;
+          decoded = new Uint8Array(values as number[]);
         }
-      } else if (bytes instanceof Uint8Array) {
-        decoded = bytes;
-      } else if (bytes && typeof bytes === "object") {
-        // Legacy backups stringified the typed array into {"0":37,"1":80,...}.
-        const values = Object.values(bytes as Record<string, number>);
-        if (values.every((value) => typeof value === "number")) decoded = new Uint8Array(values);
+        // A PDF tab is useless without its bytes.
+        if (!decoded || decoded.length === 0) return null;
+        tab.pdf = { ...rest, bytes: decoded } as DocumentTab["pdf"];
       }
-      return { ...tab, pdf: { ...rest, ...(decoded ? { bytes: decoded } : {}) } } as DocumentTab;
-    });
-    return { ...parsed, tabs } as SavedWorkspace;
+      tabs.push(tab);
+    }
+    const activeId = typeof parsed.activeId === "string" ? parsed.activeId : tabs[0].id;
+    return {
+      version: parsed.version,
+      savedAt: typeof parsed.savedAt === "string" ? parsed.savedAt : new Date().toISOString(),
+      activeId,
+      tabs,
+      stores: sanitizeStores(parsed.stores),
+    };
   } catch {
     return null;
   }

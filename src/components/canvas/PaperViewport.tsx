@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FilePlus, FileText, FolderOpen, Image as ImageIcon, MoveHorizontal, Play, Scan, Search, Settings } from "lucide-react";
 import { clamp, clampPan, getWorkspaceInsets, PX_PER_MM, workspaceSafeArea, type PanOffset } from "../../lib/paper";
 import { CANVAS_TOUCH_ACTION, pansFromBackground } from "../../lib/canvasInput";
@@ -11,7 +11,7 @@ import { useDocStore } from "../../stores/useDocStore";
 import { useContextMenuStore, keepsNativeMenu } from "../../stores/useContextMenuStore";
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore, type GridStyle } from "../../stores/useUIStore";
-import type { DocumentPage, DocumentTab, ToolId } from "../../lib/types";
+import type { DocumentPage, ToolId } from "../../lib/types";
 import { AnnotationLayer } from "./AnnotationLayer";
 import { CropOverlay } from "./CropOverlay";
 import { PaperSheet } from "./PaperSheet";
@@ -108,43 +108,51 @@ function SearchHighlights({ pageIndex, widthMm, heightMm }: { pageIndex: number;
 }
 
 interface PageViewProps {
-  tab: DocumentTab;
+  tabId: string;
   page: DocumentPage;
   index: number;
+  widthMm: number;
+  heightMm: number;
+  landscape: boolean;
+  pageCount: number;
   scale: number;
   observe: boolean;
   panMode: boolean;
   auxLines: boolean;
   gridStyle: GridStyle;
   activeTool: ToolId;
-  activePageIndex: number;
+  active: boolean;
   touchScroll: boolean;
-  register: (node: HTMLDivElement | null) => void;
+  register: (index: number, node: HTMLDivElement | null) => void;
   onActivate: (index: number) => void;
 }
 
-function PageView({
-  tab,
+// Memoised with primitives: editing one page must not re-render every sheet.
+const PageView = memo(function PageView({
+  tabId,
   page,
   index,
+  widthMm,
+  heightMm,
+  landscape,
+  pageCount,
   scale,
   observe,
   panMode,
   auxLines,
   gridStyle,
   activeTool,
-  activePageIndex,
+  active,
   touchScroll,
   register,
   onActivate,
 }: PageViewProps) {
-  const size = pageSizeMm(tab, page);
   const template = pageTemplate(page);
   const rotated = page.rotation === 90 || page.rotation === 270;
-  const baseW = size.widthMm * PX_PER_MM;
-  const baseH = size.heightMm * PX_PER_MM;
-  const displayW = (rotated ? size.heightMm : size.widthMm) * PX_PER_MM * scale;
-  const displayH = (rotated ? size.widthMm : size.heightMm) * PX_PER_MM * scale;
+  const baseW = widthMm * PX_PER_MM;
+  const baseH = heightMm * PX_PER_MM;
+  const displayW = (rotated ? heightMm : widthMm) * PX_PER_MM * scale;
+  const displayH = (rotated ? widthMm : heightMm) * PX_PER_MM * scale;
   // Skia rasterises the scaled sheet on a device-pixel grid; a fractional frame
   // leaves 1px damage seams on the backdrop along its edge.
   const boxW = Math.round(displayW);
@@ -164,10 +172,8 @@ function PageView({
       return;
     }
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) setVisible(true);
-      },
-      { rootMargin: "1200px" },
+      (entries) => setVisible(entries.some((entry) => entry.isIntersecting)),
+      { rootMargin: "1200px 0px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -175,7 +181,7 @@ function PageView({
 
   const crop = page.cropBox;
   const clipPath = crop
-    ? `inset(${crop.yMm * PX_PER_MM}px ${(size.widthMm - crop.xMm - crop.widthMm) * PX_PER_MM}px ${(size.heightMm - crop.yMm - crop.heightMm) * PX_PER_MM}px ${crop.xMm * PX_PER_MM}px)`
+    ? `inset(${crop.yMm * PX_PER_MM}px ${(widthMm - crop.xMm - crop.widthMm) * PX_PER_MM}px ${(heightMm - crop.yMm - crop.heightMm) * PX_PER_MM}px ${crop.xMm * PX_PER_MM}px)`
     : undefined;
   // The wrapper is already the scaled size; scale from its top-left corner so the
   // sheet can never bleed outside it, and keep rotated sheets in positive space.
@@ -192,7 +198,7 @@ function PageView({
     <div
       ref={(node) => {
         nodeRef.current = node;
-        register(node);
+        register(index, node);
       }}
       data-page-index={index}
       data-page-number={index + 1}
@@ -220,36 +226,41 @@ function PageView({
           <div className="relative h-full w-full" style={{ clipPath, overflow: "hidden" }}>
             {page.pdf ? (
               <div className="relative h-full w-full overflow-hidden" style={{ background: "var(--paper)" }}>
-                <PdfBackground page={page.pdf} widthMm={size.widthMm} heightMm={size.heightMm} zoom={scale} />
+                {visible && (
+                  <PdfBackground page={page.pdf} widthMm={widthMm} heightMm={heightMm} zoom={scale} />
+                )}
               </div>
             ) : (
-              <PaperSheet template={template} landscape={tab.landscape} aux={auxLines} shadow={false} />
+              <PaperSheet template={template} landscape={landscape} aux={auxLines} shadow={false} />
             )}
-            <GridOverlay styleName={gridStyle} widthMm={size.widthMm} heightMm={size.heightMm} prefix={`${tab.id}-${page.id}`} />
-            <SearchHighlights pageIndex={index} widthMm={size.widthMm} heightMm={size.heightMm} />
+            <GridOverlay styleName={gridStyle} widthMm={widthMm} heightMm={heightMm} prefix={`${tabId}-${page.id}`} />
+            <SearchHighlights pageIndex={index} widthMm={widthMm} heightMm={heightMm} />
             {visible && (
               <AnnotationLayer
-                tab={tab}
+                tabId={tabId}
                 page={page}
-                widthMm={size.widthMm}
-                heightMm={size.heightMm}
+                pageIndex={index}
+                pageCount={pageCount}
+                hasPdf={Boolean(page.pdf)}
+                widthMm={widthMm}
+                heightMm={heightMm}
                 zoom={scale}
                 panMode={panMode}
                 touchScroll={touchScroll}
               />
             )}
           </div>
-          {activeTool === "crop" && activePageIndex === index && (
+          {activeTool === "crop" && active && (
             <CropOverlay
-              key={`${tab.id}:${page.id}:${page.cropBox ? `${page.cropBox.xMm},${page.cropBox.yMm},${page.cropBox.widthMm},${page.cropBox.heightMm}` : "full"}`}
-              widthMm={size.widthMm}
-              heightMm={size.heightMm}
+              key={`${tabId}:${page.id}:${page.cropBox ? `${page.cropBox.xMm},${page.cropBox.yMm},${page.cropBox.widthMm},${page.cropBox.heightMm}` : "full"}`}
+              widthMm={widthMm}
+              heightMm={heightMm}
               cropBox={page.cropBox}
               zoom={scale}
               onApply={(box) => {
                 const doc = useDocStore.getState();
-                doc.pushHistory(tab.id);
-                doc.updatePage(tab.id, index, { cropBox: box ?? undefined });
+                doc.pushHistory(tabId);
+                doc.updatePage(tabId, index, { cropBox: box ?? undefined });
                 useToolStore.getState().setTool("select");
               }}
               onCancel={() => useToolStore.getState().setTool("select")}
@@ -259,7 +270,7 @@ function PageView({
       </div>
     </div>
   );
-}
+});
 
 export function PaperViewport() {
   const tabs = useDocStore((state) => state.tabs);
@@ -800,33 +811,43 @@ export function PaperViewport() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
-  const activate = (index: number) => {
+  const registerPage = useCallback((index: number, node: HTMLDivElement | null) => {
+    if (node) pageRefs.current.set(index, node);
+    else pageRefs.current.delete(index);
+  }, []);
+
+  const activate = useCallback((index: number) => {
     // Clicking a page on screen is not a jump request.
     if (useDocStore.getState().page !== index + 1) useDocStore.setState({ page: index + 1 });
-  };
+  }, []);
 
   const pageNodes = (row: number[], observe: boolean) =>
-    row.map((index) => (
-      <PageView
-        key={tab.pages[index]?.id ?? index}
-        tab={tab}
-        page={tab.pages[index]}
-        index={index}
-        scale={zoom}
-        observe={observe}
-        panMode={canPan}
-        auxLines={auxLines}
-        gridStyle={gridStyle}
-        activeTool={activeTool}
-        activePageIndex={pageNumber - 1}
-        touchScroll={!touchDrawEnabled}
-        register={(node) => {
-          if (node) pageRefs.current.set(index, node);
-          else pageRefs.current.delete(index);
-        }}
-        onActivate={activate}
-      />
-    ));
+    row.map((index) => {
+      const item = tab.pages[index];
+      const size = pageSizeMm(tab, item);
+      return (
+        <PageView
+          key={item?.id ?? index}
+          tabId={tab.id}
+          page={item}
+          index={index}
+          widthMm={size.widthMm}
+          heightMm={size.heightMm}
+          landscape={tab.landscape}
+          pageCount={tab.pages.length}
+          scale={zoom}
+          observe={observe}
+          panMode={canPan}
+          auxLines={auxLines}
+          gridStyle={gridStyle}
+          activeTool={activeTool}
+          active={pageNumber - 1 === index}
+          touchScroll={!touchDrawEnabled}
+          register={registerPage}
+          onActivate={activate}
+        />
+      );
+    });
 
   const maxRowWidth = displayRows.reduce((max, row) => Math.max(max, rowMetrics(row, zoom).width), 0);
   const innerWidth = Math.max(scrollerWidth, maxRowWidth + leftInset + rightInset + 48);

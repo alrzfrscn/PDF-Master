@@ -83,3 +83,39 @@ describe("closing the last tab", () => {
     expect(state.lastClosedTab).toBeNull();
   });
 });
+
+describe("workspace restore", () => {
+  it("starts a clean history instead of keeping undo entries for dead pages", () => {
+    const previous: DocumentTab = {
+      id: "doc-previous",
+      title: "Previous",
+      templateId: "paper-000",
+      landscape: false,
+      pageCount: 1,
+      pages: [page("old")],
+    };
+    const restored: DocumentTab = {
+      id: "doc-restored",
+      title: "Restored",
+      templateId: "paper-000",
+      landscape: false,
+      pageCount: 1,
+      pages: [page("fresh")],
+    };
+    useDocStore.setState({
+      tabs: [previous],
+      activeId: previous.id,
+      page: 1,
+      history: { [previous.id]: { past: [[page("old")]], future: [] } },
+      lastClosedTab: { tab: previous, index: 0 },
+    });
+
+    useDocStore.getState().restore([restored], restored.id);
+
+    const state = useDocStore.getState();
+    expect(state.history).toEqual({});
+    expect(state.lastClosedTab).toBeNull();
+    expect(state.activeId).toBe(restored.id);
+    expect(state.page).toBe(1);
+  });
+});

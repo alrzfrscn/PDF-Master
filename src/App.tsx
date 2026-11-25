@@ -19,7 +19,8 @@ import { loadMirroredStamps, useCustomStampStore } from "./lib/customStamps";
 import { readImageFile } from "./lib/raster";
 import { printActiveDocument, saveActiveDocument } from "./lib/save";
 import { bindingFromEvent, normalizeBinding, useShortcutStore } from "./lib/shortcuts";
-import { loadWorkspace, saveWorkspace } from "./lib/storage";
+import { loadWorkspace, downloadWorkspaceBackup, saveWorkspace } from "./lib/storage";
+import { base64ToBytes } from "./lib/base64";
 import { TOOL_BY_ID } from "./lib/tools";
 import type { ToolId } from "./lib/types";
 import { useAnnotationStore } from "./stores/useAnnotationStore";
@@ -55,10 +56,7 @@ async function openStartupPdf(): Promise<void> {
   try {
     const pdf = (await bridge.invoke("get_startup_pdf")) as { name: string; base64: string } | null;
     if (!pdf?.base64) return;
-    const binary = atob(pdf.base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-    await useDocStore.getState().openPdfBytes(bytes, pdf.name);
+    await useDocStore.getState().openPdfBytes(base64ToBytes(pdf.base64), pdf.name);
   } catch {
     // No document was requested, or this is not the desktop shell.
   }
@@ -81,6 +79,7 @@ export default function App() {
   const setPaletteOpen = useUIStore((state) => state.setPaletteOpen);
   const toast = useUIStore((state) => state.toast);
   const toastAction = useUIStore((state) => state.toastAction);
+  const autosaveError = useUIStore((state) => state.autosaveError);
   const setTool = useToolStore((state) => state.setTool);
   const zoomBy = useDocStore((state) => state.zoomBy);
   const setFit = useDocStore((state) => state.setFit);
@@ -91,12 +90,12 @@ export default function App() {
 
   // Restore the last workspace, then autosave every change to IndexedDB.
   useEffect(() => {
-    void Promise.all([readBootQuery(), loadWorkspace()]).then(([query, saved]) => {
+    void Promise.all([readBootQuery(), loadWorkspace()]).then(async ([query, saved]) => {
       const boot = parseBootArgs(query);
       if (saved) useDocStore.getState().restore(saved.tabs, saved.activeId);
-      // The IndexedDB mirror survives a cleared localStorage.
+      // The IndexedDB mirror survives a cleared localStorage; only a newer copy wins.
       void loadMirroredStamps().then((mirrored) => {
-        if (mirrored) useCustomStampStore.getState().restore(mirrored);
+        if (mirrored) useCustomStampStore.getState().restoreIfNewer(mirrored);
       });
       ready.current = true;
       // Desktop launch contract: a requested paper size, presentation, or print run.
@@ -105,9 +104,9 @@ export default function App() {
         if (target) useDocStore.getState().newTab(target.templateId, boot.newDoc.trim(), target.landscape);
       }
       if (boot.fullscreen) useUIStore.getState().setPresentation(true);
-      if (boot.print) window.setTimeout(() => window.print(), 500);
       // After the workspace restore, so a file opened from Explorer becomes the active tab.
-      void openStartupPdf();
+      await openStartupPdf();
+      if (boot.print) void printActiveDocument();
     });
     let timer = 0;
     let pending: { tabs: import("./lib/types").DocumentTab[]; activeId: string } | null = null;
@@ -121,9 +120,16 @@ export default function App() {
       pending = null;
       if (!value) return;
       void saveWorkspace(value.tabs, value.activeId).then((ok) => {
-        if (ok || saveFailed.current) return;
+        if (ok) {
+          saveFailed.current = false;
+          useUIStore.getState().setAutosaveError(null);
+          return;
+        }
+        if (saveFailed.current) return;
         saveFailed.current = true;
-        useUIStore.getState().setToast("Workspace autosave failed — storage may be full. Export a backup from Settings.");
+        useUIStore
+          .getState()
+          .setAutosaveError("Workspace autosave failed — storage may be full. Export a backup.");
       });
     };
     const unsubscribe = useDocStore.subscribe((state) => {
@@ -378,6 +384,38 @@ export default function App() {
       ) : (
         <>
           <TopBar />
+          {autosaveError && (
+            <div
+              className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-[11px]"
+              style={{ background: "var(--track)", color: "var(--warning, #b26a00)" }}
+            >
+              <span className="min-w-0 flex-1">{autosaveError}</span>
+              <button
+                type="button"
+                className="chip h-6 px-2"
+                onClick={() => {
+                  const state = useDocStore.getState();
+                  downloadWorkspaceBackup(state.tabs, state.activeId);
+                }}
+              >
+                Export Backup
+              </button>
+              <button
+                type="button"
+                className="chip h-6 px-2"
+                onClick={() => {
+                  const state = useDocStore.getState();
+                  void saveWorkspace(state.tabs, state.activeId).then((ok) => {
+                    if (!ok) return;
+                    saveFailed.current = false;
+                    useUIStore.getState().setAutosaveError(null);
+                  });
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
           <div className="relative flex min-h-0 flex-1">
             <Sidebar />
             <FavoriteToolsBar />

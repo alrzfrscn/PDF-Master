@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Command, FileText, Printer, Search } from "lucide-react";
 import { paperTemplates } from "../lib/data";
+import { printActiveDocument } from "../lib/save";
 import { TOOLS } from "../lib/tools";
 import type { ToolId } from "../lib/types";
 import { useDocStore } from "../stores/useDocStore";
@@ -84,13 +85,13 @@ export function CommandPalette() {
       },
       {
         id: "print",
-        label: "Print current page",
+        label: "Print document",
         hint: "Ctrl+P",
         group: "Actions",
         Icon: Printer,
         run: () => {
           close();
-          window.print();
+          void printActiveDocument();
         },
       },
       {

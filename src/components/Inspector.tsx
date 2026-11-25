@@ -1,5 +1,5 @@
 import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, BringToFront, Columns3, Ellipsis, Eraser, Group, HeartPlus, Lock, PanelRightClose, RotateCcw, Ruler, Rows3, Save, SendToBack, Trash2, Ungroup, Unlock } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { presets } from "../lib/data";
 import { pageSizeMm } from "../lib/pageUtils";
 import { SHAPE_LABEL, TEXT_FONTS, type Annotation, type AnnotationPatch, type AlignMode, type TextAlign } from "../lib/annotationTypes";
@@ -202,6 +202,21 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
   const kinds = [...new Set(annotations.map((annotation) => annotation.type === "shape" ? SHAPE_LABEL[annotation.shapeType] : annotation.type === "pen" ? "Pen" : annotation.type === "marker" ? "Highlighter" : annotation.type === "text" ? "Text" : annotation.type === "formula" ? "Formula" : "Stamp"))];
 
   const patch = (next: AnnotationPatch) => update(ids, next);
+  // A pointer drag emits many changes; only the first one opens an undo step.
+  const dragging = useRef(false);
+  const dragRecorded = useRef(false);
+  const beginDrag = () => {
+    dragging.current = true;
+    dragRecorded.current = false;
+  };
+  const endDrag = () => {
+    dragging.current = false;
+  };
+  const sliderPatch = (next: AnnotationPatch) => {
+    const record = !dragging.current || !dragRecorded.current;
+    if (dragging.current) dragRecorded.current = true;
+    update(ids, next, record);
+  };
   const singleText = annotations.length === 1 && annotations[0].type === "text" ? annotations[0] : null;
   const singleFormula = annotations.length === 1 && annotations[0].type === "formula" ? annotations[0] : null;
 
@@ -237,7 +252,9 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
           max={32}
           step={0.1}
           unit="mm"
-          onChange={(value) => patch({ thicknessMm: value, lineWidthMm: value })}
+          onDragStart={beginDrag}
+          onDragEnd={endDrag}
+          onChange={(value) => sliderPatch({ thicknessMm: value, lineWidthMm: value })}
         />
       )}
       <SliderRow
@@ -247,7 +264,9 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
         max={100}
         step={1}
         unit="%"
-        onChange={(value) => patch({ opacity: value / 100 })}
+        onDragStart={beginDrag}
+        onDragEnd={endDrag}
+        onChange={(value) => sliderPatch({ opacity: value / 100 })}
       />
       {fill !== undefined && (
         <ColorRow
@@ -298,7 +317,9 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
             max={72}
             step={1}
             unit="pt"
-            onChange={(value) => patch({ fontSizePt: value })}
+            onDragStart={beginDrag}
+            onDragEnd={endDrag}
+            onChange={(value) => sliderPatch({ fontSizePt: value })}
           />
           <ColorRow label="Text" value={singleText.textColor} onChange={(value) => value && patch({ textColor: value })} />
           <div className="grid grid-cols-4 gap-1">
@@ -374,7 +395,9 @@ function SelectionInspector({ annotations }: { annotations: Annotation[] }) {
             max={72}
             step={1}
             unit="pt"
-            onChange={(value) => patch({ fontSizePt: value })}
+            onDragStart={beginDrag}
+            onDragEnd={endDrag}
+            onChange={(value) => sliderPatch({ fontSizePt: value })}
           />
           <ColorRow label="Ink" value={singleFormula.color} onChange={(value) => value && patch({ color: value })} />
           <ColorRow

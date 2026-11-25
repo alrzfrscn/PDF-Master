@@ -49,6 +49,7 @@ async function exportPagePng(tab: DocumentTab, index: number): Promise<void> {
     pageWidthMm: size.widthMm,
     pageHeightMm: size.heightMm,
     pdfPage: page.pdf,
+    renderPage: renderPdfPage,
   });
   if (!image) {
     useUIStore.getState().setToast("That page could not be captured");
@@ -520,22 +521,28 @@ export function Sidebar() {
             </div>
 
             <div className="divider" />
-            <SectionTitle>Document setup</SectionTitle>
-            <Segmented
-              value={tab.landscape ? "landscape" : "portrait"}
-              options={[
-                { value: "portrait", label: "Portrait" },
-                { value: "landscape", label: "Landscape" },
-              ]}
-              onChange={(value) => setLandscape(value === "landscape")}
-            />
+            {!tab.pdf && (
+              <>
+                <SectionTitle>Document setup</SectionTitle>
+                <Segmented
+                  value={tab.landscape ? "landscape" : "portrait"}
+                  options={[
+                    { value: "portrait", label: "Portrait" },
+                    { value: "landscape", label: "Landscape" },
+                  ]}
+                  onChange={(value) => setLandscape(value === "landscape")}
+                />
+              </>
+            )}
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11.5px]">Alignment guides</span>
               <Switch checked={auxLines} onChange={toggleAuxLines} label="Alignment guides" />
             </div>
-            <button type="button" className="chip h-8 justify-center" onClick={() => setNewDocOpen(true)}>
-              <Plus size={13} strokeWidth={1.75} /> Change template…
-            </button>
+            {!tab.pdf && (
+              <button type="button" className="chip h-8 justify-center" onClick={() => setNewDocOpen(true)}>
+                <Plus size={13} strokeWidth={1.75} /> Change template…
+              </button>
+            )}
           </>
         )}
 

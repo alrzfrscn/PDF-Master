@@ -15,6 +15,45 @@ export interface CustomStamp {
 const KEY = "pm.customStamps";
 const DB_NAME = "pdf-master-stamps";
 const STORE = "stamps";
+const LIBRARY_ID = "library";
+const EPOCH = new Date(0).toISOString();
+
+/** A library plus the write time, so a stale mirror cannot undo a removal. */
+export interface StampLibrary {
+  updatedAt: string;
+  stamps: CustomStamp[];
+}
+
+function validStamps(stamps: unknown[]): CustomStamp[] {
+  return stamps.filter(
+    (stamp): stamp is CustomStamp =>
+      typeof stamp === "object" &&
+      stamp !== null &&
+      typeof (stamp as CustomStamp).id === "string" &&
+      typeof (stamp as CustomStamp).imageUrl === "string" &&
+      (stamp as CustomStamp).width > 0 &&
+      (stamp as CustomStamp).height > 0,
+  );
+}
+
+function readLibrary(): StampLibrary {
+  if (typeof localStorage === "undefined") return { updatedAt: EPOCH, stamps: [] };
+  try {
+    const parsed = JSON.parse(localStorage.getItem(KEY) ?? "null") as unknown;
+    // Files written before the envelope are a bare array.
+    if (Array.isArray(parsed)) return { updatedAt: EPOCH, stamps: validStamps(parsed) };
+    if (parsed && typeof parsed === "object" && Array.isArray((parsed as StampLibrary).stamps)) {
+      const library = parsed as StampLibrary;
+      return {
+        updatedAt: typeof library.updatedAt === "string" ? library.updatedAt : EPOCH,
+        stamps: validStamps(library.stamps),
+      };
+    }
+  } catch {
+    // A corrupt entry is treated as an empty library.
+  }
+  return { updatedAt: EPOCH, stamps: [] };
+}
 
 export interface StampWriteResult {
   ok: boolean;
@@ -63,7 +102,7 @@ function openDb(): Promise<IDBDatabase | null> {
 }
 
 /** localStorage holds the fast copy; IndexedDB keeps the durable one. */
-async function mirror(stamps: CustomStamp[]): Promise<StampWriteResult> {
+async function mirror(library: StampLibrary): Promise<StampWriteResult> {
   const db = await openDb();
   if (!db) return { ok: false, error: "IndexedDB is unavailable" };
   try {
@@ -71,7 +110,7 @@ async function mirror(stamps: CustomStamp[]): Promise<StampWriteResult> {
       const transaction = db.transaction(STORE, "readwrite");
       const store = transaction.objectStore(STORE);
       store.clear();
-      for (const stamp of stamps) store.put(stamp);
+      store.put({ id: LIBRARY_ID, ...library });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error ?? new Error("stamp store write failed"));
       transaction.onabort = () => reject(transaction.error ?? new Error("stamp store write aborted"));
@@ -85,33 +124,36 @@ async function mirror(stamps: CustomStamp[]): Promise<StampWriteResult> {
 }
 
 /** Durable copy, read once at startup. */
-export async function loadMirroredStamps(): Promise<CustomStamp[] | null> {
+export async function loadMirroredStamps(): Promise<StampLibrary | null> {
   const db = await openDb();
   if (!db) return null;
-  const stamps = await new Promise<CustomStamp[] | null>((resolve) => {
+  const library = await new Promise<StampLibrary | null>((resolve) => {
     const transaction = db.transaction(STORE, "readonly");
     const request = transaction.objectStore(STORE).getAll();
-    request.onsuccess = () => resolve((request.result as CustomStamp[]).filter((stamp) => stamp?.imageUrl));
+    request.onsuccess = () => {
+      const records = request.result as unknown[];
+      const envelope = records.find(
+        (record): record is StampLibrary & { id: string } =>
+          typeof record === "object" && record !== null && Array.isArray((record as StampLibrary).stamps),
+      );
+      if (envelope) {
+        resolve({ updatedAt: envelope.updatedAt ?? EPOCH, stamps: validStamps(envelope.stamps) });
+        return;
+      }
+      // Legacy mirror: one record per stamp, no timestamp.
+      const stamps = validStamps(records);
+      resolve(stamps.length ? { updatedAt: EPOCH, stamps } : null);
+    };
     request.onerror = () => resolve(null);
   });
   db.close();
-  return stamps?.length ? stamps : null;
+  return library;
 }
 
-function readStamps(): CustomStamp[] {
-  if (typeof localStorage === "undefined") return [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(KEY) ?? "[]") as CustomStamp[];
-    return Array.isArray(parsed) ? parsed.filter((stamp) => stamp?.imageUrl) : [];
-  } catch {
-    return [];
-  }
-}
-
-function persist(stamps: CustomStamp[]): void {
+function persist(library: StampLibrary): void {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(stamps));
+    localStorage.setItem(KEY, JSON.stringify(library));
   } catch {
     // Quota exceeded: the stamp stays usable for this session.
   }
@@ -123,31 +165,45 @@ interface CustomStampState {
   remove: (id: string) => void;
   /** Replaces the library from a workspace backup. */
   restore: (stamps: CustomStamp[]) => void;
+  /** Applies the durable mirror only when it is newer than the local library. */
+  restoreIfNewer: (library: StampLibrary) => void;
+}
+
+function stampLibrary(stamps: CustomStamp[]): StampLibrary {
+  return { updatedAt: new Date().toISOString(), stamps: validStamps(stamps) };
 }
 
 export const useCustomStampStore = create<CustomStampState>((set, get) => ({
-  stamps: readStamps(),
+  stamps: readLibrary().stamps,
   add: async (stamp) => {
     const created: CustomStamp = {
       ...stamp,
       id: `custom-${typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       createdAt: new Date().toISOString(),
     };
-    const stamps = [created, ...get().stamps];
-    persist(stamps);
-    set({ stamps });
-    return { ...(await mirror(stamps)), stamp: created };
+    const library = stampLibrary([created, ...get().stamps]);
+    persist(library);
+    set({ stamps: library.stamps });
+    return { ...(await mirror(library)), stamp: created };
   },
   remove: (id) => {
-    const stamps = get().stamps.filter((stamp) => stamp.id !== id);
-    persist(stamps);
-    set({ stamps });
-    void mirror(stamps);
+    const library = stampLibrary(get().stamps.filter((stamp) => stamp.id !== id));
+    persist(library);
+    set({ stamps: library.stamps });
+    void mirror(library);
   },
   restore: (stamps) => {
-    const valid = stamps.filter((stamp) => stamp?.id && stamp.imageUrl && stamp.width > 0 && stamp.height > 0);
-    persist(valid);
-    set({ stamps: valid });
-    void mirror(valid);
+    const library = stampLibrary(stamps);
+    persist(library);
+    set({ stamps: library.stamps });
+    void mirror(library);
+  },
+  restoreIfNewer: (library) => {
+    // A removal writes a newer timestamp locally; replaying an older mirror
+    // would bring the deleted stamp back.
+    if (library.updatedAt <= readLibrary().updatedAt) return;
+    const next: StampLibrary = { updatedAt: library.updatedAt, stamps: validStamps(library.stamps) };
+    persist(next);
+    set({ stamps: next.stamps });
   },
 }));

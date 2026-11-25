@@ -36,6 +36,8 @@ interface UIState {
   /** Optional action rendered as an Undo button inside the toast. */
   toastAction: (() => void) | null;
   saving: boolean;
+  /** Sticky banner text while workspace autosave keeps failing. */
+  autosaveError: string | null;
   eraserSplit: boolean;
   eraserSizeMm: number;
   viewMode: ViewMode;
@@ -68,6 +70,7 @@ interface UIState {
   setMeasureMode: (mode: MeasureModeUi) => void;
   setToast: (toast: string | null, action?: (() => void) | null) => void;
   setSaving: (saving: boolean) => void;
+  setAutosaveError: (error: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -88,6 +91,7 @@ export const useUIStore = create<UIState>((set) => ({
   toast: null,
   toastAction: null,
   saving: false,
+  autosaveError: null,
   eraserSplit: false,
   eraserSizeMm: 5.2,
   viewMode: "one-continuous",
@@ -101,6 +105,7 @@ export const useUIStore = create<UIState>((set) => ({
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),
   setEraserSize: (eraserSizeMm) => set({ eraserSizeMm }),
   setSaving: (saving) => set({ saving }),
+  setAutosaveError: (autosaveError) => set({ autosaveError }),
   setTheme: (theme) => {
     if (typeof document !== "undefined") document.documentElement.dataset.theme = theme;
     if (typeof localStorage !== "undefined") localStorage.setItem("pa.theme", theme);

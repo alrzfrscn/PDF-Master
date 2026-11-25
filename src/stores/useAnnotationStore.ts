@@ -20,7 +20,7 @@ import {
   translateAnnotation,
 } from "../lib/annotationGeometry";
 import type { DocumentPage } from "../lib/types";
-import { makeId, useDocStore } from "./useDocStore";
+import { makeId, setSelectionResetHook, useDocStore } from "./useDocStore";
 
 export function cloneAnnotations(annotations: Annotation[]): Annotation[] {
   return structuredClone(annotations);
@@ -64,7 +64,7 @@ interface AnnotationState {
   clearSelection: () => void;
   add: (annotation: Annotation) => void;
   addMany: (annotations: Annotation[]) => void;
-  update: (ids: string[], patch: AnnotationPatch) => void;
+  update: (ids: string[], patch: AnnotationPatch, recordHistory?: boolean) => void;
   transform: (fn: (annotation: Annotation) => Annotation) => void;
   mutate: (fn: (annotations: Annotation[]) => Annotation[], history?: boolean) => void;
   remove: (ids: string[]) => void;
@@ -126,12 +126,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({ selection: annotations.map((annotation) => annotation.id) });
   },
 
-  update: (ids, patch) => {
+  update: (ids, patch, recordHistory = true) => {
     const ctx = activeContext();
     if (!ctx) return;
     const wanted = new Set(ids);
     if (!ctx.page.annotations.some((annotation) => wanted.has(annotation.id))) return;
-    withHistory(ctx);
+    if (recordHistory) withHistory(ctx);
     const annotations = ctx.page.annotations.map((annotation) =>
       wanted.has(annotation.id) ? ({ ...annotation, ...patch } as Annotation) : annotation,
     );
@@ -409,4 +409,8 @@ useDocStore.subscribe((state) => {
     lastKey = key;
     if (useAnnotationStore.getState().selection.length > 0) useAnnotationStore.setState({ selection: [] });
   }
+});
+
+setSelectionResetHook(() => {
+  if (useAnnotationStore.getState().selection.length > 0) useAnnotationStore.setState({ selection: [] });
 });

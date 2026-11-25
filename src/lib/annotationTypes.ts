@@ -72,7 +72,8 @@ export interface ShapeAnnotation extends AnnotationBase {
 export interface StampAnnotation extends AnnotationBase {
   type: "stamp";
   stampId: string;
-  imageUrl: string;
+  /** Only kept when the stamp library cannot resolve `stampId`. */
+  imageUrl?: string;
   svgPath?: string | null;
   xMm: number;
   yMm: number;
