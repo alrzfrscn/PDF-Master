@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Columns3, Copy, FileDown, Pencil, Printer, Save, Search } from "lucide-react";
 import { findTextMatches } from "../lib/pdfSearch";
-import { extractMarkdownHeadings, markdownStats, renderMarkdown, toggleMarkdownTask } from "../lib/markdown";
+import {
+  extractMarkdownHeadings,
+  isPredominantlyRtl,
+  markdownStats,
+  renderMarkdown,
+  slugifyHeading,
+  toggleMarkdownTask,
+} from "../lib/markdown";
 import { exportMarkdownAsPdf, saveMarkdownDocument } from "../lib/save";
 import { isMarkdownTab, type DocumentTab, type MarkdownMode } from "../lib/types";
 import { useContextMenuStore, keepsNativeMenu } from "../stores/useContextMenuStore";
@@ -15,6 +22,7 @@ export function MarkdownViewport({ tab }: { tab: DocumentTab }) {
   const zoom = useDocStore((state) => state.zoom);
   const rootRef = useRef<HTMLDivElement>(null);
   const articleRef = useRef<HTMLElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const marksRef = useRef<HTMLElement[]>([]);
   const searchRef = useRef<{ query: string; wholeWord: boolean } | null>(null);
 
@@ -22,6 +30,7 @@ export function MarkdownViewport({ tab }: { tab: DocumentTab }) {
   const html = useMemo(() => (markdown ? renderMarkdown(markdown.content) : ""), [markdown?.content]);
   const headings = useMemo(() => (markdown ? extractMarkdownHeadings(markdown.content) : []), [markdown?.content]);
   const stats = useMemo(() => (markdown ? markdownStats(markdown.content) : { words: 0, minutes: 1 }), [markdown?.content]);
+  const rtl = useMemo(() => (markdown ? isPredominantlyRtl(markdown.content) : false), [markdown?.content]);
 
   const setMode = (mode: MarkdownMode) => {
     if (markdown) useDocStore.getState().setMarkdownMode(tab.id, mode);
@@ -140,20 +149,77 @@ export function MarkdownViewport({ tab }: { tab: DocumentTab }) {
     };
   }, [applySearch, focusMark]);
 
+  // The editor grows with its content inside an LTR scroll host, so the
+  // scrollbar stays on the right even when the text itself is RTL.
+  useLayoutEffect(() => {
+    const node = editorRef.current;
+    if (!node) return;
+    const grow = () => {
+      node.style.height = "auto";
+      node.style.height = `${node.scrollHeight}px`;
+    };
+    grow();
+    window.addEventListener("resize", grow);
+    return () => window.removeEventListener("resize", grow);
+  }, [markdown?.content, markdown?.mode]);
+
+  /** Resolves a TOC link to its heading, tolerating ZWNJ and `--` in old links. */
+  const scrollToAnchor = useCallback((raw: string) => {
+    const article = articleRef.current;
+    if (!article || !raw) return;
+    let id = raw;
+    try {
+      id = decodeURIComponent(raw);
+    } catch {
+      // A malformed escape keeps the raw fragment.
+    }
+    const wanted = slugifyHeading(id);
+    const candidates = [...article.querySelectorAll<HTMLElement>("[id]")];
+    const target =
+      candidates.find((element) => element.id === id) ??
+      candidates.find((element) => slugifyHeading(element.id) === wanted);
+    if (!target) return;
+    target.scrollIntoView({ block: "start", behavior: "smooth" });
+    target.classList.add("md-anchor-focus");
+    window.setTimeout(() => target.classList.remove("md-anchor-focus"), 1400);
+  }, []);
+
   if (!markdown) return null;
 
   const update = (content: string) => useDocStore.getState().updateMarkdownContent(tab.id, content);
 
   const toggleTask = (event: React.MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;
+
+    const anchor = target.closest<HTMLAnchorElement>("a[href]");
+    if (anchor) {
+      const href = anchor.getAttribute("href") ?? "";
+      if (href.startsWith("#")) {
+        event.preventDefault();
+        scrollToAnchor(href.slice(1));
+        return;
+      }
+      if (/^https?:/i.test(href)) {
+        // Never let the Tauri window navigate away from the app.
+        event.preventDefault();
+        const opened = window.open(href, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          void navigator.clipboard?.writeText(href);
+          useUIStore.getState().setToast("Link copied to clipboard");
+        }
+        return;
+      }
+    }
+
     const copy = target.closest<HTMLButtonElement>(".md-copy");
     if (copy) {
-      const pre = copy.closest(".md-code")?.querySelector("pre");
+      const pre = copy.closest(".md-code-block")?.querySelector("pre");
       if (pre) {
         void navigator.clipboard?.writeText(pre.textContent ?? "");
-        copy.textContent = "Copied";
+        const label = copy.querySelector("span") ?? copy;
+        label.textContent = "Copied!";
         window.setTimeout(() => {
-          copy.textContent = "Copy";
+          label.textContent = "Copy";
         }, 1200);
       }
       return;
@@ -215,23 +281,31 @@ export function MarkdownViewport({ tab }: { tab: DocumentTab }) {
   };
 
   const editor = (
-    <textarea
-      className="h-full w-full resize-none bg-transparent p-6 font-mono text-[13px] leading-relaxed outline-none"
-      style={{ color: "var(--fg)", tabSize: 2 }}
-      value={markdown.content}
-      dir="auto"
-      spellCheck={false}
-      aria-label="Markdown editor"
-      onChange={(event) => update(event.target.value)}
-      onKeyDown={onEditorKeyDown}
-    />
+    <div
+      dir="ltr"
+      className="doc-scroll h-full overflow-y-auto"
+      style={{ paddingLeft: 72, paddingRight: 28 }}
+    >
+      <textarea
+        ref={editorRef}
+        className="block w-full resize-none overflow-hidden bg-transparent py-6 font-mono text-[13px] leading-relaxed outline-none"
+        style={{ color: "var(--fg)", tabSize: 2, minHeight: "100%" }}
+        value={markdown.content}
+        dir="auto"
+        spellCheck={false}
+        aria-label="Markdown editor"
+        onChange={(event) => update(event.target.value)}
+        onKeyDown={onEditorKeyDown}
+      />
+    </div>
   );
 
   const reader = (
-    <div className="md-scroll h-full overflow-y-auto">
+    <div className="doc-scroll h-full overflow-y-auto">
       <article
         ref={articleRef}
         className="md-doc mx-auto w-full max-w-[780px] px-6 py-10"
+        dir={rtl ? "rtl" : "ltr"}
         style={{ fontSize: `${Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))}rem` }}
         onClick={toggleTask}
         onContextMenu={onContextMenu}
@@ -259,6 +333,7 @@ export function MarkdownViewport({ tab }: { tab: DocumentTab }) {
       {/* Always available to the print sheet, even while editing. */}
       <article
         className="md-print-area md-print-only md-doc"
+        dir={rtl ? "rtl" : "ltr"}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

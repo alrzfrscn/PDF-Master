@@ -161,7 +161,7 @@ export async function exportMarkdownAsPdf(annotate = false): Promise<void> {
     const bytes = await exportMarkdownToPdf(tab.title, renderMarkdown(tab.markdown.content), ui.theme);
     const name = `${cleanTitle(tab.title)}.pdf`;
     if (annotate) {
-      await useDocStore.getState().openPdfBytes(bytes, name);
+      await useDocStore.getState().openPdfBytes(bytes, `${cleanTitle(tab.title)} (PDF).pdf`);
       useUIStore.getState().setToast("Markdown opened as an annotatable PDF");
     } else {
       const saved = await writeFile(bytes, name, handleKey(tab.id, "markdown-pdf"), true, "pdf");

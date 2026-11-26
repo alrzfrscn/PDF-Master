@@ -635,6 +635,14 @@ textarea {
 }
 
 /* ---------- Markdown reader ---------- */
+/* Reading and editing panes share the PDF viewer's slim themed scrollbar, but
+   keep touch scrolling and text selection (the PDF canvas disables both). */
+.md-viewport .doc-scroll {
+  touch-action: pan-y;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .md-doc {
   color: var(--fg);
   font-family: var(--font-sans, -apple-system, "Segoe UI", Tahoma, sans-serif);
@@ -667,7 +675,9 @@ textarea {
 .md-doc pre { margin: 0 0 0.9em; }
 
 .md-doc ul,
-.md-doc ol { padding-inline-start: 1.6em; }
+.md-doc ol { padding-inline-start: 1.6em; list-style-position: outside; }
+.md-doc[dir="rtl"] ul,
+.md-doc[dir="rtl"] ol { padding-inline-start: 2em; }
 .md-doc li { margin: 0.25em 0; }
 .md-doc li > input[type="checkbox"] { margin-inline-end: 0.45em; accent-color: var(--accent); }
 
@@ -677,59 +687,97 @@ textarea {
   color: var(--muted);
 }
 
-.md-doc table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+.md-doc table { width: 100%; border-collapse: collapse; font-size: 0.92em; text-align: start; }
 .md-doc th,
-.md-doc td { border: 1px solid var(--border); padding: 0.45em 0.65em; vertical-align: top; }
+.md-doc td { border: 1px solid var(--border); padding: 0.45em 0.65em; text-align: start; vertical-align: top; }
 .md-doc th { background: var(--hover); font-weight: 600; }
 
 .md-doc a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .md-doc img { max-width: 100%; border-radius: 6px; }
 .md-doc hr { border: 0; border-top: 1px solid var(--border); margin: 1.6em 0; }
+
+/* English flags and paths inside a Persian sentence must never flip. */
 .md-doc :not(pre) > code {
-  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", "Segoe UI", Tahoma, ui-monospace, monospace;
   font-size: 0.88em;
   padding: 0.12em 0.35em;
   border-radius: 5px;
   background: var(--hover);
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
-.md-doc .md-code { position: relative; margin: 0 0 1em; }
-.md-doc .md-code pre {
-  margin: 0;
-  padding: 0.85em 1em;
+/* Apple-style code card: a header strip with the language and a visible Copy
+   button, then a wrapping body with no horizontal scrollbar. */
+.md-doc .md-code-block {
+  margin: 0 0 1em;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--hover);
-  overflow-x: auto;
+  overflow: hidden;
 }
-.md-doc .md-code code {
-  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
-  font-size: 0.86em;
-  line-height: 1.6;
+
+.md-doc .md-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px 5px 12px;
+  border-bottom: 1px solid var(--border);
+  direction: ltr;
 }
+
 .md-doc .md-code-lang {
-  position: absolute;
-  top: 0.45em;
-  inset-inline-end: 4.4em;
   font-size: 0.66em;
-  letter-spacing: 0.06em;
+  font-weight: 650;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
+
 .md-doc .md-copy {
-  position: absolute;
-  top: 0.35em;
-  inset-inline-end: 0.5em;
-  padding: 0.15em 0.5em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.2em 0.6em;
   border-radius: 6px;
   font-size: 0.7em;
+  line-height: 1.5;
   color: var(--muted);
   background: var(--paper);
   border: 1px solid var(--border);
-  opacity: 0;
-  transition: opacity 0.12s;
+  transition: color 0.12s, border-color 0.12s;
 }
-.md-doc .md-code:hover .md-copy { opacity: 1; }
+.md-doc .md-copy:hover { color: var(--fg); border-color: var(--muted); }
+.md-doc .md-copy svg { width: 12px; height: 12px; }
+
+.md-doc .md-code-block pre {
+  margin: 0;
+  padding: 0.85em 1em;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Persian comments shape with the sans fallback; Latin code stays monospace. */
+.md-doc .md-code-block code {
+  font-family: "JetBrains Mono", "Cascadia Code", "Fira Code", "Segoe UI", Tahoma, ui-monospace, monospace;
+  font-size: 0.86em;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.md-doc .md-anchor-focus { animation: md-anchor-flash 1.4s ease; }
+@keyframes md-anchor-flash {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  20% { box-shadow: 0 0 0 6px var(--accent-soft); }
+}
 
 .md-doc mark[data-md-mark] {
   background: color-mix(in srgb, var(--accent) 28%, transparent);
@@ -752,7 +800,8 @@ textarea {
     color: #14161b !important;
     background: #fff !important;
   }
+  .md-print-area .md-code-head,
   .md-print-area .md-copy,
   .md-print-area .md-code-lang { display: none !important; }
-  .md-print-area pre { white-space: pre-wrap; word-break: break-word; }
+  .md-print-area pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 }

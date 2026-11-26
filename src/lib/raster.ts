@@ -87,16 +87,34 @@ export async function rasterizeTextAnnotation(annotation: TextAnnotation): Promi
   return { dataUrl: canvas.toDataURL("image/png"), width, height };
 }
 
+/**
+ * Serialises an HTML fragment as strict XHTML for an SVG `foreignObject`.
+ * Raw HTML5 void tags (`<hr>`, `<br>`, `<input>`) are not valid XML and make the
+ * browser reject the whole SVG image, which is what turned every PDF page with
+ * a `<hr>` blank. A real DOM plus `XMLSerializer` always emits `<hr/>`.
+ */
+export function toXhtmlFragment(html: string, style = ""): string {
+  if (typeof document === "undefined") return html;
+  const wrapper = document.createElement("div");
+  if (style) wrapper.setAttribute("style", style);
+  wrapper.innerHTML = html;
+  // Interactive UI-only chrome never belongs in a printed page.
+  for (const node of [...wrapper.querySelectorAll(".md-copy, button")]) node.remove();
+  return new XMLSerializer().serializeToString(wrapper);
+}
+
 /** Renders an HTML fragment (used for KaTeX) to a PNG via an SVG foreignObject. */
 export async function rasterizeHtml(html: string, widthPx: number, heightPx: number, pixelRatio = 2): Promise<RasterImage | null> {
   if (typeof document === "undefined") return null;
   const width = Math.max(1, Math.ceil(widthPx));
   const height = Math.max(1, Math.ceil(heightPx));
   const scale = Math.max(1, Math.min(4, pixelRatio));
+  const markup = toXhtmlFragment(
+    html,
+    `width:${width}px;height:${height}px;display:flex;align-items:center;justify-content:center;color:#101114;background:transparent;`,
+  );
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-<foreignObject width="100%" height="100%">
-<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;display:flex;align-items:center;justify-content:center;color:#101114;background:transparent;">${html}</div>
-</foreignObject></svg>`;
+<foreignObject width="100%" height="100%">${markup}</foreignObject></svg>`;
   try {
     const image = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
     const canvas = document.createElement("canvas");
