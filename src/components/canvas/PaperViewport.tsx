@@ -12,7 +12,9 @@ import { useContextMenuStore, keepsNativeMenu } from "../../stores/useContextMen
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore, type GridStyle } from "../../stores/useUIStore";
 import type { DocumentPage, DocumentTab, ToolId } from "../../lib/types";
+import { isMarkdownTab } from "../../lib/types";
 import { EmptyWorkspace } from "../EmptyWorkspace";
+import { MarkdownViewport } from "../MarkdownViewport";
 import { AnnotationLayer } from "./AnnotationLayer";
 import { CropOverlay } from "./CropOverlay";
 import { PaperSheet } from "./PaperSheet";
@@ -278,6 +280,7 @@ export function PaperViewport() {
   const activeId = useDocStore((state) => state.activeId);
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
   if (!tab) return <EmptyWorkspace />;
+  if (isMarkdownTab(tab)) return <MarkdownViewport tab={tab} />;
   return <PaperViewportBody key={tab.id} tab={tab} />;
 }
 
@@ -893,7 +896,7 @@ function PaperViewportBody({ tab }: { tab: DocumentTab }) {
         const ui = useUIStore.getState();
         useContextMenuStore.getState().openAt(event.clientX, event.clientY, "Workspace", [
           {
-            label: "Open PDF...",
+            label: "Open Document...",
             icon: FolderOpen,
             shortcut: "Ctrl+O",
             onSelect: () => document.getElementById("pm-pdf-input")?.click(),
@@ -928,6 +931,10 @@ function PaperViewportBody({ tab }: { tab: DocumentTab }) {
         }
         if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
           void useDocStore.getState().openPdfFile(file);
+          return;
+        }
+        if (/\.(md|markdown)$/i.test(file.name) || file.type === "text/markdown") {
+          void useDocStore.getState().openMarkdownFile(file);
         }
       }}
     >
@@ -980,7 +987,7 @@ function PaperViewportBody({ tab }: { tab: DocumentTab }) {
       {dropActive && (
         <div className="pointer-events-none absolute inset-4 z-30 grid place-items-center rounded-2xl border-2 border-dashed border-[var(--accent)] bg-[var(--accent-soft)]">
           <div className="glass-strong flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-medium">
-            <FileText size={16} /> Drop a PDF to open a tab, or an image to place it <ImageIcon size={16} />
+            <FileText size={16} /> Drop a PDF or Markdown file to open a tab, or an image to place it <ImageIcon size={16} />
           </div>
         </div>
       )}

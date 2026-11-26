@@ -188,6 +188,14 @@ export type ToolId =
 
 export type ShapeTool = "line" | "arrow" | "rectangle" | "ellipse" | "polygon" | "dimension";
 
+export type MarkdownMode = "reader" | "split" | "edit";
+
+export interface MarkdownDocument {
+  content: string;
+  fileName?: string;
+  mode: MarkdownMode;
+}
+
 export interface DocumentTab {
   id: string;
   title: string;
@@ -196,6 +204,14 @@ export interface DocumentTab {
   pageCount: number;
   pages: DocumentPage[];
   pdf?: PdfSource;
+  /** Present on a `.md` tab; a Markdown tab has no pages. */
+  markdown?: MarkdownDocument;
+}
+
+export function isMarkdownTab(
+  tab: DocumentTab | null | undefined,
+): tab is DocumentTab & { markdown: MarkdownDocument } {
+  return Boolean(tab?.markdown && typeof tab.markdown.content === "string");
 }
 
 /** A rasterised page from an opened PDF, addressed in page-local millimetres. */

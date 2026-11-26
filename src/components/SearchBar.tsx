@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import { searchTab, useSearchStore } from "../lib/pdfSearch";
+import { isMarkdownTab } from "../lib/types";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
 
@@ -10,6 +11,7 @@ export function SearchBar() {
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
+  const markdown = isMarkdownTab(tab);
 
   const query = useSearchStore((state) => state.query);
   const matches = useSearchStore((state) => state.matches);
@@ -17,6 +19,8 @@ export function SearchBar() {
   const searching = useSearchStore((state) => state.searching);
   const [text, setText] = useState(query);
   const [wholeWord, setWholeWord] = useState(false);
+  const [mdTotal, setMdTotal] = useState(0);
+  const [mdCurrent, setMdCurrent] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -25,17 +29,39 @@ export function SearchBar() {
     inputRef.current?.select();
   }, [open]);
 
+  // Markdown matches live in the reader DOM; it reports how many it highlighted.
+  useEffect(() => {
+    const onCount = (event: Event) => {
+      setMdTotal((event as CustomEvent<{ total: number }>).detail?.total ?? 0);
+    };
+    window.addEventListener("pm:md-search-count", onCount);
+    return () => window.removeEventListener("pm:md-search-count", onCount);
+  }, []);
+
   // A new tab starts a fresh search.
   useEffect(() => {
     if (!open) return;
     setText("");
+    setMdTotal(0);
+    setMdCurrent(0);
     useSearchStore.getState().setQuery("");
     useSearchStore.getState().setMatches([]);
-  }, [open, tab?.id]);
+    if (markdown) window.dispatchEvent(new CustomEvent("pm:md-search", { detail: { query: "" } }));
+  }, [open, tab?.id, markdown]);
 
   useEffect(() => {
     if (!open || !tab) return;
     const value = text.trim();
+    if (markdown) {
+      setMdCurrent(0);
+      const timer = window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("pm:md-search", { detail: { query: value, wholeWord } }));
+        useSearchStore.getState().setQuery(value);
+        useSearchStore.getState().setMatches([]);
+        useSearchStore.getState().setSearching(false);
+      }, 160);
+      return () => window.clearTimeout(timer);
+    }
     if (!value) {
       useSearchStore.getState().setQuery("");
       useSearchStore.getState().setMatches([]);
@@ -64,11 +90,21 @@ export function SearchBar() {
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [open, text, tab?.id, wholeWord]);
+  }, [open, text, tab?.id, wholeWord, markdown]);
 
   if (!open || !tab) return null;
 
+  const total = markdown ? mdTotal : matches.length;
+  const position = markdown ? mdCurrent : current;
+
   const jump = (index: number) => {
+    if (markdown) {
+      if (total === 0) return;
+      const next = ((index % total) + total) % total;
+      setMdCurrent(next);
+      window.dispatchEvent(new CustomEvent("pm:md-search-goto", { detail: { index: next } }));
+      return;
+    }
     const list = useSearchStore.getState().matches;
     if (list.length === 0) return;
     const next = ((index % list.length) + list.length) % list.length;
@@ -79,8 +115,11 @@ export function SearchBar() {
 
   const close = () => {
     setOpen(false);
+    setMdTotal(0);
+    setMdCurrent(0);
     useSearchStore.getState().setMatches([]);
     useSearchStore.getState().setQuery("");
+    if (markdown) window.dispatchEvent(new CustomEvent("pm:md-search", { detail: { query: "" } }));
   };
 
   return (
@@ -97,7 +136,7 @@ export function SearchBar() {
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              jump(current + (event.shiftKey ? -1 : 1));
+              jump(position + (event.shiftKey ? -1 : 1));
             }
             if (event.key === "Escape") {
               event.preventDefault();
@@ -106,7 +145,7 @@ export function SearchBar() {
           }}
         />
         <span className="min-w-[42px] shrink-0 text-center text-[10.5px] tabular-nums text-muted" aria-live="polite">
-          {searching ? "…" : `${matches.length ? current + 1 : 0}/${matches.length}`}
+          {searching ? "…" : `${total ? position + 1 : 0}/${total}`}
         </span>
         <div className="mx-0.5 h-5 w-px bg-[var(--border)]" />
         <button
@@ -124,8 +163,8 @@ export function SearchBar() {
           className="icon-btn h-7 w-7"
           aria-label="Previous match"
           title="Previous match (Shift+Enter)"
-          disabled={matches.length === 0}
-          onClick={() => jump(current - 1)}
+          disabled={total === 0}
+          onClick={() => jump(position - 1)}
         >
           <ChevronUp size={14} strokeWidth={1.9} />
         </button>
@@ -134,8 +173,8 @@ export function SearchBar() {
           className="icon-btn h-7 w-7"
           aria-label="Next match"
           title="Next match (Enter)"
-          disabled={matches.length === 0}
-          onClick={() => jump(current + 1)}
+          disabled={total === 0}
+          onClick={() => jump(position + 1)}
         >
           <ChevronDown size={14} strokeWidth={1.9} />
         </button>

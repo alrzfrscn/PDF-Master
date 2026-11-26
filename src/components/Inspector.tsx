@@ -15,6 +15,7 @@ import {
 import { BASE_PROPS, presetPatch, presetsFor } from "../lib/presets";
 import { usePrefsStore } from "../lib/prefs";
 import { NO_POPOVER_TOOLS, TOOL_BY_ID } from "../lib/tools";
+import { isMarkdownTab } from "../lib/types";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useFavoritesStore } from "../stores/useFavoritesStore";
@@ -480,7 +481,7 @@ export function Inspector() {
   }, [customStamps, selectedStampId]);
 
   // The welcome workspace has no page to inspect.
-  if (!tab) return null;
+  if (!tab || isMarkdownTab(tab)) return null;
 
   const pageNumber = Math.min(Math.max(1, pageIndex), tab.pages.length);
   const page = tab.pages[pageNumber - 1] ?? tab.pages[0];

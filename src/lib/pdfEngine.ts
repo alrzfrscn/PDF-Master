@@ -1093,12 +1093,12 @@ export function exportInputFromTab(tab: DocumentTab, mode: PersistenceMode): Pdf
   };
 }
 
-export function downloadPdf(bytes: Uint8Array, filename: string): void {
-  const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
+export function downloadPdf(bytes: Uint8Array, filename: string, mime = "application/pdf"): void {
+  const blob = new Blob([new Uint8Array(bytes)], { type: mime });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+  anchor.download = mime === "application/pdf" && !filename.endsWith(".pdf") ? `${filename}.pdf` : filename;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

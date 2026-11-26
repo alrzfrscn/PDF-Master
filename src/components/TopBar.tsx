@@ -8,6 +8,7 @@ import {
   FilePlus,
   FolderOpen,
   Pencil,
+  PenLine,
   Play,
   Plus,
   Printer,
@@ -17,8 +18,8 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { printActiveDocument, saveActiveDocument } from "../lib/save";
-import type { DocumentTab } from "../lib/types";
+import { exportMarkdownAsPdf, printActiveDocument, saveActiveDocument, saveMarkdownDocument } from "../lib/save";
+import { isMarkdownTab, type DocumentTab, type MarkdownDocument, type MarkdownMode } from "../lib/types";
 import { useContextMenuStore, keepsNativeMenu } from "../stores/useContextMenuStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useUIStore } from "../stores/useUIStore";
@@ -87,6 +88,45 @@ function PagePill() {
   );
 }
 
+const MARKDOWN_MODES: { id: MarkdownMode; label: string }[] = [
+  { id: "reader", label: "Reader" },
+  { id: "split", label: "Split" },
+  { id: "edit", label: "Edit" },
+];
+
+function MarkdownPill({ tab }: { tab: DocumentTab & { markdown: MarkdownDocument } }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="pill" role="group" aria-label="Markdown mode">
+        {MARKDOWN_MODES.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            className="h-7 rounded-lg px-2 text-[11px] font-medium"
+            style={
+              tab.markdown.mode === mode.id
+                ? { background: "var(--accent)", color: "var(--accent-ink)" }
+                : { color: "var(--muted)" }
+            }
+            aria-pressed={tab.markdown.mode === mode.id}
+            onClick={() => useDocStore.getState().setMarkdownMode(tab.id, mode.id)}
+          >
+            {mode.label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="chip h-8 gap-1.5 px-2.5"
+        title="Convert this Markdown note into an annotatable PDF tab"
+        onClick={() => void exportMarkdownAsPdf(true)}
+      >
+        <PenLine size={13} strokeWidth={1.75} /> Annotate as PDF
+      </button>
+    </div>
+  );
+}
+
 export function TopBar() {
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
@@ -98,6 +138,8 @@ export function TopBar() {
   const saving = useUIStore((state) => state.saving);
   const setToast = useUIStore((state) => state.setToast);
   const hasTab = tabs.length > 0;
+  const activeTab = tabs.find((tab) => tab.id === activeId) ?? tabs[0];
+  const markdownTab = isMarkdownTab(activeTab);
 
   const [filesOpen, setFilesOpen] = useState(false);
   const [combineOpen, setCombineOpen] = useState(false);
@@ -163,7 +205,7 @@ export function TopBar() {
         shortcut: "Ctrl+S",
         onSelect: () => {
           doc.setActive(tab.id);
-          void saveActiveDocument("editable");
+          void (isMarkdownTab(tab) ? saveMarkdownDocument() : saveActiveDocument("editable"));
         },
       },
       {
@@ -171,7 +213,7 @@ export function TopBar() {
         icon: Save,
         onSelect: () => {
           doc.setActive(tab.id);
-          void saveActiveDocument("editable", true);
+          void (isMarkdownTab(tab) ? saveMarkdownDocument(true) : saveActiveDocument("editable", true));
         },
       },
       { label: "Duplicate Tab", icon: CopyPlus, onSelect: () => doc.duplicateTab(tab.id) },
@@ -210,71 +252,138 @@ export function TopBar() {
                   document.getElementById("pm-pdf-input")?.click();
                 }}
               />
-              <FileAction
-                label="Create Document..."
-                icon={<FilePlus size={13} />}
-                onClick={() => {
-                  setFilesOpen(false);
-                  setNewDocOpen(true);
-                }}
-              />
-              <FileAction
-                label="Combine Documents..."
-                icon={<Combine size={13} />}
-                onClick={() => {
-                  setFilesOpen(false);
-                  setCombineOpen(true);
-                }}
-              />
-              <div className="divider my-1" />
-              <FileAction
-                label="Save"
-                shortcut="Ctrl+S"
-                icon={<Save size={13} />}
-                disabled={!hasTab}
-                onClick={() => {
-                  setFilesOpen(false);
-                  void saveActiveDocument("editable");
-                }}
-              />
-              <FileAction
-                label="Save As..."
-                icon={<Save size={13} />}
-                disabled={!hasTab}
-                onClick={() => {
-                  setFilesOpen(false);
-                  void saveActiveDocument("editable", true);
-                }}
-              />
-              <FileAction
-                label="Save Flattened PDF..."
-                icon={<FileDown size={13} />}
-                disabled={!hasTab}
-                onClick={() => {
-                  setFilesOpen(false);
-                  void saveActiveDocument("flattened");
-                }}
-              />
-              <div className="divider my-1" />
-              <FileAction
-                label="Print..."
-                shortcut="Ctrl+P"
-                icon={<Printer size={13} />}
-                disabled={!hasTab}
-                onClick={() => {
-                  setFilesOpen(false);
-                  void printActiveDocument();
-                }}
-              />
-              <FileAction
-                label="Print Current Page"
-                icon={<Printer size={13} />}
-                disabled={!hasTab}
-                onClick={() => {
-                  setFilesOpen(false);
-                  window.print();
-                }}
-              />
+              {markdownTab ? (
+                <>
+                  <FileAction
+                    label="Create Paper Document..."
+                    icon={<FilePlus size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      setNewDocOpen(true);
+                    }}
+                  />
+                  <FileAction
+                    label="New Markdown Note..."
+                    icon={<FilePlus size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      useDocStore.getState().newMarkdownTab();
+                    }}
+                  />
+                  <FileAction
+                    label="Combine PDF Documents..."
+                    icon={<Combine size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      setCombineOpen(true);
+                    }}
+                  />
+                  <div className="divider my-1" />
+                  <FileAction
+                    label="Save Markdown"
+                    shortcut="Ctrl+S"
+                    icon={<Save size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void saveMarkdownDocument();
+                    }}
+                  />
+                  <FileAction
+                    label="Save As .md..."
+                    icon={<Save size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void saveMarkdownDocument(true);
+                    }}
+                  />
+                  <FileAction
+                    label="Export as PDF..."
+                    icon={<FileDown size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void exportMarkdownAsPdf(false);
+                    }}
+                  />
+                  <div className="divider my-1" />
+                  <FileAction
+                    label="Print..."
+                    shortcut="Ctrl+P"
+                    icon={<Printer size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void printActiveDocument();
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <FileAction
+                    label="Create Document..."
+                    icon={<FilePlus size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      setNewDocOpen(true);
+                    }}
+                  />
+                  <FileAction
+                    label="Combine Documents..."
+                    icon={<Combine size={13} />}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      setCombineOpen(true);
+                    }}
+                  />
+                  <div className="divider my-1" />
+                  <FileAction
+                    label="Save"
+                    shortcut="Ctrl+S"
+                    icon={<Save size={13} />}
+                    disabled={!hasTab}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void saveActiveDocument("editable");
+                    }}
+                  />
+                  <FileAction
+                    label="Save As..."
+                    icon={<Save size={13} />}
+                    disabled={!hasTab}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void saveActiveDocument("editable", true);
+                    }}
+                  />
+                  <FileAction
+                    label="Save Flattened PDF..."
+                    icon={<FileDown size={13} />}
+                    disabled={!hasTab}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void saveActiveDocument("flattened");
+                    }}
+                  />
+                  <div className="divider my-1" />
+                  <FileAction
+                    label="Print..."
+                    shortcut="Ctrl+P"
+                    icon={<Printer size={13} />}
+                    disabled={!hasTab}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      void printActiveDocument();
+                    }}
+                  />
+                  <FileAction
+                    label="Print Current Page"
+                    icon={<Printer size={13} />}
+                    disabled={!hasTab}
+                    onClick={() => {
+                      setFilesOpen(false);
+                      window.print();
+                    }}
+                  />
+                </>
+              )}
             </div>
           )}
         </div>
@@ -320,6 +429,9 @@ export function TopBar() {
                     onClick={() => setActive(tab.id)}
                     title={tab.title}
                   >
+                    {isMarkdownTab(tab) && (
+                      <span className="mr-1 rounded bg-[var(--active)] px-1 py-px text-[9px] uppercase text-muted">md</span>
+                    )}
                     {tab.title}
                   </button>
                 )}
@@ -337,19 +449,24 @@ export function TopBar() {
           <button
             type="button"
             className="icon-btn h-8 w-8 shrink-0"
-            aria-label="Open PDF file(s)"
-            title="Open PDF file(s)..."
+            aria-label="Open document"
+            title="Open PDF or Markdown file..."
             onClick={() => document.getElementById("pm-pdf-input")?.click()}
           >
             <Plus size={16} strokeWidth={1.75} />
           </button>
         </div>
 
-        {hasTab && (
-          <div className="hidden sm:block">
-            <PagePill />
-          </div>
-        )}
+        {hasTab &&
+          (markdownTab ? (
+            <div className="hidden sm:block">
+              <MarkdownPill tab={activeTab} />
+            </div>
+          ) : (
+            <div className="hidden sm:block">
+              <PagePill />
+            </div>
+          ))}
         {hasTab && (
           <div className="hidden md:block">
             <ZoomPill />
@@ -381,10 +498,10 @@ export function TopBar() {
         <button
           type="button"
           className="icon-btn hidden sm:grid"
-          aria-label="Save editable PDF"
-          title="Save as PDF with editable annotations (Ctrl+S)"
+          aria-label={markdownTab ? "Save Markdown" : "Save editable PDF"}
+          title={markdownTab ? "Save Markdown (Ctrl+S)" : "Save as PDF with editable annotations (Ctrl+S)"}
           disabled={!hasTab || saving}
-          onClick={() => void saveActiveDocument("editable")}
+          onClick={() => void (markdownTab ? saveMarkdownDocument() : saveActiveDocument("editable"))}
         >
           <Save size={16} strokeWidth={1.75} />
         </button>

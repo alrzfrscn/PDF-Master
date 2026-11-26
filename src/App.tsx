@@ -17,12 +17,13 @@ import { parseBootArgs, resolvePaperTarget } from "./lib/bootArgs";
 import { paperTemplates } from "./lib/data";
 import { loadMirroredStamps, useCustomStampStore } from "./lib/customStamps";
 import { readImageFile } from "./lib/raster";
-import { printActiveDocument, saveActiveDocument } from "./lib/save";
+import { printActiveDocument, saveActiveDocument, saveMarkdownDocument } from "./lib/save";
 import { bindingFromEvent, normalizeBinding, useShortcutStore } from "./lib/shortcuts";
 import { loadWorkspace, downloadWorkspaceBackup, saveWorkspace } from "./lib/storage";
 import { base64ToBytes } from "./lib/base64";
 import { TOOL_BY_ID } from "./lib/tools";
 import type { ToolId } from "./lib/types";
+import { isMarkdownTab } from "./lib/types";
 import { useAnnotationStore } from "./stores/useAnnotationStore";
 import { keepsNativeMenu } from "./stores/useContextMenuStore";
 import { useDocStore } from "./stores/useDocStore";
@@ -79,6 +80,11 @@ async function openStartupPdf(): Promise<void> {
   try {
     const pdf = (await bridge.invoke("get_startup_pdf")) as { name: string; base64: string } | null;
     if (!pdf?.base64) return;
+    if (/\.(md|markdown)$/i.test(pdf.name)) {
+      const text = new TextDecoder().decode(base64ToBytes(pdf.base64));
+      useDocStore.getState().openMarkdownText(text, pdf.name);
+      return;
+    }
     await useDocStore.getState().openPdfBytes(base64ToBytes(pdf.base64), pdf.name);
   } catch {
     // No document was requested, or this is not the desktop shell.
@@ -240,6 +246,8 @@ export default function App() {
       const pressed = bindingFromEvent(event);
       const action = pressed ? useShortcutStore.getState().resolve().get(normalizeBinding(pressed)) : undefined;
       if (action && DOCUMENT_ACTIONS.has(action) && useDocStore.getState().tabs.length === 0) return;
+      const activeState = useDocStore.getState();
+      const markdownActive = isMarkdownTab(activeState.tabs.find((item) => item.id === activeState.activeId));
 
       switch (action) {
         case "palette":
@@ -258,10 +266,13 @@ export default function App() {
           event.preventDefault();
           fileRef.current?.click();
           return;
-        case "save":
+        case "save": {
           event.preventDefault();
-          void saveActiveDocument("editable");
+          const state = useDocStore.getState();
+          const tab = state.tabs.find((item) => item.id === state.activeId);
+          void (isMarkdownTab(tab) ? saveMarkdownDocument() : saveActiveDocument("editable"));
           return;
+        }
         case "print":
           event.preventDefault();
           void printActiveDocument();
@@ -318,22 +329,27 @@ export default function App() {
           useUIStore.getState().setSearchOpen(true);
           return;
         case "view-one-page":
+          if (markdownActive) return;
           event.preventDefault();
           useUIStore.getState().setViewMode("one-page");
           return;
         case "view-one-continuous":
+          if (markdownActive) return;
           event.preventDefault();
           useUIStore.getState().setViewMode("one-continuous");
           return;
         case "view-two-continuous":
+          if (markdownActive) return;
           event.preventDefault();
           useUIStore.getState().setViewMode("two-continuous");
           return;
         case "view-two-page":
+          if (markdownActive) return;
           event.preventDefault();
           useUIStore.getState().setViewMode("two-page");
           return;
         case "toggle-cover-page":
+          if (markdownActive) return;
           event.preventDefault();
           useUIStore.getState().toggleSeparateCoverPage();
           return;
@@ -371,11 +387,11 @@ export default function App() {
       }
 
       if (action === "fit-page") {
-        setFit("page");
+        if (!markdownActive) setFit("page");
         return;
       }
       if (action && TOOL_BY_ID.has(action as ToolId)) {
-        setTool(action as ToolId);
+        if (!markdownActive) setTool(action as ToolId);
         return;
       }
 
@@ -390,6 +406,7 @@ export default function App() {
         return;
       }
       if (event.key === "PageDown" || event.key === "PageUp") {
+        if (markdownActive) return;
         event.preventDefault();
         setPage(useDocStore.getState().page + (event.key === "PageDown" ? 1 : -1));
         return;
@@ -405,14 +422,20 @@ export default function App() {
         ref={fileRef}
         id="pm-pdf-input"
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,.md,.markdown,text/markdown"
         multiple
         className="hidden"
         onChange={(event) => {
           const files = [...(event.target.files ?? [])];
           event.target.value = "";
           void (async () => {
-            for (const file of files) await useDocStore.getState().openPdfFile(file);
+            for (const file of files) {
+              if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+                await useDocStore.getState().openPdfFile(file);
+              } else if (file.type === "text/markdown" || /\.(md|markdown)$/i.test(file.name)) {
+                await useDocStore.getState().openMarkdownFile(file);
+              }
+            }
           })();
         }}
       />

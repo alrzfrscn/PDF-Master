@@ -78,11 +78,13 @@ fn base64_encode(bytes: &[u8]) -> String {
     out
 }
 
-/// The first positional argument that names an existing PDF file.
+/// The first positional argument that names an existing PDF or Markdown file.
 fn find_startup_pdf(args: &[String]) -> Option<StartupPdf> {
-    let path = args
-        .iter()
-        .find(|arg| arg.to_lowercase().ends_with(".pdf") && std::path::Path::new(arg).is_file())?;
+    let path = args.iter().find(|arg| {
+        let lower = arg.to_lowercase();
+        (lower.ends_with(".pdf") || lower.ends_with(".md") || lower.ends_with(".markdown"))
+            && std::path::Path::new(arg).is_file()
+    })?;
     let bytes = std::fs::read(path).ok()?;
     let name = std::path::Path::new(path).file_name()?.to_string_lossy().to_string();
     Some(StartupPdf {

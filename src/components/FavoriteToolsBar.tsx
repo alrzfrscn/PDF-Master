@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { penStyleOptions, inkPath } from "../lib/ink";
 import type { InkPoint } from "../lib/annotationTypes";
+import { isMarkdownTab } from "../lib/types";
 import { useFavoritesStore, type FavoriteTool } from "../stores/useFavoritesStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
@@ -71,7 +72,10 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
 
 export function FavoriteToolsBar() {
   const open = useUIStore((state) => state.favoritesOpen);
-  const hasTab = useDocStore((state) => state.tabs.length > 0);
+  const hasTab = useDocStore((state) => {
+    const tab = state.tabs.find((item) => item.id === state.activeId) ?? state.tabs[0];
+    return Boolean(tab) && !isMarkdownTab(tab);
+  });
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const sidebarTab = useUIStore((state) => state.sidebarTab);
   const pagesCompactMode = useUIStore((state) => state.pagesCompactMode);

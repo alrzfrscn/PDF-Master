@@ -4,7 +4,7 @@ import { scaleAnnotation } from "../lib/annotationGeometry";
 import { clamp } from "../lib/paper";
 import { deleteWorkspaceBlob } from "../lib/storage";
 import { ZOOM_STEPS } from "../lib/tools";
-import type { DocumentPage, DocumentTab, PdfBookmark } from "../lib/types";
+import { isMarkdownTab, type DocumentPage, type DocumentTab, type MarkdownMode, type PdfBookmark } from "../lib/types";
 import { inspectPdf, loadSidecar, mergeSidecarPages, releasePdfDocument, type InspectedPdf } from "../lib/pdfEngine";
 import { remapBookmarksOnPageOp, type PageOp } from "../lib/bookmarks";
 import { clearSaveHandle } from "../lib/save";
@@ -52,7 +52,14 @@ const initialTabs: DocumentTab[] = [
 export interface HistoryEntry {
   past: DocumentPage[][];
   future: DocumentPage[][];
+  /** Markdown tabs undo by content snapshot; a tab uses one pair or the other. */
+  mdPast?: string[];
+  mdFuture?: string[];
 }
+
+/** Typing coalesces into one undo step; a pause longer than this starts a new one. */
+const MARKDOWN_HISTORY_GAP_MS = 700;
+const markdownHistoryAt = new Map<string, number>();
 
 interface DocState {
   tabs: DocumentTab[];
@@ -94,6 +101,11 @@ interface DocState {
   openPdfBytes: (bytes: Uint8Array, name: string) => Promise<void>;
   openPdfFile: (file: File) => Promise<void>;
   openPdfUrl: (url: string, name: string) => Promise<void>;
+  openMarkdownFile: (file: File) => Promise<void>;
+  openMarkdownText: (content: string, title: string) => void;
+  newMarkdownTab: (title?: string) => void;
+  updateMarkdownContent: (tabId: string, content: string, recordHistory?: boolean) => void;
+  setMarkdownMode: (tabId: string, mode: MarkdownMode) => void;
   addBookmark: (title: string) => void;
   restore: (tabs: DocumentTab[], activeId: string) => void;
   pushHistory: (tabId?: string) => void;
@@ -141,6 +153,24 @@ function tabOf(state: DocState, tabId?: string): DocumentTab | undefined {
   return state.tabs.find((tab) => tab.id === (tabId ?? state.activeId));
 }
 
+/** A Markdown tab carries its own text and no pages; PDF/paper fields stay inert. */
+function markdownTab(content: string, title: string, fileName?: string, mode: MarkdownMode = "reader"): DocumentTab {
+  return {
+    id: makeId("doc"),
+    title,
+    templateId: DEFAULT_TEMPLATE_ID,
+    landscape: false,
+    pageCount: 0,
+    pages: [],
+    markdown: { content, mode, ...(fileName ? { fileName } : {}) },
+  };
+}
+
+function markdownTitle(title: string): string {
+  const clean = title.replace(/\.(md|markdown)$/i, "").trim();
+  return clean || "Untitled";
+}
+
 function pdfPages(info: InspectedPdf, url: string): DocumentPage[] {
   return info.pages.map((size, index) => ({
     id: makeId("page"),
@@ -162,7 +192,10 @@ export const useDocStore = create<DocState>((set, get) => ({
   lastError: null,
   lastClosedTab: null,
 
-  setActive: (activeId) => set({ activeId, fitMode: "page", zoom: 0.8, page: 1 }),
+  setActive: (activeId) => {
+    const target = get().tabs.find((tab) => tab.id === activeId);
+    set({ activeId, fitMode: isMarkdownTab(target) ? null : "page", zoom: isMarkdownTab(target) ? 1 : 0.8, page: 1 });
+  },
   newTab: (templateId, title, landscape = false) => {
     const tab: DocumentTab = {
       id: makeId("doc"),
@@ -217,7 +250,13 @@ export const useDocStore = create<DocState>((set, get) => ({
       pageCount: pages.length,
       ...(pdf ? { pdf } : {}),
     };
-    set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, fitMode: "page", page: 1 }));
+    set((state) => ({
+      tabs: [...state.tabs, tab],
+      activeId: tab.id,
+      fitMode: isMarkdownTab(tab) ? null : "page",
+      page: 1,
+      ...(isMarkdownTab(tab) ? { zoom: 1 } : {}),
+    }));
   },
   renameTab: (id, title) => {
     const next = title.trim();
@@ -238,7 +277,8 @@ export const useDocStore = create<DocState>((set, get) => ({
 
     // Closing the last tab leaves a calm empty workspace; it is recoverable for 15 s.
     if (tabs.length === 1) {
-      const annotated = closing.pages.some((page) => page.annotations.length > 0);
+      const annotated =
+        closing.pages.some((page) => page.annotations.length > 0) || Boolean(closing.markdown?.content.trim());
       set({
         tabs: [],
         history: nextHistory,
@@ -300,7 +340,7 @@ export const useDocStore = create<DocState>((set, get) => ({
     const state = get();
     const tab = tabOf(state);
     // A PDF page's size comes from the source document, not from a paper recipe.
-    if (!tab || tab.pdf) return;
+    if (!tab || tab.pdf || isMarkdownTab(tab)) return;
     state.pushHistory(tab.id);
     const nextTemplate = paperById.get(templateId);
     const pages = tab.pages.map((page) => {
@@ -328,7 +368,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   setLandscape: (landscape) => {
     const tab = tabOf(get());
     // PDF pages keep the source orientation; flipping them would be a no-op undo entry.
-    if (!tab || tab.pdf) return;
+    if (!tab || tab.pdf || isMarkdownTab(tab)) return;
     get().pushHistory(tab.id);
     set((state) => ({
       tabs: state.tabs.map((item) => (item.id === tab.id ? { ...item, landscape } : item)),
@@ -554,6 +594,42 @@ export const useDocStore = create<DocState>((set, get) => ({
     }
   },
 
+  openMarkdownFile: async (file) => {
+    get().openMarkdownText(await file.text(), file.name);
+  },
+  openMarkdownText: (content, title) => {
+    const fileName = /\.(md|markdown)$/i.test(title) ? title : undefined;
+    const tab = markdownTab(content, markdownTitle(title), fileName);
+    set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, page: 1, fitMode: null, zoom: 1 }));
+  },
+  newMarkdownTab: (title = "Untitled") => {
+    const tab = markdownTab(`# ${title}\n\n`, title, undefined, "split");
+    set((state) => ({ tabs: [...state.tabs, tab], activeId: tab.id, page: 1, fitMode: null, zoom: 1 }));
+  },
+  updateMarkdownContent: (tabId, content, recordHistory = true) => {
+    const tab = tabOf(get(), tabId);
+    if (!isMarkdownTab(tab) || tab.markdown.content === content) return;
+    if (recordHistory) {
+      const now = Date.now();
+      if (now - (markdownHistoryAt.get(tab.id) ?? 0) > MARKDOWN_HISTORY_GAP_MS) {
+        get().pushHistory(tab.id);
+        markdownHistoryAt.set(tab.id, now);
+      }
+    }
+    set((state) => ({
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id && item.markdown ? { ...item, markdown: { ...item.markdown, content } } : item,
+      ),
+    }));
+  },
+  setMarkdownMode: (tabId, mode) => {
+    set((state) => ({
+      tabs: state.tabs.map((item) =>
+        item.id === tabId && item.markdown ? { ...item, markdown: { ...item.markdown, mode } } : item,
+      ),
+    }));
+  },
+
   addBookmark: (title) => {
     const state = get();
     const tab = tabOf(state);
@@ -576,6 +652,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   restore: (tabs, activeId) => {
     const previousTabs = get().tabs;
     const restored = tabs.map((tab) => {
+      if (isMarkdownTab(tab)) return { ...tab, pages: tab.pages ?? [], pageCount: 0 };
       const pages = tab.pages?.length ? tab.pages : [newPage(tab.templateId)];
       if (!tab.pdf?.bytes) return { ...tab, pages, pageCount: pages.length };
       const url = URL.createObjectURL(new Blob([new Uint8Array(tab.pdf.bytes)], { type: "application/pdf" }));
@@ -592,12 +669,13 @@ export const useDocStore = create<DocState>((set, get) => ({
     }
     // Restored pages are a new starting point: old undo entries point at dead URLs.
     resetSelection?.();
+    const activeTab = restored.find((tab) => tab.id === activeId) ?? restored[0];
     set({
       tabs: restored,
-      activeId: restored.some((tab) => tab.id === activeId) ? activeId : restored[0].id,
+      activeId: activeTab.id,
       page: 1,
-      fitMode: "page",
-      zoom: 0.8,
+      fitMode: isMarkdownTab(activeTab) ? null : "page",
+      zoom: isMarkdownTab(activeTab) ? 1 : 0.8,
       history: {},
       lastClosedTab: null,
       lastError: null,
@@ -608,6 +686,12 @@ export const useDocStore = create<DocState>((set, get) => ({
     const state = get();
     const tab = tabOf(state, tabId);
     if (!tab) return;
+    if (isMarkdownTab(tab)) {
+      const entry = state.history[tab.id] ?? { past: [], future: [] };
+      const mdPast = [...(entry.mdPast ?? []), tab.markdown.content].slice(-HISTORY_LIMIT);
+      set({ history: { ...state.history, [tab.id]: { past: entry.past, future: entry.future, mdPast, mdFuture: [] } } });
+      return;
+    }
     const entry = state.history[tab.id] ?? { past: [], future: [] };
     const past = [...entry.past, clonePages(tab.pages)].slice(-HISTORY_LIMIT);
     set({ history: { ...state.history, [tab.id]: { past, future: [] } } });
@@ -616,6 +700,26 @@ export const useDocStore = create<DocState>((set, get) => ({
     const state = get();
     const tab = tabOf(state, tabId);
     if (!tab) return;
+    if (isMarkdownTab(tab)) {
+      const entry = state.history[tab.id];
+      const previous = entry?.mdPast?.[entry.mdPast.length - 1];
+      if (!entry || previous === undefined) return;
+      set({
+        tabs: state.tabs.map((item) =>
+          item.id === tab.id && item.markdown ? { ...item, markdown: { ...item.markdown, content: previous } } : item,
+        ),
+        history: {
+          ...state.history,
+          [tab.id]: {
+            past: entry.past,
+            future: entry.future,
+            mdPast: entry.mdPast?.slice(0, -1) ?? [],
+            mdFuture: [tab.markdown.content, ...(entry.mdFuture ?? [])],
+          },
+        },
+      });
+      return;
+    }
     const entry = state.history[tab.id];
     const previous = entry?.past[entry.past.length - 1];
     if (!entry || !previous) return;
@@ -632,6 +736,26 @@ export const useDocStore = create<DocState>((set, get) => ({
     const state = get();
     const tab = tabOf(state, tabId);
     if (!tab) return;
+    if (isMarkdownTab(tab)) {
+      const entry = state.history[tab.id];
+      const next = entry?.mdFuture?.[0];
+      if (!entry || next === undefined) return;
+      set({
+        tabs: state.tabs.map((item) =>
+          item.id === tab.id && item.markdown ? { ...item, markdown: { ...item.markdown, content: next } } : item,
+        ),
+        history: {
+          ...state.history,
+          [tab.id]: {
+            past: entry.past,
+            future: entry.future,
+            mdPast: [...(entry.mdPast ?? []), tab.markdown.content],
+            mdFuture: entry.mdFuture?.slice(1) ?? [],
+          },
+        },
+      });
+      return;
+    }
     const entry = state.history[tab.id];
     const next = entry?.future[0];
     if (!entry || !next) return;

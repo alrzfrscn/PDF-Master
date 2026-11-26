@@ -1,6 +1,6 @@
 import { Shapes } from "lucide-react";
 import { isShapeTool, NO_POPOVER_TOOLS, TOOLBAR, TOOL_BY_ID } from "../lib/tools";
-import type { ToolId } from "../lib/types";
+import { isMarkdownTab, type ToolId } from "../lib/types";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
 import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
@@ -8,7 +8,10 @@ import { useUIStore } from "../stores/useUIStore";
 import { TOOL_ICONS } from "./toolIcons";
 
 export function ToolBar() {
-  const hasTab = useDocStore((state) => state.tabs.length > 0);
+  const hasTab = useDocStore((state) => {
+    const tab = state.tabs.find((item) => item.id === state.activeId) ?? state.tabs[0];
+    return Boolean(tab) && !isMarkdownTab(tab);
+  });
   const activeTool = useToolStore((state) => state.activeTool);
   const setTool = useToolStore((state) => state.setTool);
   const shapeActive = isShapeTool(activeTool);

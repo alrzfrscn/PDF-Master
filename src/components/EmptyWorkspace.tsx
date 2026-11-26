@@ -72,6 +72,8 @@ export function EmptyWorkspace() {
           for (const file of files) {
             if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
               await useDocStore.getState().openPdfFile(file);
+            } else if (file.type === "text/markdown" || /\.(md|markdown)$/i.test(file.name)) {
+              await useDocStore.getState().openMarkdownFile(file);
             }
           }
         })();
@@ -105,7 +107,7 @@ export function EmptyWorkspace() {
           <ActionCard
             icon={<FolderOpen size={18} strokeWidth={1.75} />}
             title="Open Document..."
-            body="Open one or more PDF files from your computer."
+            body="Open one or more PDF or Markdown files from your computer."
             hint="Ctrl+O"
             onClick={openFiles}
           />
@@ -125,13 +127,13 @@ export function EmptyWorkspace() {
           />
         </div>
 
-        <p className="mt-5 text-[10.5px] text-muted">Drop a PDF anywhere here to open it.</p>
+        <p className="mt-5 text-[10.5px] text-muted">Drop a PDF or Markdown file anywhere here to open it.</p>
       </div>
 
       {dropActive && (
         <div className="pointer-events-none absolute inset-4 z-30 grid place-items-center rounded-2xl border-2 border-dashed border-[var(--accent)] bg-[var(--accent-soft)]">
           <div className="glass-strong flex items-center gap-2 rounded-xl px-4 py-2.5 text-[12.5px] font-medium">
-            <FileText size={16} /> Drop a PDF to open it
+            <FileText size={16} /> Drop a PDF or Markdown file to open it
           </div>
         </div>
       )}

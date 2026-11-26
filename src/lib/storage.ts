@@ -344,8 +344,25 @@ function sanitizePage(value: unknown): DocumentPage | null {
   return { ...(value as unknown as DocumentPage), rotation: rotation as DocumentPage["rotation"], annotations };
 }
 
+const MARKDOWN_MODES = new Set(["reader", "split", "edit"]);
+
+/** `undefined` means the tab is not Markdown; `null` means a broken Markdown block. */
+function sanitizeMarkdown(value: unknown): DocumentTab["markdown"] | null | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value) || typeof value.content !== "string") return null;
+  const mode = typeof value.mode === "string" && MARKDOWN_MODES.has(value.mode) ? value.mode : "reader";
+  return {
+    content: value.content,
+    mode: mode as NonNullable<DocumentTab["markdown"]>["mode"],
+    ...(typeof value.fileName === "string" ? { fileName: value.fileName } : {}),
+  };
+}
+
 function sanitizeTab(value: unknown): DocumentTab | null {
   if (!isRecord(value) || typeof value.id !== "string" || typeof value.title !== "string") return null;
+  const markdown = sanitizeMarkdown(value.markdown);
+  if (markdown === null) return null;
+  if (markdown) return { ...(value as unknown as DocumentTab), pages: [], pageCount: 0, markdown };
   if (!Array.isArray(value.pages) || value.pages.length === 0) return null;
   const pages = value.pages.map(sanitizePage);
   if (pages.some((page) => page === null)) return null;

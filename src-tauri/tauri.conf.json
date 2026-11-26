@@ -52,6 +52,13 @@
         "description": "PDF Master Document",
         "role": "Editor",
         "mimeType": "application/pdf"
+      },
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown Document",
+        "description": "Markdown Document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
       }
     ]
   }

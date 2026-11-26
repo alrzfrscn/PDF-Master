@@ -7,6 +7,8 @@ import { renderPdfPage } from "../lib/pdfEngine";
 import { captureRegion } from "../lib/raster";
 import { SHAPE_LABEL, type Annotation } from "../lib/annotationTypes";
 import type { DocumentPage, DocumentTab } from "../lib/types";
+import { isMarkdownTab } from "../lib/types";
+import { extractMarkdownHeadings } from "../lib/markdown";
 import { usePrefsStore } from "../lib/prefs";
 import type { GridStyle, SidebarTab, ViewMode } from "../stores/useUIStore";
 import { useAnnotationStore } from "../stores/useAnnotationStore";
@@ -553,6 +555,9 @@ export function Sidebar() {
   const [viewOpen, setViewOpen] = useState(false);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
+  const markdownTab = isMarkdownTab(tab);
+  const mdHeadings = markdownTab ? extractMarkdownHeadings(tab.markdown.content) : [];
+  const drawerTitle = markdownTab ? "Outline" : TAB_TITLES[sidebarTab];
   const compactPages = sidebarOpen && sidebarTab === "pages" && pagesCompactMode;
   const railRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -584,6 +589,14 @@ export function Sidebar() {
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [viewOpen]);
 
+  // A PDF-only drawer (pages, annotations, stamps) cannot stay open on Markdown.
+  useEffect(() => {
+    if (!markdownTab) return;
+    setViewOpen(false);
+    const ui = useUIStore.getState();
+    if (ui.sidebarOpen && ui.sidebarTab !== "bookmarks") ui.toggleSidebar();
+  }, [markdownTab]);
+
   const recent = recentStamps
     .map((id) => stamps.find((stamp) => stamp.id === id) ?? userStamps.find((stamp) => stamp.id === id))
     .filter((stamp): stamp is NonNullable<typeof stamp> => Boolean(stamp));
@@ -602,28 +615,32 @@ export function Sidebar() {
   return (
     <div ref={railRef} className="sidebar absolute left-3 top-3 z-40">
       <div className="glass flex w-11 flex-col items-center gap-1 rounded-2xl py-2">
-        <button
-          ref={viewButtonRef}
-          type="button"
-          className="icon-btn"
-          aria-label="View settings"
-          title="View"
-          aria-pressed={viewOpen}
-          onClick={() => {
-            closeCompactStrip();
-            setViewOpen((open) => !open);
-          }}
-        >
-          <LayoutGrid size={16} strokeWidth={1.75} />
-        </button>
-        <div className="my-0.5 h-px w-6 bg-[var(--border)]" />
-        {TABS.map(({ id, label, Icon }) => (
+        {!markdownTab && (
+          <>
+            <button
+              ref={viewButtonRef}
+              type="button"
+              className="icon-btn"
+              aria-label="View settings"
+              title="View"
+              aria-pressed={viewOpen}
+              onClick={() => {
+                closeCompactStrip();
+                setViewOpen((open) => !open);
+              }}
+            >
+              <LayoutGrid size={16} strokeWidth={1.75} />
+            </button>
+            <div className="my-0.5 h-px w-6 bg-[var(--border)]" />
+          </>
+        )}
+        {(markdownTab ? TABS.filter((item) => item.id === "bookmarks") : TABS).map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"
             className="icon-btn"
-            aria-label={label}
-            title={label}
+            aria-label={markdownTab && id === "bookmarks" ? "Outline" : label}
+            title={markdownTab && id === "bookmarks" ? "Outline" : label}
             aria-pressed={sidebarOpen && sidebarTab === id}
             onClick={() => setSidebarTab(id)}
           >
@@ -644,32 +661,36 @@ export function Sidebar() {
         >
           <Search size={16} strokeWidth={1.75} />
         </button>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Favorite tools"
-          title="Favorite tools"
-          aria-pressed={favoritesOpen}
-          onClick={() => {
-            closeCompactStrip();
-            toggleFavorites();
-          }}
-        >
-          <Heart size={16} strokeWidth={1.75} style={favoritesOpen ? { fill: "currentColor" } : undefined} />
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="Finger draws"
-          title={touchDrawEnabled ? "Finger draws · tap to pan with one finger" : "One finger pans · tap to draw with a finger"}
-          aria-pressed={touchDrawEnabled}
-          onClick={() => {
-            closeCompactStrip();
-            setPrefs({ touchDrawEnabled: !touchDrawEnabled });
-          }}
-        >
-          <Hand size={16} strokeWidth={1.75} />
-        </button>
+        {!markdownTab && (
+          <>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Favorite tools"
+              title="Favorite tools"
+              aria-pressed={favoritesOpen}
+              onClick={() => {
+                closeCompactStrip();
+                toggleFavorites();
+              }}
+            >
+              <Heart size={16} strokeWidth={1.75} style={favoritesOpen ? { fill: "currentColor" } : undefined} />
+            </button>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Finger draws"
+              title={touchDrawEnabled ? "Finger draws · tap to pan with one finger" : "One finger pans · tap to draw with a finger"}
+              aria-pressed={touchDrawEnabled}
+              onClick={() => {
+                closeCompactStrip();
+                setPrefs({ touchDrawEnabled: !touchDrawEnabled });
+              }}
+            >
+              <Hand size={16} strokeWidth={1.75} />
+            </button>
+          </>
+        )}
       </div>
 
       {viewOpen && (
@@ -719,10 +740,10 @@ export function Sidebar() {
             compactPages ? "left-[56px] w-[104px]" : "left-[52px] w-[268px]"
           }`}
           style={{ maxHeight: compactPages ? "calc(100vh - 80px)" : "calc(100vh - 120px)", height: "auto" }}
-          aria-label={TAB_TITLES[sidebarTab]}
+          aria-label={drawerTitle}
         >
           <div className={`flex items-center gap-1 border-b border-[var(--border)] ${compactPages ? "justify-center px-2 py-1.5" : "px-3 py-2"}`}>
-            {!compactPages && <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{TAB_TITLES[sidebarTab]}</span>}
+            {!compactPages && <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{drawerTitle}</span>}
             {sidebarTab === "pages" && (
               <button
                 type="button"
@@ -767,34 +788,56 @@ export function Sidebar() {
           >
         {sidebarTab === "pages" && <PagesPanel tab={tab} compact={compactPages} />}
 
-        {sidebarTab === "bookmarks" && (
-          <>
-            <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pdf?.bookmarks.length ?? 0}</span>}>Bookmarks</SectionTitle>
-            {tab.pdf && (
-              <button type="button" className="chip h-8 justify-center" onClick={() => addBookmark(`Page ${pageIndex}`)}>
-                <BookmarkPlus size={13} /> Bookmark page {pageIndex}
-              </button>
-            )}
-            <div className="flex flex-col gap-0.5">
-              {(tab.pdf?.bookmarks ?? []).map((bookmark) => (
-                <button
-                  key={bookmark.id}
-                  type="button"
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11.5px] hover:bg-[var(--hover)]"
-                  style={{ paddingLeft: 8 + bookmark.depth * 12 }}
-                  onClick={() => setPage(bookmark.pageIndex + 1)}
-                >
-                  <Bookmark size={12} className="shrink-0 text-muted" strokeWidth={1.75} />
-                  <span className="min-w-0 flex-1 truncate">{bookmark.title}</span>
-                  <span className="text-[10px] text-muted">{bookmark.pageIndex + 1}</span>
+        {sidebarTab === "bookmarks" &&
+          (markdownTab ? (
+            <>
+              <SectionTitle aside={<span className="text-[10px] text-muted">{mdHeadings.length}</span>}>Outline</SectionTitle>
+              <div className="flex flex-col gap-0.5">
+                {mdHeadings.map((heading) => (
+                  <button
+                    key={heading.id}
+                    type="button"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11.5px] hover:bg-[var(--hover)]"
+                    style={{ paddingLeft: 8 + (heading.level - 1) * 12 }}
+                    onClick={() => window.dispatchEvent(new CustomEvent("pm:md-goto-heading", { detail: { id: heading.id } }))}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{heading.title}</span>
+                    <span className="text-[10px] text-muted">{heading.line}</span>
+                  </button>
+                ))}
+              </div>
+              {mdHeadings.length === 0 && (
+                <EmptyState Icon={Bookmark} title="No headings" body="Add # headings to this Markdown note to build an outline." />
+              )}
+            </>
+          ) : (
+            <>
+              <SectionTitle aside={<span className="text-[10px] text-muted">{tab.pdf?.bookmarks.length ?? 0}</span>}>Bookmarks</SectionTitle>
+              {tab.pdf && (
+                <button type="button" className="chip h-8 justify-center" onClick={() => addBookmark(`Page ${pageIndex}`)}>
+                  <BookmarkPlus size={13} /> Bookmark page {pageIndex}
                 </button>
-              ))}
-            </div>
-            {tab.pdf && tab.pdf.bookmarks.length === 0 && (
-              <EmptyState Icon={Bookmark} title="No bookmarks" body="This PDF has no outline. Add a bookmark for the current page." />
-            )}
-          </>
-        )}
+              )}
+              <div className="flex flex-col gap-0.5">
+                {(tab.pdf?.bookmarks ?? []).map((bookmark) => (
+                  <button
+                    key={bookmark.id}
+                    type="button"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11.5px] hover:bg-[var(--hover)]"
+                    style={{ paddingLeft: 8 + bookmark.depth * 12 }}
+                    onClick={() => setPage(bookmark.pageIndex + 1)}
+                  >
+                    <Bookmark size={12} className="shrink-0 text-muted" strokeWidth={1.75} />
+                    <span className="min-w-0 flex-1 truncate">{bookmark.title}</span>
+                    <span className="text-[10px] text-muted">{bookmark.pageIndex + 1}</span>
+                  </button>
+                ))}
+              </div>
+              {tab.pdf && tab.pdf.bookmarks.length === 0 && (
+                <EmptyState Icon={Bookmark} title="No bookmarks" body="This PDF has no outline. Add a bookmark for the current page." />
+              )}
+            </>
+          ))}
 
         {sidebarTab === "annotations" && (
           <>
