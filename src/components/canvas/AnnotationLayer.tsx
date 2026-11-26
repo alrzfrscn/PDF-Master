@@ -59,10 +59,11 @@ import { angleAt, PRESET_SCALES, useScaleStore } from "../../lib/measure";
 import {
   initialInkPressure,
   inkPath,
+  isRealPen,
   markerOpacity,
   penStyleOptions,
   polylinePath,
-  pointerPressure,
+  sampleInkPressure,
   smoothPressure,
 } from "../../lib/ink";
 import { CANVAS_TOUCH_ACTION, drawsWithPointer } from "../../lib/canvasInput";
@@ -112,7 +113,16 @@ type Draft =
   | null;
 
 type Interaction =
-  | { kind: "ink"; points: InkPoint[]; tool: "pen" | "marker"; start: Pt; last: Pt; lastTime: number }
+  | {
+      kind: "ink";
+      points: InkPoint[];
+      tool: "pen" | "marker";
+      start: Pt;
+      last: Pt;
+      lastTime: number;
+      /** Latched once the stylus reports true pressure, so a lift never simulates one. */
+      hasRealPressure: boolean;
+    }
   | { kind: "shape"; start: Pt; tool: ShapeType }
   | { kind: "move"; last: Pt; pushed: boolean }
   | { kind: "marquee"; start: Pt; additive: boolean }
@@ -763,7 +773,15 @@ export function AnnotationLayer({ tabId, page, pageIndex, pageCount, hasPdf, wid
           point[1],
           toolProps.pressureSensitive ? initialInkPressure(event.pointerType, event.pressure) : 0.5,
         ];
-        begin({ kind: "ink", points: [ink], tool: activeTool, start: point, last: point, lastTime: event.timeStamp });
+        begin({
+          kind: "ink",
+          points: [ink],
+          tool: activeTool,
+          start: point,
+          last: point,
+          lastTime: event.timeStamp,
+          hasRealPressure: toolProps.pressureSensitive && isRealPen(event.pointerType, event.pressure),
+        });
         setDraft({ kind: "ink", points: [ink], tool: activeTool });
         return;
       }
@@ -882,23 +900,28 @@ export function AnnotationLayer({ tabId, page, pageIndex, pageCount, hasPdf, wid
       const coalesced = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
       const samples = coalesced.length > 0 ? coalesced : [native];
       const first = current.points[0];
+      // Fine steps at high zoom keep tiny handwriting smooth; stacked duplicates stay out.
+      const minStepMm = Math.min(0.18, Math.max(0.04, 0.7 / (PX_PER_MM * zoom)));
       let points = current.points;
       let changed = false;
       for (const sample of samples) {
         const samplePoint = toMm(sample.clientX, sample.clientY);
-        // Stacked start points are what turn perfect-freehand's cap into a half-moon.
-        if (distance(samplePoint, current.last) < 0.25) continue;
+        if (distance(samplePoint, current.last) < minStepMm) continue;
         const sampleTime = sample.timeStamp || event.timeStamp;
-        const target = toolProps.pressureSensitive
-          ? pointerPressure(
-              sample.pointerType || event.pointerType,
-              sample.pressure,
-              current.last,
-              samplePoint,
-              sampleTime - current.lastTime,
-            )
-          : 0.5;
-        const pressure = smoothPressure(points[points.length - 1][2], target);
+        const previousPressure = points[points.length - 1][2];
+        const sampled = toolProps.pressureSensitive
+          ? sampleInkPressure({
+              pointerType: sample.pointerType || event.pointerType,
+              pressure: sample.pressure,
+              previous: current.last,
+              next: samplePoint,
+              elapsedMs: sampleTime - current.lastTime,
+              previousPressure,
+              hasRealPressure: current.hasRealPressure,
+            })
+          : { pressure: 0.5, hasRealPressure: current.hasRealPressure };
+        current.hasRealPressure = sampled.hasRealPressure;
+        const pressure = smoothPressure(previousPressure, sampled.pressure);
         if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
           points = [first, [samplePoint[0], samplePoint[1], pressure]];
         } else if (event.shiftKey) {

@@ -179,7 +179,7 @@ npx @tauri-apps/cli build           # MSI/NSIS installer + executable
 | State | Zustand 5 stores (documents, tools, annotations, UI) |
 | PDF read | PDF.js 6 (`pdfjs-dist`) |
 | PDF write | pdf-lib 1.17 |
-| Ink | `perfect-freehand` + custom vector paths |
+| Ink | Local quadratic-ribbon engine (`src/lib/ink.ts`), no ink dependency |
 | Formulas | KaTeX |
 | Build | Vite 8, TypeScript 7 |
 | Tests | Vitest 5 (unit), Playwright/Chromium (headless E2E, run ad hoc) |
