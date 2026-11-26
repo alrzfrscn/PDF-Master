@@ -15,7 +15,7 @@ import {
 import type { DocumentPage, PaperTemplate, DocumentTab, PdfBookmark } from "./types";
 import type { Annotation, FormulaAnnotation, Pt, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, formatDimension } from "./annotationGeometry";
-import { inkPath, markerOpacity, penStyleOptions, polylinePath } from "./ink";
+import { inkPath, markerOpacity, markerPath, penStyleOptions, polylinePath } from "./ink";
 import { layoutText, measureTextWidthMm, TEXT_PADDING_MM, PT_TO_MM } from "./textLayout";
 import { latexToPng } from "./formula";
 import { rasterizeTextAnnotation } from "./raster";
@@ -422,13 +422,12 @@ async function drawAnnotation(context: DrawContext, annotation: Annotation): Pro
       return;
     }
     case "marker": {
-      if (annotation.points.length < 2) return;
-      const path = polylinePath(annotation.points.map(([x, value]) => [x, value] as Pt));
+      const path = markerPath(annotation.points, annotation.thicknessMm, annotation.tipStyle);
+      if (!path) return;
       page.drawSvgPath(path, {
         ...svgOptions,
-        borderColor: hexToRgb(annotation.color),
-        borderWidth: annotation.thicknessMm,
-        borderOpacity: markerOpacity(annotation.opacity),
+        color: hexToRgb(annotation.color),
+        opacity: markerOpacity(annotation.opacity),
       });
       return;
     }

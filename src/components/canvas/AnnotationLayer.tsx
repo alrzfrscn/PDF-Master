@@ -34,7 +34,6 @@ import type {
   FormulaAnnotation,
   InkPoint,
   MarkerAnnotation,
-  MarkerTip,
   PenAnnotation,
   Pt,
   ShapeAnnotation,
@@ -61,6 +60,7 @@ import {
   inkPath,
   isRealPen,
   markerOpacity,
+  markerPath,
   penStyleOptions,
   polylinePath,
   sampleInkPressure,
@@ -212,15 +212,6 @@ function stampArt(stampId: string) {
   return stamp ? { imageUrl: stamp.imageUrl, width: stamp.width, height: stamp.height, name: stamp.name } : null;
 }
 
-/** Marker nib: vertical is a tall band, horizontal a flat one. */
-// shortcut: a nib is approximated by stroke width and cap, upgrade to a shaped outline if tips must be exact.
-function markerNib(tip: MarkerTip | undefined, thicknessMm: number): { width: number; cap: "butt" | "square" | "round" } {
-  if (tip === "horizontal") return { width: Math.max(0.6, thicknessMm * 0.45), cap: "butt" };
-  if (tip === "squared") return { width: thicknessMm, cap: "square" };
-  if (tip === "ball") return { width: thicknessMm, cap: "round" };
-  return { width: thicknessMm, cap: "butt" };
-}
-
 function normalizeFont(name: string | undefined): string {
   const value = (name ?? "").toLowerCase();
   if (value.includes("courier") || value.includes("mono")) return "Courier";
@@ -286,15 +277,11 @@ function AnnotationView({ annotation }: { annotation: Annotation }) {
     );
   }
   if (annotation.type === "marker") {
-    const nib = markerNib(annotation.tipStyle, annotation.thicknessMm);
     return (
-      <polyline
-        points={annotation.points.map(([x, y]) => `${x},${y}`).join(" ")}
-        fill="none"
-        stroke={annotation.color}
-        strokeWidth={nib.width}
-        strokeLinecap={nib.cap}
-        strokeLinejoin="round"
+      <path
+        d={markerPath(annotation.points, annotation.thicknessMm, annotation.tipStyle)}
+        fill={annotation.color}
+        fillRule="nonzero"
         opacity={markerOpacity(annotation.opacity)}
         style={{ mixBlendMode: "multiply" }}
       />
@@ -542,10 +529,7 @@ export function AnnotationLayer({ tabId, page, pageIndex, pageCount, hasPdf, wid
 
   const commitInk = (points: InkPoint[], tool: "pen" | "marker", shift: boolean) => {
     if (points.length < 1) return;
-    // A pen tap stays exactly one point: inkPath draws it as a clean proportional dot.
-    // A marker needs a second point before its polyline nib becomes visible.
-    let final: InkPoint[] =
-      tool === "marker" && points.length === 1 ? [points[0], [points[0][0] + 0.01, points[0][1], points[0][2]]] : points;
+    let final: InkPoint[] = points;
     if (tool === "marker" && (toolProps.straightHighlight || shift)) {
       const first = final[0];
       const last = final[final.length - 1];
@@ -1578,20 +1562,13 @@ export function AnnotationLayer({ tabId, page, pageIndex, pageCount, hasPdf, wid
               opacity={toolProps.opacity}
             />
           ) : (
-            (() => {
-              const nib = markerNib(toolProps.tipStyle, toolProps.thicknessMm);
-              return (
-                <polyline
-                  points={draft.points.map(([x, y]) => `${x},${y}`).join(" ")}
-                  fill="none"
-                  stroke={toolProps.color}
-                  strokeWidth={nib.width}
-                  strokeLinecap={nib.cap}
-                  opacity={markerOpacity(toolProps.opacity)}
-                  style={{ mixBlendMode: "multiply" }}
-                />
-              );
-            })()
+            <path
+              d={markerPath(draft.points, toolProps.thicknessMm, toolProps.tipStyle)}
+              fill={toolProps.color}
+              fillRule="nonzero"
+              opacity={markerOpacity(toolProps.opacity)}
+              style={{ mixBlendMode: "multiply" }}
+            />
           ))}
         {draft?.kind === "shape" && <AnnotationView annotation={draft.shape} />}
         {draft?.kind === "marquee" && (

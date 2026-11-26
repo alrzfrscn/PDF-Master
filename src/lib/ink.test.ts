@@ -5,6 +5,8 @@ import {
   inkOutline,
   inkPath,
   isDotStroke,
+  markerNibSize,
+  markerPath,
   penStyleOptions,
   pressureFromVelocity,
   sampleInkPressure,
@@ -165,5 +167,108 @@ describe("stylus lift pressure", () => {
   it("keeps simulated mouse pressure inside the balanced band", () => {
     expect(pressureFromVelocity([0, 0], [10, 0], 1, 0.5)).toBeCloseTo(0.35);
     expect(pressureFromVelocity([0, 0], [0.01, 0], 1000, 0.5)).toBeCloseTo(0.72);
+  });
+});
+
+function markerSubpaths(path: string): string[] {
+  return path
+    .split("M ")
+    .filter(Boolean)
+    .map((part) => `M ${part.trim()}`);
+}
+
+function vertices(path: string): number[][] {
+  return (path.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number).reduce<number[][]>((pairs, value, index, all) => {
+    if (index % 2 === 0) pairs.push([value, all[index + 1]]);
+    return pairs;
+  }, []);
+}
+
+function signedArea(polygon: number[][]): number {
+  let sum = 0;
+  for (let index = 0; index < polygon.length; index += 1) {
+    const [x1, y1] = polygon[index];
+    const [x2, y2] = polygon[(index + 1) % polygon.length];
+    sum += x1 * y2 - x2 * y1;
+  }
+  return sum / 2;
+}
+
+describe("chisel marker nibs", () => {
+  const tips = ["vertical", "horizontal", "squared"] as const;
+
+  it("defines upright nib extents that never depend on stroke direction", () => {
+    expect(markerNibSize("vertical", 10).halfW).toBeCloseTo(1.4);
+    expect(markerNibSize("vertical", 10).halfH).toBeCloseTo(5);
+    expect(markerNibSize("horizontal", 10).halfW).toBeCloseTo(5);
+    expect(markerNibSize("horizontal", 10).halfH).toBeCloseTo(1.4);
+    expect(markerNibSize("squared", 10)).toEqual({ halfW: 5, halfH: 5 });
+    expect(markerNibSize("ball", 10)).toEqual({ halfW: 5, halfH: 5 });
+  });
+
+  it("delegates the ball tip to the fixed-width round ribbon", () => {
+    const points: InkPoint[] = [
+      [0, 0, 0.5],
+      [10, 4, 0.7],
+      [20, 0, 0.3],
+    ];
+    expect(markerPath(points, 6, "ball")).toBe(inkPath(points, 6, { thinning: 0 }));
+  });
+
+  it("draws a single tap as an exact upright rectangle", () => {
+    for (const tip of tips) {
+      const nib = markerNibSize(tip, 10);
+      const parts = markerSubpaths(markerPath([[10, 20, 0.5]], 10, tip));
+      expect(parts).toHaveLength(1);
+      const corners = vertices(parts[0]);
+      expect(corners).toHaveLength(4);
+      expect(Math.min(...corners.map(([x]) => x))).toBeCloseTo(10 - nib.halfW, 6);
+      expect(Math.max(...corners.map(([x]) => x))).toBeCloseTo(10 + nib.halfW, 6);
+      expect(Math.min(...corners.map(([, y]) => y))).toBeCloseTo(20 - nib.halfH, 6);
+      expect(Math.max(...corners.map(([, y]) => y))).toBeCloseTo(20 + nib.halfH, 6);
+    }
+  });
+
+  it("keeps every vertex inside the exact upright nib band", () => {
+    const { halfW, halfH } = markerNibSize("vertical", 10);
+    const path = markerPath(
+      [
+        [10, 20, 0.5],
+        [40, 20, 0.5],
+      ],
+      10,
+      "vertical",
+    );
+    const all = vertices(path);
+    expect(all.length).toBeGreaterThan(8);
+    for (const [x, y] of all) {
+      expect(x).toBeGreaterThanOrEqual(10 - halfW - 1e-6);
+      expect(x).toBeLessThanOrEqual(40 + halfW + 1e-6);
+      expect(y).toBeGreaterThanOrEqual(20 - halfH - 1e-6);
+      expect(y).toBeLessThanOrEqual(20 + halfH + 1e-6);
+    }
+    expect(Math.max(...all.map(([, y]) => y))).toBeCloseTo(20 + halfH, 6);
+    expect(Math.min(...all.map(([, y]) => y))).toBeCloseTo(20 - halfH, 6);
+  });
+
+  it("never moves earlier sub-paths when points are appended", () => {
+    const curve: InkPoint[] = Array.from({ length: 12 }, (_, index) => [index * 20, 0.4 * index * index, 0.55]);
+    for (const tip of tips) {
+      const short = markerSubpaths(markerPath(curve.slice(0, 8), 10, tip));
+      const long = markerSubpaths(markerPath(curve, 10, tip));
+      // Only the final quadratic segment changes, and it emits at most 16 hulls.
+      const stable = short.length - 16;
+      expect(stable).toBeGreaterThan(0);
+      for (let index = 0; index < stable; index += 1) expect(long[index]).toBe(short[index]);
+    }
+  });
+
+  it("winds every swept hull clockwise for nonzero fill", () => {
+    const curve: InkPoint[] = Array.from({ length: 10 }, (_, index) => [index * 6, Math.sin(index) * 8, 0.5]);
+    for (const tip of tips) {
+      const parts = markerSubpaths(markerPath(curve, 8, tip));
+      expect(parts.length).toBeGreaterThan(4);
+      for (const part of parts) expect(signedArea(vertices(part))).toBeGreaterThan(0);
+    }
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FormulaAnnotation, InkPoint, TextAnnotation } from "./annotationTypes";
+import type { FormulaAnnotation, InkPoint, MarkerAnnotation, TextAnnotation } from "./annotationTypes";
 import { annotationBounds, hitTest, regularPolygonPoints, rotateAnnotation, scaleAnnotation, subtractEraser } from "./annotationGeometry";
 
 const text: TextAnnotation = {
@@ -138,5 +138,46 @@ describe("split eraser", () => {
 
   it("removes a stroke swallowed by the eraser", () => {
     expect(subtractEraser([[-1, 0, 0.5], [1, 0, 0.5]], [0, 0], 5)).toEqual([]);
+  });
+});
+
+describe("chisel marker geometry", () => {
+  const marker: MarkerAnnotation = {
+    id: "marker-1",
+    type: "marker",
+    points: [
+      [10, 20, 0.5],
+      [40, 20, 0.5],
+    ],
+    color: "#ffe14d",
+    thicknessMm: 10,
+    opacity: 0.6,
+    tipStyle: "vertical",
+  };
+
+  it("bounds the exact upright nib, not a round pen band", () => {
+    const bounds = annotationBounds(marker);
+    expect(bounds.x).toBeCloseTo(10 - 1.4);
+    expect(bounds.y).toBeCloseTo(20 - 5);
+    expect(bounds.width).toBeCloseTo(30 + 2.8);
+    expect(bounds.height).toBeCloseTo(10);
+
+    const flat = annotationBounds({ ...marker, tipStyle: "horizontal" });
+    expect(flat.y).toBeCloseTo(20 - 1.4);
+    expect(flat.height).toBeCloseTo(2.8);
+    expect(flat.x).toBeCloseTo(10 - 5);
+  });
+
+  it("hit-tests the tall vertical band and misses above it", () => {
+    expect(hitTest(marker, [25, 24.9], 0)).toBe(true);
+    expect(hitTest(marker, [25, 25.1], 0)).toBe(false);
+    expect(hitTest(marker, [8.5, 20], 0)).toBe(false);
+    expect(hitTest(marker, [8.7, 20], 0)).toBe(true);
+  });
+
+  it("hit-tests a single marker tap as its upright nib", () => {
+    const tap = { ...marker, points: [[10, 20, 0.5]] as InkPoint[] };
+    expect(hitTest(tap, [11, 24], 0)).toBe(true);
+    expect(hitTest(tap, [12, 20], 0)).toBe(false);
   });
 });

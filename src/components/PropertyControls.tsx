@@ -1,7 +1,7 @@
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { SHAPE_LABEL, type DimensionUnit, type MarkerTip, type TextAlign } from "../lib/annotationTypes";
 import { ARROW_HEADS, SWATCHES } from "../lib/presets";
-import { inkPath, markerOpacity, penStyleOptions } from "../lib/ink";
+import { inkPath, markerOpacity, markerPath, penStyleOptions } from "../lib/ink";
 import type { InkPoint, PenStyle } from "../lib/annotationTypes";
 import { isShapeTool, SHAPE_TOOLS } from "../lib/tools";
 import type { LineStyleName, ShapeTool, ToolId, ToolProps } from "../lib/types";
@@ -104,33 +104,30 @@ function previewNib(tool: ToolId, thicknessMm: number) {
 }
 
 /** Highlighter preview nib: 3 px at the thinnest marker, 12 px at the widest. */
-function markerPreviewWidth(thicknessMm: number, tip: MarkerTip): number {
-  const band = Math.min(12, Math.max(3, 3 + ((thicknessMm - 2) / 30) * 9));
-  return tip === "horizontal" ? Math.max(3, band * 0.55) : band;
-}
-
-/** Live ink preview: colour, nib, opacity and stroke style update as you type. */
 function WavePreview({ tool, props }: { tool: ToolId; props: ToolProps }) {
   const path = useMemo(
     () => strokePreview(props.penStyle, props.pressureLevel, previewNib(tool, props.thicknessMm)),
     [props, tool],
   );
   const tip = props.tipStyle ?? "vertical";
+  const marker = useMemo(
+    () => markerPath(WAVE_POINTS, previewNib("marker", props.thicknessMm), tip),
+    [props.thicknessMm, tip],
+  );
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-[var(--border)]"
       style={{ height: 68, background: "linear-gradient(180deg, var(--glass-strong), var(--panel))" }}
     >
       <svg viewBox="0 0 320 72" className="h-full w-full" aria-hidden="true">
+        {/* Light paper backing keeps multiply highlights true-to-colour in Dark mode. */}
+        <rect width="320" height="72" fill="#fffdf7" />
         <line x1="6" y1="36" x2="314" y2="36" stroke="var(--border)" strokeDasharray="2 4" />
         {tool === "marker" ? (
-          <polyline
-            points={WAVE_POINTS.map(([x, y]) => `${x},${y}`).join(" ")}
-            fill="none"
-            stroke={props.color}
-            strokeWidth={markerPreviewWidth(props.thicknessMm, tip)}
-            strokeLinecap={tip === "squared" ? "square" : tip === "ball" ? "round" : "butt"}
-            strokeLinejoin="round"
+          <path
+            d={marker}
+            fill={props.color}
+            fillRule="nonzero"
             opacity={markerOpacity(props.opacity)}
             style={{ mixBlendMode: "multiply" }}
           />

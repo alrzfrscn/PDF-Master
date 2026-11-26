@@ -1,4 +1,4 @@
-import type { InkPoint, PenStyle, Pt } from "./annotationTypes";
+import type { InkPoint, MarkerTip, PenStyle, Pt } from "./annotationTypes";
 
 export interface InkOutlineOptions {
   /** Kept for API compatibility: the local engine needs no simulated pressure. */
@@ -266,12 +266,15 @@ export function inkOutline(points: InkPoint[], thicknessMm: number, options: Ink
   return ribbonOutline(buildSpine(buildSegments(clean), thicknessMm), thicknessMm, thinning);
 }
 
+function roundMm(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
 function outlineToPath(outline: number[][]): string {
   if (outline.length === 0) return "";
-  const round = (value: number) => Math.round(value * 1000) / 1000;
-  const parts = [`M ${round(outline[0][0])} ${round(outline[0][1])}`];
+  const parts = [`M ${roundMm(outline[0][0])} ${roundMm(outline[0][1])}`];
   for (let index = 1; index < outline.length; index += 1) {
-    parts.push(`L ${round(outline[index][0])} ${round(outline[index][1])}`);
+    parts.push(`L ${roundMm(outline[index][0])} ${roundMm(outline[index][1])}`);
   }
   parts.push("Z");
   return parts.join(" ");
@@ -304,6 +307,100 @@ function dotPath(point: readonly number[], thicknessMm: number): string {
 export function inkPath(points: InkPoint[], thicknessMm: number, options: InkOutlineOptions = {}): string {
   if (isDotStroke(points)) return dotPath(points[0], thicknessMm);
   return outlineToPath(inkOutline(points, thicknessMm, options));
+}
+
+/**
+ * Fixed upright nib half-extents. A chisel never rotates with the hand: the
+ * nib is always axis-aligned, so only the swept rectangle changes.
+ */
+export function markerNibSize(tipStyle: MarkerTip = "vertical", thicknessMm: number): { halfW: number; halfH: number } {
+  const thickness = Math.max(0, thicknessMm);
+  if (tipStyle === "horizontal") return { halfW: Math.max(0.25, thickness * 0.5), halfH: Math.max(0.25, thickness * 0.14) };
+  if (tipStyle === "vertical") return { halfW: Math.max(0.25, thickness * 0.14), halfH: Math.max(0.25, thickness * 0.5) };
+  return { halfW: Math.max(0.25, thickness * 0.5), halfH: Math.max(0.25, thickness * 0.5) };
+}
+
+function uprightRectPath(cx: number, cy: number, halfW: number, halfH: number): string {
+  return [
+    `M ${roundMm(cx - halfW)} ${roundMm(cy - halfH)}`,
+    `L ${roundMm(cx + halfW)} ${roundMm(cy - halfH)}`,
+    `L ${roundMm(cx + halfW)} ${roundMm(cy + halfH)}`,
+    `L ${roundMm(cx - halfW)} ${roundMm(cy + halfH)}`,
+    "Z",
+  ].join(" ");
+}
+
+/** Clockwise convex hull of an upright nib swept from A to B (SVG y-down). */
+function sweptRectPath(a: Pt, b: Pt, halfW: number, halfH: number): string {
+  const [ax, ay] = a;
+  const [bx, by] = b;
+  const dx = bx - ax;
+  const dy = by - ay;
+  let corners: number[][];
+  if (dx >= 0 && dy >= 0) {
+    corners = [
+      [ax - halfW, ay - halfH],
+      [ax + halfW, ay - halfH],
+      [bx + halfW, by - halfH],
+      [bx + halfW, by + halfH],
+      [bx - halfW, by + halfH],
+      [ax - halfW, ay + halfH],
+    ];
+  } else if (dx >= 0) {
+    corners = [
+      [ax - halfW, ay - halfH],
+      [bx - halfW, by - halfH],
+      [bx + halfW, by - halfH],
+      [bx + halfW, by + halfH],
+      [ax + halfW, ay + halfH],
+      [ax - halfW, ay + halfH],
+    ];
+  } else if (dy >= 0) {
+    corners = [
+      [bx - halfW, by - halfH],
+      [ax - halfW, ay - halfH],
+      [ax + halfW, ay - halfH],
+      [ax + halfW, ay + halfH],
+      [bx + halfW, by + halfH],
+      [bx - halfW, by + halfH],
+    ];
+  } else {
+    corners = [
+      [bx - halfW, by - halfH],
+      [bx + halfW, by - halfH],
+      [ax + halfW, ay - halfH],
+      [ax + halfW, ay + halfH],
+      [ax - halfW, ay + halfH],
+      [bx - halfW, by + halfH],
+    ];
+  }
+  return corners
+    .map(([x, y], index) => `${index === 0 ? "M" : "L"} ${roundMm(x)} ${roundMm(y)}`)
+    .concat("Z")
+    .join(" ");
+}
+
+/**
+ * Highlighter geometry as one nonzero-fill path. Every swept upright nib is a
+ * clockwise sub-path, so overlaps merge into a single uniform-opacity area.
+ */
+export function markerPath(points: InkPoint[], thicknessMm: number, tipStyle: MarkerTip = "vertical"): string {
+  if (tipStyle === "ball") return inkPath(points, thicknessMm, { thinning: 0 });
+  const clean = dedupe(points);
+  if (clean.length === 0) return "";
+  const { halfW, halfH } = markerNibSize(tipStyle, thicknessMm);
+  if (clean.length === 1 || polylineLength(clean) < MIN_STROKE_MM) {
+    return uprightRectPath(clean[0][0], clean[0][1], halfW, halfH);
+  }
+  const spine = buildSpine(buildSegments(clean), thicknessMm);
+  const parts: string[] = [];
+  for (let index = 1; index < spine.length; index += 1) {
+    const previous = spine[index - 1];
+    const current = spine[index];
+    if (Math.hypot(current.x - previous.x, current.y - previous.y) < 1e-4) continue;
+    parts.push(sweptRectPath([previous.x, previous.y], [current.x, current.y], halfW, halfH));
+  }
+  return parts.join(" ");
 }
 
 export function polylinePath(points: Pt[], closed = false): string {

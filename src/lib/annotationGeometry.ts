@@ -1,4 +1,5 @@
 import type { Annotation, BBox, InkPoint, Pt } from "./annotationTypes";
+import { markerNibSize } from "./ink";
 
 const RAD = Math.PI / 180;
 
@@ -78,8 +79,12 @@ export function boxCorners(xMm: number, yMm: number, widthMm: number, heightMm: 
 export function annotationBounds(annotation: Annotation): BBox {
   switch (annotation.type) {
     case "pen":
-    case "marker":
       return inflate(pointsBounds(annotation.points.map(([x, y]) => [x, y] as Pt)), annotation.thicknessMm / 2);
+    case "marker": {
+      const nib = markerNibSize(annotation.tipStyle, annotation.thicknessMm);
+      const box = pointsBounds(annotation.points.map(([x, y]) => [x, y] as Pt));
+      return { x: box.x - nib.halfW, y: box.y - nib.halfH, width: box.width + nib.halfW * 2, height: box.height + nib.halfH * 2 };
+    }
     case "shape":
       return inflate(
         pointsBounds([annotation.start, annotation.end, ...annotation.points]),
@@ -132,13 +137,42 @@ export function pointInPolygon(point: Pt, polygon: Pt[]): boolean {
   return inside;
 }
 
+/** True when `p` lies inside the upright nib swept along segment A→B. */
+function withinSweptRect(p: Pt, a: Pt, b: Pt, halfW: number, halfH: number): boolean {
+  const axisRange = (value: number, start: number, delta: number, half: number): [number, number] => {
+    if (Math.abs(delta) < 1e-9) return Math.abs(value - start) <= half ? [0, 1] : [1, 0];
+    const first = (value - half - start) / delta;
+    const second = (value + half - start) / delta;
+    return [Math.min(first, second), Math.max(first, second)];
+  };
+  const [x0, x1] = axisRange(p[0], a[0], b[0] - a[0], halfW);
+  const [y0, y1] = axisRange(p[1], a[1], b[1] - a[1], halfH);
+  return Math.max(x0, y0, 0) <= Math.min(x1, y1, 1);
+}
+
 /** True when a pointer at `p` is close enough to grab the annotation. */
 export function hitTest(annotation: Annotation, p: Pt, toleranceMm = 1.4): boolean {
   if (annotation.hidden) return false;
   switch (annotation.type) {
     case "pen":
-    case "marker":
       return distanceToInk(annotation.points, p) <= annotation.thicknessMm / 2 + toleranceMm;
+    case "marker": {
+      if (annotation.tipStyle === "ball") {
+        return distanceToInk(annotation.points, p) <= annotation.thicknessMm / 2 + toleranceMm;
+      }
+      const nib = markerNibSize(annotation.tipStyle, annotation.thicknessMm);
+      const halfW = nib.halfW + toleranceMm;
+      const halfH = nib.halfH + toleranceMm;
+      if (annotation.points.length === 1) {
+        return Math.abs(p[0] - annotation.points[0][0]) <= halfW && Math.abs(p[1] - annotation.points[0][1]) <= halfH;
+      }
+      for (let index = 1; index < annotation.points.length; index += 1) {
+        const previous = annotation.points[index - 1];
+        const current = annotation.points[index];
+        if (withinSweptRect(p, [previous[0], previous[1]], [current[0], current[1]], halfW, halfH)) return true;
+      }
+      return false;
+    }
     case "shape": {
       const reach = annotation.lineWidthMm / 2 + toleranceMm;
       const vertices = [annotation.start, annotation.end, ...annotation.points];

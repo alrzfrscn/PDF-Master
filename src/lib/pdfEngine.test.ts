@@ -10,7 +10,7 @@ import {
   mergeSidecarPages,
   type PdfExportInput,
 } from "./pdfEngine";
-import type { FormulaAnnotation, ShapeAnnotation, StampAnnotation, TextAnnotation } from "./annotationTypes";
+import type { FormulaAnnotation, MarkerAnnotation, ShapeAnnotation, StampAnnotation, TextAnnotation } from "./annotationTypes";
 import type { DocumentPage, DocumentTab } from "./types";
 
 const PNG =
@@ -169,6 +169,85 @@ describe("PDF engine", () => {
     const scales = [...operators.matchAll(/(-?[\d.]+) 0 0 (-?[\d.]+) /g)].map((match) => [Number(match[1]), Number(match[2])]);
     expect(scales.some(([width, height]) => width < 0 && height < 0)).toBe(true);
     expect(await loadSidecar(bytes)).toBeNull();
+  });
+
+  it("flattens all four highlighter tips as one nonzero fill each", async () => {
+    const tips = ["vertical", "horizontal", "squared", "ball"] as const;
+    const markers: MarkerAnnotation[] = tips.map((tipStyle, index) => ({
+      id: `marker-${tipStyle}`,
+      type: "marker",
+      points: [
+        [20, 40 + index * 40, 0.5],
+        [80, 40 + index * 40, 0.5],
+      ],
+      color: "#ffe14d",
+      thicknessMm: 10,
+      opacity: 0.6,
+      tipStyle,
+    }));
+    const bytes = await exportPdf({
+      title: "Highlighters",
+      mode: "flattened",
+      pages: [
+        {
+          templateId: "marker-test",
+          landscape: false,
+          rotation: 0,
+          widthMm: 210,
+          heightMm: 297,
+          annotations: markers,
+        },
+      ],
+    });
+    const pdf = await PDFDocument.load(bytes);
+    const raw = pdf.getPage(0).node.Contents() as never;
+    const first = (pdf.context.lookup(raw) as unknown as { array?: unknown[] }).array?.[0] ?? raw;
+    const contents = pdf.context.lookup(first as never) as unknown as { asUint8Array: () => Uint8Array };
+    const decoded = new Blob([contents.asUint8Array() as unknown as BlobPart])
+      .stream()
+      .pipeThrough(new DecompressionStream("deflate"));
+    const lines = (await new Response(decoded).text())
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    // One `f` per marker, not one per swept sub-path, so overlaps stay uniform.
+    expect(lines.filter((line) => line === "f")).toHaveLength(4);
+    expect(lines.filter((line) => line === "S")).toHaveLength(0);
+    expect(lines.filter((line) => line === "h").length).toBeGreaterThan(8);
+  });
+
+  it("keeps all four highlighter tip styles in the sidecar", async () => {
+    const tips = ["vertical", "horizontal", "squared", "ball"] as const;
+    const annotations: MarkerAnnotation[] = tips.map((tipStyle, index) => ({
+      id: `marker-${tipStyle}`,
+      type: "marker",
+      points: [
+        [20, 40 + index * 30, 0.5],
+        [80, 40 + index * 30, 0.5],
+      ],
+      color: "#ffe14d",
+      thicknessMm: 8,
+      opacity: 0.6,
+      tipStyle,
+    }));
+    const bytes = await exportPdf({
+      title: "Highlighter sidecar",
+      mode: "editable",
+      pages: [
+        {
+          templateId: "paper-000",
+          landscape: false,
+          rotation: 0,
+          widthMm: 210,
+          heightMm: 297,
+          annotations,
+        },
+      ],
+    });
+    const sidecar = await loadSidecar(bytes);
+    expect(sidecar?.pages[0].annotations.map((annotation) => (annotation.type === "marker" ? annotation.tipStyle : null))).toEqual(
+      tips,
+    );
   });
 
   it("never bakes annotations into an editable export", async () => {
