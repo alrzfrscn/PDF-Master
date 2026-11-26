@@ -44,8 +44,11 @@ interface UIState {
   separateCoverPage: boolean;
   gridStyle: GridStyle;
   searchOpen: boolean;
+  /** The Pages drawer shrinks to a narrow thumbnail strip. */
+  pagesCompactMode: boolean;
   setViewMode: (mode: ViewMode) => void;
   toggleSeparateCoverPage: () => void;
+  togglePagesCompactMode: () => void;
   setGridStyle: (style: GridStyle) => void;
   setSearchOpen: (open: boolean) => void;
   setEraserSplit: (split: boolean) => void;
@@ -98,8 +101,10 @@ export const useUIStore = create<UIState>((set) => ({
   separateCoverPage: false,
   gridStyle: "none",
   searchOpen: false,
+  pagesCompactMode: false,
   setViewMode: (viewMode) => set({ viewMode }),
   toggleSeparateCoverPage: () => set((state) => ({ separateCoverPage: !state.separateCoverPage })),
+  togglePagesCompactMode: () => set((state) => ({ pagesCompactMode: !state.pagesCompactMode })),
   setGridStyle: (gridStyle) => set({ gridStyle }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
   setEraserSplit: (eraserSplit) => set({ eraserSplit }),

@@ -25,14 +25,19 @@ export const PdfBackground = memo(function PdfBackground({ page, widthMm, height
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
-      // A page scrolled out of view keeps no full-size backing buffer.
-      const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.width = 0;
-        canvas.height = 0;
-      }
     };
   }, [page.url, page.pageNumber, widthMm, heightMm, renderQuality]);
+
+  // Only an unmount frees the backing buffer: doing it per render would clear
+  // the visible bitmap and flash the page white while the next raster is drawn.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    return () => {
+      if (!canvas) return;
+      canvas.width = 0;
+      canvas.height = 0;
+    };
+  }, []);
 
   // CSS size always follows the .page-paper box; only the raster resolution is quantised.
   return <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full" aria-label={`PDF page ${page.pageNumber}`} />;

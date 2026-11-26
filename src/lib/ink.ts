@@ -7,18 +7,26 @@ export interface InkOutlineOptions {
   thinning?: number;
   smoothing?: number;
   streamline?: number;
+  /** Which calibrated width response to use; absent falls back to `thinning`. */
+  penStyle?: PenStyle;
+  /** The Ink Pressure slider, 0..100. */
+  pressureLevel?: number;
 }
 
-type PenStyleOptions = Required<Pick<InkOutlineOptions, "thinning" | "smoothing" | "streamline" | "simulatePressure">>;
+type PenStyleOptions = Required<Pick<InkOutlineOptions, "thinning" | "smoothing" | "streamline" | "simulatePressure">> &
+  Pick<InkOutlineOptions, "penStyle" | "pressureLevel">;
 
 /** Style presets: Basic is a fixed nib, Pro and Calligraphy follow pressure. */
 export function penStyleOptions(style: PenStyle = "pro", pressureLevel = 55): PenStyleOptions {
-  const level = Math.min(100, Math.max(0, pressureLevel)) / 100;
+  const clamped = Math.min(100, Math.max(0, pressureLevel));
+  const level = clamped / 100;
   return {
     thinning: style === "basic" ? 0 : (style === "calligraphy" ? 0.65 : 0.45) * level,
     smoothing: style === "basic" ? 0.3 : style === "calligraphy" ? 0.45 : 0.38,
     streamline: style === "basic" ? 0.2 : style === "calligraphy" ? 0.35 : 0.28,
     simulatePressure: style !== "basic",
+    penStyle: style,
+    pressureLevel: clamped,
   };
 }
 
@@ -73,13 +81,29 @@ function baseRadius(thicknessMm: number): number {
   return Math.max(0.02, thicknessMm / 2);
 }
 
+/**
+ * Calibrated width response, as a multiplier of the pen's half-width.
+ * `p = 0.45` is a normal press (about 1×), a feather touch is a hairline and a
+ * firm press is bold; the slider scales the whole range around 1×.
+ */
+export function pressureWidthMultiplier(pressure: number, style: PenStyle, pressureLevel: number): number {
+  if (style === "basic") return 1;
+  const level = Math.min(1, Math.max(0, pressureLevel / 100));
+  const p = Math.min(1, Math.max(0.02, pressure));
+  const full =
+    style === "calligraphy" ? 0.16 + 2.04 * Math.pow(p, 0.88) : 0.25 + 1.65 * Math.pow(p, 0.82);
+  return 1 + level * (full - 1);
+}
+
 /** Pressure 0..1 to nib radius, in millimetres. Never jumps, never blobs. */
-function radiusForPressure(pressure: number, thicknessMm: number, thinning: number): number {
+function radiusForPressure(pressure: number, thicknessMm: number, options: InkOutlineOptions): number {
   const baseR = baseRadius(thicknessMm);
+  if (options.penStyle) return baseR * pressureWidthMultiplier(pressure, options.penStyle, options.pressureLevel ?? 55);
+  const thinning = options.thinning ?? 0.45;
   if (thinning <= 0) return baseR;
-  const p = Math.min(1, Math.max(0.05, pressure));
-  const r = baseR * (1 - thinning * 0.75 + thinning * 1.15 * p);
-  return Math.min(baseR * 1.25, Math.max(baseR * 0.22, r));
+  // An explicit thinning with no style keeps the legacy calibrated response.
+  const p = Math.min(1, Math.max(0.02, pressure));
+  return baseR * (1 + thinning * (0.25 + 1.65 * Math.pow(p, 0.82) - 1));
 }
 
 function dedupe(points: InkPoint[]): InkPoint[] {
@@ -183,9 +207,9 @@ function arc(center: Pt, radius: number, from: number, sweep: number, steps: num
  * Tangent-aligned left/right ribbon with analytic round caps and a small
  * circular join on the outer side of sharp corners.
  */
-function ribbonOutline(samples: Sample[], thicknessMm: number, thinning: number): number[][] {
+function ribbonOutline(samples: Sample[], thicknessMm: number, options: InkOutlineOptions): number[][] {
   const count = samples.length;
-  const radii = samples.map((sample) => radiusForPressure(sample.p, thicknessMm, thinning));
+  const radii = samples.map((sample) => radiusForPressure(sample.p, thicknessMm, options));
   const tangents: Pt[] = [];
   for (let index = 0; index < count; index += 1) {
     if (index === 0) {
@@ -259,11 +283,10 @@ function circleOutline(cx: number, cy: number, radius: number): number[][] {
 export function inkOutline(points: InkPoint[], thicknessMm: number, options: InkOutlineOptions = {}): number[][] {
   const clean = dedupe(points);
   if (clean.length === 0) return [];
-  const thinning = options.thinning ?? 0.45;
   if (clean.length === 1 || polylineLength(clean) < MIN_STROKE_MM) {
-    return circleOutline(clean[0][0], clean[0][1], radiusForPressure(clean[0][2], thicknessMm, thinning));
+    return circleOutline(clean[0][0], clean[0][1], radiusForPressure(clean[0][2], thicknessMm, options));
   }
-  return ribbonOutline(buildSpine(buildSegments(clean), thicknessMm), thicknessMm, thinning);
+  return ribbonOutline(buildSpine(buildSegments(clean), thicknessMm), thicknessMm, options);
 }
 
 function roundMm(value: number): number {
@@ -472,11 +495,14 @@ export function sampleInkPressure(sample: InkPressureSample): { pressure: number
  * inside a safe band; mouse and touch start at a neutral half-width.
  */
 export function initialInkPressure(pointerType: string, pressure: number): number {
-  if (isRealPen(pointerType, pressure)) return Math.min(0.8, Math.max(0.25, pressure));
+  if (isRealPen(pointerType, pressure)) return Math.min(0.95, Math.max(0.15, pressure));
   return 0.5;
 }
 
-/** Gentle exponential smoothing so width changes never show as lumps. */
-export function smoothPressure(previous: number, target: number): number {
-  return previous * 0.65 + target * 0.35;
+/**
+ * Exponential smoothing so width changes never show as lumps. A real stylus
+ * gets a light touch so a firm press widens the stroke immediately.
+ */
+export function smoothPressure(previous: number, target: number, hasRealPressure = false): number {
+  return hasRealPressure ? previous * 0.25 + target * 0.75 : previous * 0.65 + target * 0.35;
 }

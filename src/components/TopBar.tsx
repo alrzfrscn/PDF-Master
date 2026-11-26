@@ -31,16 +31,19 @@ function FileAction({
   shortcut,
   icon,
   onClick,
+  disabled = false,
 }: {
   label: string;
   shortcut?: string;
   icon: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[11.5px] hover:bg-[var(--hover)]"
+      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[11.5px] hover:bg-[var(--hover)] disabled:pointer-events-none disabled:opacity-40"
+      disabled={disabled}
       onClick={onClick}
     >
       <span className="text-muted">{icon}</span>
@@ -56,7 +59,8 @@ function PagePill() {
   const page = useDocStore((state) => state.page);
   const setPage = useDocStore((state) => state.setPage);
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
-  const count = tab?.pages.length ?? 1;
+  if (!tab) return null;
+  const count = tab.pages.length;
   const current = Math.min(Math.max(1, page), count);
 
   return (
@@ -93,6 +97,7 @@ export function TopBar() {
   const setSettingsOpen = useUIStore((state) => state.setSettingsOpen);
   const saving = useUIStore((state) => state.saving);
   const setToast = useUIStore((state) => state.setToast);
+  const hasTab = tabs.length > 0;
 
   const [filesOpen, setFilesOpen] = useState(false);
   const [combineOpen, setCombineOpen] = useState(false);
@@ -226,6 +231,7 @@ export function TopBar() {
                 label="Save"
                 shortcut="Ctrl+S"
                 icon={<Save size={13} />}
+                disabled={!hasTab}
                 onClick={() => {
                   setFilesOpen(false);
                   void saveActiveDocument("editable");
@@ -234,6 +240,7 @@ export function TopBar() {
               <FileAction
                 label="Save As..."
                 icon={<Save size={13} />}
+                disabled={!hasTab}
                 onClick={() => {
                   setFilesOpen(false);
                   void saveActiveDocument("editable", true);
@@ -242,6 +249,7 @@ export function TopBar() {
               <FileAction
                 label="Save Flattened PDF..."
                 icon={<FileDown size={13} />}
+                disabled={!hasTab}
                 onClick={() => {
                   setFilesOpen(false);
                   void saveActiveDocument("flattened");
@@ -252,6 +260,7 @@ export function TopBar() {
                 label="Print..."
                 shortcut="Ctrl+P"
                 icon={<Printer size={13} />}
+                disabled={!hasTab}
                 onClick={() => {
                   setFilesOpen(false);
                   void printActiveDocument();
@@ -260,6 +269,7 @@ export function TopBar() {
               <FileAction
                 label="Print Current Page"
                 icon={<Printer size={13} />}
+                disabled={!hasTab}
                 onClick={() => {
                   setFilesOpen(false);
                   window.print();
@@ -327,20 +337,24 @@ export function TopBar() {
           <button
             type="button"
             className="icon-btn h-8 w-8 shrink-0"
-            aria-label="New document"
-            title="New document"
-            onClick={() => setNewDocOpen(true)}
+            aria-label="Open PDF file(s)"
+            title="Open PDF file(s)..."
+            onClick={() => document.getElementById("pm-pdf-input")?.click()}
           >
             <Plus size={16} strokeWidth={1.75} />
           </button>
         </div>
 
-        <div className="hidden sm:block">
-          <PagePill />
-        </div>
-        <div className="hidden md:block">
-          <ZoomPill />
-        </div>
+        {hasTab && (
+          <div className="hidden sm:block">
+            <PagePill />
+          </div>
+        )}
+        {hasTab && (
+          <div className="hidden md:block">
+            <ZoomPill />
+          </div>
+        )}
 
         <div className="mx-0.5 hidden h-7 w-px bg-[var(--border)] sm:block" />
 
@@ -349,6 +363,7 @@ export function TopBar() {
           className="icon-btn hidden sm:grid"
           aria-label="Undo"
           title="Undo (Ctrl+Z)"
+          disabled={!hasTab}
           onClick={() => useDocStore.getState().undo()}
         >
           <Undo2 size={16} strokeWidth={1.75} />
@@ -358,6 +373,7 @@ export function TopBar() {
           className="icon-btn hidden sm:grid"
           aria-label="Redo"
           title="Redo (Ctrl+Y)"
+          disabled={!hasTab}
           onClick={() => useDocStore.getState().redo()}
         >
           <Redo2 size={16} strokeWidth={1.75} />
@@ -367,7 +383,7 @@ export function TopBar() {
           className="icon-btn hidden sm:grid"
           aria-label="Save editable PDF"
           title="Save as PDF with editable annotations (Ctrl+S)"
-          disabled={saving}
+          disabled={!hasTab || saving}
           onClick={() => void saveActiveDocument("editable")}
         >
           <Save size={16} strokeWidth={1.75} />
@@ -377,6 +393,7 @@ export function TopBar() {
           className="icon-btn hidden sm:grid"
           aria-label="Presentation mode"
           title="Presentation mode"
+          disabled={!hasTab}
           onClick={() => setPresentation(true)}
         >
           <Play size={15} strokeWidth={1.75} />

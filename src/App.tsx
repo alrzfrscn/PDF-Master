@@ -39,6 +39,29 @@ function isTyping(target: EventTarget | null): boolean {
   );
 }
 
+/** Shortcuts that need an open document; on the welcome screen they do nothing. */
+const DOCUMENT_ACTIONS = new Set([
+  "save",
+  "print",
+  "undo",
+  "redo",
+  "copy",
+  "cut",
+  "paste",
+  "duplicate",
+  "select-all",
+  "group",
+  "ungroup",
+  "search",
+  "fit-page",
+  "view-one-page",
+  "view-one-continuous",
+  "view-two-continuous",
+  "view-two-page",
+  "toggle-cover-page",
+  "presentation",
+]);
+
 /** The desktop shell bridge, present only when this page runs inside Tauri. */
 function tauriBridge(): { invoke?: (command: string) => Promise<unknown> } | undefined {
   return (window as unknown as {
@@ -197,12 +220,26 @@ export default function App() {
     return () => window.removeEventListener("paste", onPaste);
   }, []);
 
+  // WebView2 claims Ctrl/⌘ +/-/0 for its own UI scaling before the app sees it.
+  // Capture the keys, stop the default zoom, and let the app's shortcuts run.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      const zoomKey = ["+", "=", "-", "_", "0"].includes(event.key) ||
+        ["Equal", "Minus", "NumpadAdd", "NumpadSubtract", "Digit0", "Numpad0"].includes(event.code);
+      if (zoomKey) event.preventDefault();
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTyping(event.target)) return;
       const annotations = useAnnotationStore.getState();
       const pressed = bindingFromEvent(event);
       const action = pressed ? useShortcutStore.getState().resolve().get(normalizeBinding(pressed)) : undefined;
+      if (action && DOCUMENT_ACTIONS.has(action) && useDocStore.getState().tabs.length === 0) return;
 
       switch (action) {
         case "palette":
@@ -369,11 +406,14 @@ export default function App() {
         id="pm-pdf-input"
         type="file"
         accept="application/pdf,.pdf"
+        multiple
         className="hidden"
         onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void useDocStore.getState().openPdfFile(file);
+          const files = [...(event.target.files ?? [])];
           event.target.value = "";
+          void (async () => {
+            for (const file of files) await useDocStore.getState().openPdfFile(file);
+          })();
         }}
       />
       {presentation ? (

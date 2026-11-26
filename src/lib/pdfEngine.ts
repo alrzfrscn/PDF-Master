@@ -172,21 +172,35 @@ export async function renderPdfPage(
   const page = await doc.getPage(pageNumber);
   const base = page.getViewport({ scale: 1 });
   const pixelRatio = Math.max(1, Math.min(4, quality));
-  canvas.width = Math.max(1, Math.round(cssWidthPx * pixelRatio));
-  canvas.height = Math.max(1, Math.round(cssHeightPx * pixelRatio));
-  canvas.style.width = `${cssWidthPx}px`;
-  canvas.style.height = `${cssHeightPx}px`;
+  const width = Math.max(1, Math.round(cssWidthPx * pixelRatio));
+  const height = Math.max(1, Math.round(cssHeightPx * pixelRatio));
   renderTasks.get(canvas)?.cancel();
-  const viewport = page.getViewport({ scale: canvas.width / base.width });
-  const context = canvas.getContext("2d");
+  // Draw into an offscreen buffer first: resizing the visible canvas clears it,
+  // which would flash white until pdf.js finishes the new raster.
+  const buffer = document.createElement("canvas");
+  buffer.width = width;
+  buffer.height = height;
+  const viewport = page.getViewport({ scale: width / base.width });
+  const context = buffer.getContext("2d");
   if (!context) return;
-  const task = page.render({ canvas, viewport });
+  const task = page.render({ canvas: buffer, viewport });
   renderTasks.set(canvas, task);
   try {
     await task.promise;
   } catch {
     // A cancelled render is expected while zooming or switching pages.
+    return;
   }
+  // A newer render owns the canvas now; drop this stale bitmap.
+  if (renderTasks.get(canvas) !== task) return;
+  // Resize and blit in one synchronous step, so the old bitmap never disappears.
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = `${cssWidthPx}px`;
+  canvas.style.height = `${cssHeightPx}px`;
+  canvas.getContext("2d")?.drawImage(buffer, 0, 0);
+  buffer.width = 0;
+  buffer.height = 0;
 }
 
 export type PersistenceMode = "editable" | "flattened";

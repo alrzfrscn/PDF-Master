@@ -12,6 +12,13 @@ describe("workspace insets", () => {
     expect(getWorkspaceInsets({ sidebarOpen: true, favoritesOpen: true }).leftInset).toBe(404);
   });
 
+  it("narrows to the simple page strip beside the favourite dock", () => {
+    expect(getWorkspaceInsets({ sidebarOpen: true, pagesCompactMode: true }).leftInset).toBe(184);
+    expect(getWorkspaceInsets({ sidebarOpen: true, pagesCompactMode: true, favoritesOpen: true }).leftInset).toBe(240);
+    // The strip only exists while the pages drawer is open.
+    expect(getWorkspaceInsets({ pagesCompactMode: true }).leftInset).toBe(68);
+  });
+
   it("makes room for a pinned inspector on the right", () => {
     expect(getWorkspaceInsets({}).rightInset).toBe(76);
     // An unpinned tool popover floats over the page and closes on the first stroke.

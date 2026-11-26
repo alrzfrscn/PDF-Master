@@ -466,12 +466,7 @@ export function Inspector() {
   const selection = useAnnotationStore((state) => state.selection);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
-  const pageNumber = Math.min(Math.max(1, pageIndex), tab.pages.length);
-  const page = tab.pages[pageNumber - 1] ?? tab.pages[0];
-  const size = pageSizeMm(tab, page);
-  const chosen = page.annotations.filter((annotation) => selection.includes(annotation.id));
   const customStamps = useCustomStampStore((state) => state.stamps);
-
   const meta = TOOL_BY_ID.get(activeTool);
   const Icon = TOOL_ICONS[activeTool];
 
@@ -483,6 +478,14 @@ export function Inspector() {
     // customStamps is read so a store update re-resolves the preview.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customStamps, selectedStampId]);
+
+  // The welcome workspace has no page to inspect.
+  if (!tab) return null;
+
+  const pageNumber = Math.min(Math.max(1, pageIndex), tab.pages.length);
+  const page = tab.pages[pageNumber - 1] ?? tab.pages[0];
+  const size = pageSizeMm(tab, page);
+  const chosen = page.annotations.filter((annotation) => selection.includes(annotation.id));
 
   if (!toolPopoverOpen) return null;
   // Direct-acting tools stay bare unless something is selected.

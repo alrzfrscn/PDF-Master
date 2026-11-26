@@ -11,7 +11,8 @@ import { useDocStore } from "../../stores/useDocStore";
 import { useContextMenuStore, keepsNativeMenu } from "../../stores/useContextMenuStore";
 import { useToolStore } from "../../stores/useToolStore";
 import { useUIStore, type GridStyle } from "../../stores/useUIStore";
-import type { DocumentPage, ToolId } from "../../lib/types";
+import type { DocumentPage, DocumentTab, ToolId } from "../../lib/types";
+import { EmptyWorkspace } from "../EmptyWorkspace";
 import { AnnotationLayer } from "./AnnotationLayer";
 import { CropOverlay } from "./CropOverlay";
 import { PaperSheet } from "./PaperSheet";
@@ -275,8 +276,15 @@ const PageView = memo(function PageView({
 export function PaperViewport() {
   const tabs = useDocStore((state) => state.tabs);
   const activeId = useDocStore((state) => state.activeId);
+  const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
+  if (!tab) return <EmptyWorkspace />;
+  return <PaperViewportBody key={tab.id} tab={tab} />;
+}
+
+function PaperViewportBody({ tab }: { tab: DocumentTab }) {
   const zoom = useDocStore((state) => state.zoom);
   const fitMode = useDocStore((state) => state.fitMode);
+  const fitEpoch = useDocStore((state) => state.fitEpoch);
   const pageIndex = useDocStore((state) => state.page);
   const activeTool = useToolStore((state) => state.activeTool);
   const measureMode = useUIStore((state) => state.measureMode);
@@ -287,21 +295,24 @@ export function PaperViewport() {
   const lastError = useDocStore((state) => state.lastError);
   const touchDrawEnabled = usePrefsStore((state) => state.touchDrawEnabled);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
+  const sidebarTab = useUIStore((state) => state.sidebarTab);
+  const pagesCompactMode = useUIStore((state) => state.pagesCompactMode);
   const favoritesOpen = useUIStore((state) => state.favoritesOpen);
   const toolPopoverOpen = useUIStore((state) => state.toolPopoverOpen);
   const toolPopoverPinned = useUIStore((state) => state.toolPopoverPinned);
   const presentation = useUIStore((state) => state.presentation);
 
-  const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
   const pageNumber = clamp(pageIndex, 1, tab.pages.length);
   const continuous = viewMode === "one-continuous" || viewMode === "two-continuous";
   const twoPage = viewMode === "two-page" || viewMode === "two-continuous";
+  const compactPages = sidebarOpen && sidebarTab === "pages" && pagesCompactMode;
   // Floating controls cover part of the canvas; fitting must centre in the rest.
   const { leftInset, rightInset } = presentation
     ? { leftInset: 0, rightInset: 0 }
     : getWorkspaceInsets({
         sidebarOpen,
         favoritesOpen,
+        pagesCompactMode: compactPages,
         inspectorOpen: toolPopoverOpen,
         inspectorPinned: toolPopoverPinned,
       });
@@ -535,7 +546,8 @@ export function PaperViewport() {
   }, []);
 
   // Fit to the safe workspace between the floating side rails whenever that fit
-  // was requested, or the page/rotation/sidebars change.
+  // was requested, the view mode changed, or the rails resized. Scrolling through
+  // the document updates `page` and must never re-run this and jump the scroller.
   useLayoutEffect(() => {
     if (!fitMode) return;
     const element = viewportRef.current;
@@ -569,7 +581,7 @@ export function PaperViewport() {
     const observer = new ResizeObserver(apply);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [fitMode, twoPage, viewMode, leftInset, rightInset, continuous, rows, pageNumber]);
+  }, [fitMode, fitEpoch, tab.id, twoPage, viewMode, leftInset, rightInset, continuous, rows]);
 
   // Zooming keeps the exact page point under the cursor/fingers in place.
   useLayoutEffect(() => {
@@ -635,27 +647,37 @@ export function PaperViewport() {
   useEffect(() => {
     const element = viewportRef.current;
     if (!element) return;
-    const zoomWithWheel = (event: WheelEvent): boolean => {
-      if (!event.ctrlKey && !event.metaKey) return false;
-      event.preventDefault();
-      captureZoomAnchor(event.clientX, event.clientY);
+    const applyWheelZoom = (deltaY: number, deltaMode: number, clientX: number, clientY: number) => {
+      captureZoomAnchor(clientX, clientY);
+      // Line/page deltas are rare but legal; normalise them to pixels.
+      const delta = deltaMode === 1 ? deltaY * 16 : deltaMode === 2 ? deltaY * 400 : deltaY;
+      if (delta === 0) return;
       // A precision touchpad sends many tiny fractional deltas; a mouse notch is
-      // large. Different gains keep both from feeling either sticky or violent.
-      const trackpad = event.deltaMode === 0 && Math.abs(event.deltaY) < 12;
-      const factor = Math.exp(-event.deltaY * (trackpad ? 0.012 : 0.0025));
+      // large. Different gains keep both from feeling either sticky or violent,
+      // and the clamp stops one huge event from jumping the whole zoom range.
+      const trackpad = Math.abs(delta) < 30;
+      const factor = Math.min(1.35, Math.max(0.74, Math.exp(-delta * (trackpad ? 0.012 : 0.0025))));
       useDocStore.setState({ zoom: clamp(useDocStore.getState().zoom * factor, 0.1, 6), fitMode: null });
-      return true;
     };
     const onWheel = (event: WheelEvent) => {
-      if (zoomWithWheel(event)) return;
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        applyWheelZoom(event.deltaY, event.deltaMode, event.clientX, event.clientY);
+        return;
+      }
       if (continuous) return;
       event.preventDefault();
       setPan((current) => clampPanRef.current({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
     };
     // Chromium/WebView2 otherwise consumes touchpad pinch for browser UI scaling
-    // before the canvas can see it. The window-level guard wins the zoom race.
+    // before the canvas can see it. The window-level guard wins the zoom race;
+    // a pinch that starts over the chrome still zooms the document itself.
     const onWindowWheel = (event: WheelEvent) => {
-      if (event.ctrlKey || event.metaKey) event.preventDefault();
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      if (element.contains(event.target as Node)) return;
+      const rect = element.getBoundingClientRect();
+      applyWheelZoom(event.deltaY, event.deltaMode, rect.left + rect.width / 2, rect.top + rect.height / 2);
     };
     element.addEventListener("wheel", onWheel, { capture: true, passive: false });
     window.addEventListener("wheel", onWindowWheel, { capture: true, passive: false });

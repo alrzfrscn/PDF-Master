@@ -99,13 +99,26 @@ export function getWorkspaceInsets({
   favoritesOpen = false,
   inspectorOpen = false,
   inspectorPinned = false,
+  pagesCompactMode = false,
 }: {
   sidebarOpen?: boolean;
   favoritesOpen?: boolean;
   inspectorOpen?: boolean;
   inspectorPinned?: boolean;
+  /** The pages drawer is the narrow 104 px strip at x 68..172. */
+  pagesCompactMode?: boolean;
 }): WorkspaceInsets {
-  const leftInset = sidebarOpen ? (favoritesOpen ? 404 : 348) : favoritesOpen ? 124 : 68;
+  const leftInset = sidebarOpen
+    ? pagesCompactMode
+      ? favoritesOpen
+        ? 240
+        : 184
+      : favoritesOpen
+        ? 404
+        : 348
+    : favoritesOpen
+      ? 124
+      : 68;
   const rightInset = inspectorOpen && inspectorPinned ? 410 : 76;
   return { leftInset, rightInset };
 }

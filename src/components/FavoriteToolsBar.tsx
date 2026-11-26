@@ -3,6 +3,7 @@ import { Pencil, X } from "lucide-react";
 import { penStyleOptions, inkPath } from "../lib/ink";
 import type { InkPoint } from "../lib/annotationTypes";
 import { useFavoritesStore, type FavoriteTool } from "../stores/useFavoritesStore";
+import { useDocStore } from "../stores/useDocStore";
 import { useToolStore } from "../stores/useToolStore";
 import { useUIStore } from "../stores/useUIStore";
 import { TOOL_ICONS } from "./toolIcons";
@@ -70,7 +71,10 @@ function FavoriteGlyph({ item }: { item: FavoriteTool }) {
 
 export function FavoriteToolsBar() {
   const open = useUIStore((state) => state.favoritesOpen);
+  const hasTab = useDocStore((state) => state.tabs.length > 0);
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
+  const sidebarTab = useUIStore((state) => state.sidebarTab);
+  const pagesCompactMode = useUIStore((state) => state.pagesCompactMode);
   const favorites = useFavoritesStore((state) => state.favorites);
   const activeFavoriteId = useFavoritesStore((state) => state.activeFavoriteId);
   const remove = useFavoritesStore((state) => state.remove);
@@ -91,7 +95,7 @@ export function FavoriteToolsBar() {
 
   useEffect(() => () => window.clearTimeout(holdTimer.current), []);
 
-  if (!open) return null;
+  if (!open || !hasTab) return null;
 
   const activate = (item: FavoriteTool) => {
     const tools = useToolStore.getState();
@@ -173,7 +177,7 @@ export function FavoriteToolsBar() {
     <div
       ref={dockRef}
       className="favorite-dock absolute top-1/2 z-30 -translate-y-1/2"
-      style={{ left: sidebarOpen ? 348 : 68 }}
+      style={{ left: sidebarOpen ? (pagesCompactMode && sidebarTab === "pages" ? 184 : 348) : 68 }}
     >
       <div className="glass no-scrollbar flex max-h-[calc(100vh-140px)] w-11 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto rounded-full px-0 py-1.5">
         {favorites.map((item) => {

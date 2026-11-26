@@ -82,19 +82,19 @@ export function NewDocumentModal() {
   const newTab = useDocStore((state) => state.newTab);
 
   const tab = tabs.find((item) => item.id === activeId) ?? tabs[0];
-  const activePage = tab.pages[activePageIndex - 1] ?? tab.pages[0];
+  const activePage = tab?.pages[activePageIndex - 1] ?? tab?.pages[0];
   const [size, setSize] = useState("All");
   const [style, setStyle] = useState("All");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(activePage.templateId);
+  const [selectedId, setSelectedId] = useState(activePage?.templateId ?? "paper-000");
 
   useEffect(() => {
     if (open) {
       const state = useDocStore.getState();
       const current = state.tabs.find((item) => item.id === state.activeId);
-      setSelectedId(current?.pages[state.page - 1]?.templateId ?? current?.templateId ?? tab.templateId);
+      setSelectedId(current?.pages[state.page - 1]?.templateId ?? current?.templateId ?? tab?.templateId ?? "paper-000");
     }
-  }, [open, tab.templateId]);
+  }, [open, tab?.templateId]);
 
   const styles = useMemo(() => {
     const seen: string[] = [];
@@ -120,7 +120,8 @@ export function NewDocumentModal() {
   const close = () => setNewDocOpen(false);
   const place = (asNewTab: boolean) => {
     const landscape = selected.page.landscape;
-    if (asNewTab) newTab(selected.id, selected.name, landscape);
+    // The welcome workspace has no tab yet, so any template becomes a new one.
+    if (asNewTab || useDocStore.getState().tabs.length === 0) newTab(selected.id, selected.name, landscape);
     else applyTemplate(selected.id, selected.name, landscape);
     useDocStore.getState().setPage(1);
     close();
@@ -261,9 +262,9 @@ export function NewDocumentModal() {
             <button
               type="button"
               className="h-8 rounded-[10px] px-3.5 text-[12px] font-semibold"
-              style={{ background: "var(--accent)", color: "var(--accent-ink)", opacity: tab.pdf ? 0.5 : 1 }}
-              disabled={Boolean(tab.pdf)}
-              title={tab.pdf ? "A PDF page keeps its source size" : undefined}
+              style={{ background: "var(--accent)", color: "var(--accent-ink)", opacity: tab?.pdf ? 0.5 : 1 }}
+              disabled={Boolean(tab?.pdf)}
+              title={tab?.pdf ? "A PDF page keeps its source size" : undefined}
               onClick={() => place(false)}
             >
               Use template

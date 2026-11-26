@@ -30,18 +30,6 @@ export function newPage(templateId: string, annotations: DocumentPage["annotatio
   return { id: makeId("page"), templateId, rotation: 0, annotations };
 }
 
-/** A clean blank document used when the last tab is closed. */
-export function createInitialTab(): DocumentTab {
-  return {
-    id: makeId("doc"),
-    title: "A4 Blank",
-    templateId: DEFAULT_TEMPLATE_ID,
-    landscape: false,
-    pageCount: 1,
-    pages: [newPage(DEFAULT_TEMPLATE_ID)],
-  };
-}
-
 const initialTabs: DocumentTab[] = [
   {
     id: "doc-a4",
@@ -71,6 +59,8 @@ interface DocState {
   activeId: string;
   zoom: number;
   fitMode: "page" | "width" | null;
+  /** Bumped by an explicit fit request so the same fit mode re-applies. */
+  fitEpoch: number;
   page: number;
   history: Record<string, HistoryEntry>;
   lastError: string | null;
@@ -94,7 +84,11 @@ interface DocState {
   duplicatePage: (index?: number) => void;
   rotatePage: (index?: number, delta?: number) => void;
   reorderPage: (from: number, to: number) => void;
+  /** Smooth drag-and-drop reordering; same single undo step as `reorderPage`. */
+  movePage: (from: number, to: number) => void;
   deletePage: (index?: number) => void;
+  deletePagesAfter: (index?: number) => void;
+  deletePagesBefore: (index?: number) => void;
   setPages: (tabId: string, pages: DocumentPage[]) => void;
   updatePage: (tabId: string, index: number, patch: Partial<DocumentPage>) => void;
   openPdfBytes: (bytes: Uint8Array, name: string) => Promise<void>;
@@ -162,6 +156,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   activeId: initialTabs[0].id,
   zoom: 0.8,
   fitMode: "page",
+  fitEpoch: 0,
   page: 1,
   history: {},
   lastError: null,
@@ -241,19 +236,18 @@ export const useDocStore = create<DocState>((set, get) => ({
     const nextHistory = { ...history };
     delete nextHistory[id];
 
-    // Closing the only tab never traps the user: it becomes a fresh blank tab.
+    // Closing the last tab leaves a calm empty workspace; it is recoverable for 15 s.
     if (tabs.length === 1) {
-      const fresh = createInitialTab();
       const annotated = closing.pages.some((page) => page.annotations.length > 0);
       set({
-        tabs: [fresh],
+        tabs: [],
         history: nextHistory,
-        activeId: fresh.id,
+        activeId: "",
         page: 1,
         lastClosedTab: annotated ? { tab: closing, index: 0 } : null,
       });
       if (!annotated) {
-        disposeTab(closing, [fresh.id]);
+        disposeTab(closing, []);
         return;
       }
       if (closeTimer) globalThis.clearTimeout(closeTimer);
@@ -350,7 +344,7 @@ export const useDocStore = create<DocState>((set, get) => ({
         : [...ZOOM_STEPS].reverse().find((step) => step < zoom - 0.001) ?? ZOOM_STEPS[0];
     set({ zoom: next, fitMode: null });
   },
-  setFit: (fitMode) => set({ fitMode }),
+  setFit: (fitMode) => set((state) => ({ fitMode, fitEpoch: state.fitEpoch + 1 })),
   setPage: (page) => {
     const tab = tabOf(get());
     const next = clamp(page, 1, tab?.pages.length ?? 1);
@@ -438,6 +432,7 @@ export const useDocStore = create<DocState>((set, get) => ({
       page: to + 1,
     }));
   },
+  movePage: (from, to) => get().reorderPage(from, to),
   deletePage: (index) => {
     const tab = tabOf(get());
     if (!tab || tab.pages.length <= 1) return;
@@ -452,6 +447,39 @@ export const useDocStore = create<DocState>((set, get) => ({
           : item,
       ),
       page: clamp(get().page, 1, pages.length),
+    }));
+  },
+  deletePagesAfter: (index) => {
+    const tab = tabOf(get());
+    if (!tab) return;
+    const from = (index ?? get().page - 1) + 1;
+    if (from <= 0 || from >= tab.pages.length) return;
+    get().pushHistory(tab.id);
+    const pages = tab.pages.slice(0, from);
+    const to = tab.pages.length - 1;
+    set((state) => ({
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "delete-range", from, to }), pages)
+          : item,
+      ),
+      page: clamp(get().page, 1, pages.length),
+    }));
+  },
+  deletePagesBefore: (index) => {
+    const tab = tabOf(get());
+    if (!tab) return;
+    const to = index ?? get().page - 1;
+    if (to <= 0 || to >= tab.pages.length) return;
+    get().pushHistory(tab.id);
+    const pages = tab.pages.slice(to);
+    set((state) => ({
+      tabs: state.tabs.map((item) =>
+        item.id === tab.id
+          ? withPageCount(withRemappedBookmarks(item, pages, { kind: "delete-range", from: 0, to: to - 1 }), pages)
+          : item,
+      ),
+      page: 1,
     }));
   },
 

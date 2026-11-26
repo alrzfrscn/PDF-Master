@@ -46,15 +46,53 @@ describe("ink pressure", () => {
     expect(initialInkPressure("touch", 0.25)).toBe(0.5);
   });
 
-  it("keeps stylus pressure inside a safe band", () => {
-    expect(initialInkPressure("pen", 0.1)).toBe(0.25);
+  it("keeps stylus pressure inside an expressive band", () => {
+    expect(initialInkPressure("pen", 0.1)).toBe(0.15);
     expect(initialInkPressure("pen", 0.7)).toBe(0.7);
-    expect(initialInkPressure("pen", 1)).toBe(0.8);
+    expect(initialInkPressure("pen", 1)).toBe(0.95);
   });
 
   it("smooths pressure exponentially", () => {
     expect(smoothPressure(0.5, 1)).toBeCloseTo(0.675);
     expect(smoothPressure(1, 0)).toBeCloseTo(0.65);
+  });
+
+  it("responds to a real stylus almost instantly", () => {
+    expect(smoothPressure(0.5, 1, true)).toBeCloseTo(0.875);
+    expect(smoothPressure(1, 0, true)).toBeCloseTo(0.25);
+  });
+});
+
+describe("stylus width calibration", () => {
+  /** Half-width of a straight stroke held at one pressure, in millimetres. */
+  function halfWidth(style: "basic" | "pro" | "calligraphy", level: number, pressure: number): number {
+    const outline = inkOutline(
+      [
+        [0, 0, pressure],
+        [10, 0, pressure],
+      ],
+      2,
+      { ...penStyleOptions(style, level) },
+    );
+    return Math.max(...outline.map(([, y]) => Math.abs(y)));
+  }
+
+  it("widens Pro ink visibly from light to firm at 55%", () => {
+    expect(halfWidth("pro", 55, 0.95)).toBeGreaterThan(halfWidth("pro", 55, 0.15) * 1.5);
+    expect(halfWidth("calligraphy", 55, 0.95)).toBeGreaterThan(halfWidth("calligraphy", 55, 0.15) * 1.5);
+  });
+
+  it("makes 100% dramatically expressive for Pro and Calligraphy", () => {
+    expect(halfWidth("pro", 100, 0.95)).toBeGreaterThan(halfWidth("pro", 100, 0.15) * 2);
+    expect(halfWidth("calligraphy", 100, 0.95)).toBeGreaterThan(halfWidth("calligraphy", 100, 0.15) * 2);
+    expect(halfWidth("pro", 100, 0.95)).toBeGreaterThan(halfWidth("pro", 55, 0.95));
+    expect(halfWidth("calligraphy", 100, 0.95)).toBeGreaterThan(halfWidth("calligraphy", 55, 0.95));
+  });
+
+  it("stays flat for Basic and at a 0% pressure level", () => {
+    expect(halfWidth("basic", 100, 0.95)).toBeCloseTo(halfWidth("basic", 100, 0.15), 6);
+    expect(halfWidth("pro", 0, 0.95)).toBeCloseTo(halfWidth("pro", 0, 0.15), 6);
+    expect(halfWidth("calligraphy", 0, 0.95)).toBeCloseTo(halfWidth("calligraphy", 0, 0.15), 6);
   });
 });
 

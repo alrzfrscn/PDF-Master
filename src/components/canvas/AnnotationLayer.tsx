@@ -905,7 +905,7 @@ export function AnnotationLayer({ tabId, page, pageIndex, pageCount, hasPdf, wid
             })
           : { pressure: 0.5, hasRealPressure: current.hasRealPressure };
         current.hasRealPressure = sampled.hasRealPressure;
-        const pressure = smoothPressure(previousPressure, sampled.pressure);
+        const pressure = smoothPressure(previousPressure, sampled.pressure, current.hasRealPressure);
         if (current.tool === "marker" && (toolProps.straightHighlight || event.shiftKey)) {
           points = [first, [samplePoint[0], samplePoint[1], pressure]];
         } else if (event.shiftKey) {

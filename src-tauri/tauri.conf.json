@@ -22,6 +22,7 @@
         "resizable": true,
         "decorations": true,
         "dragDropEnabled": false,
+        "zoomHotkeysEnabled": true,
         "theme": "Light",
         "backgroundColor": "#dfe5ef",
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --no-proxy-server"

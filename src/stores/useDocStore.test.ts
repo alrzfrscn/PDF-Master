@@ -61,7 +61,7 @@ describe("document store bookmarks", () => {
 });
 
 describe("closing the last tab", () => {
-  it("replaces it with a fresh blank tab", () => {
+  it("leaves an empty workspace instead of creating a blank tab", () => {
     const blank: DocumentTab = {
       id: "doc-last",
       title: "Last",
@@ -75,12 +75,109 @@ describe("closing the last tab", () => {
     useDocStore.getState().closeTab(blank.id);
 
     const state = useDocStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].id).not.toBe(blank.id);
-    expect(state.activeId).toBe(state.tabs[0].id);
-    expect(state.tabs[0].pages).toHaveLength(1);
-    expect(state.tabs[0].pages[0].annotations).toEqual([]);
+    expect(state.tabs).toHaveLength(0);
+    expect(state.activeId).toBe("");
     expect(state.lastClosedTab).toBeNull();
+  });
+
+  it("keeps an annotated last tab recoverable for 15 s", () => {
+    const annotated: DocumentPage = { ...page("inked"), annotations: [{ id: "a1", type: "pen" } as never] };
+    const tab: DocumentTab = {
+      id: "doc-inked",
+      title: "Inked",
+      templateId: "paper-000",
+      landscape: false,
+      pageCount: 1,
+      pages: [annotated],
+    };
+    useDocStore.setState({ tabs: [tab], activeId: tab.id, page: 1, history: {}, lastClosedTab: null });
+
+    useDocStore.getState().closeTab(tab.id);
+
+    const state = useDocStore.getState();
+    expect(state.tabs).toHaveLength(0);
+    expect(state.lastClosedTab?.tab.id).toBe(tab.id);
+    useDocStore.getState().undoCloseTab();
+    expect(useDocStore.getState().tabs[0].id).toBe(tab.id);
+  });
+});
+
+describe("page range deletion", () => {
+  beforeEach(() => {
+    useDocStore.setState({
+      tabs: [tabWith([page("p1"), page("p2"), page("p3"), page("p4")])],
+      activeId: "doc-bookmarks",
+      page: 2,
+      history: {},
+      lastClosedTab: null,
+    });
+  });
+
+  it("deletes pages after the current one in one undo step", () => {
+    useDocStore.getState().addBookmark("two");
+    useDocStore.getState().deletePagesAfter(1);
+
+    const state = useDocStore.getState();
+    expect(state.tabs[0].pages.map((item) => item.id)).toEqual(["p1", "p2"]);
+    expect(bookmarks()[0]).toMatchObject({ pageIndex: 1, pageId: "p2" });
+    expect(state.history["doc-bookmarks"].past).toHaveLength(1);
+    expect(state.page).toBe(2);
+  });
+
+  it("clamps a bookmark whose trailing page was deleted", () => {
+    useDocStore.setState({ page: 4 });
+    useDocStore.getState().addBookmark("four");
+    useDocStore.getState().deletePagesAfter(1);
+    expect(bookmarks()[0]).toMatchObject({ pageIndex: 1 });
+  });
+
+  it("deletes pages before the current one in one undo step", () => {
+    useDocStore.setState({ page: 3 });
+    useDocStore.getState().addBookmark("three");
+    useDocStore.getState().deletePagesBefore(2);
+
+    const state = useDocStore.getState();
+    expect(state.tabs[0].pages.map((item) => item.id)).toEqual(["p3", "p4"]);
+    expect(bookmarks()[0]).toMatchObject({ pageIndex: 0, pageId: "p3" });
+    expect(state.history["doc-bookmarks"].past).toHaveLength(1);
+    expect(state.page).toBe(1);
+  });
+
+  it("does nothing on the last page or the first page", () => {
+    useDocStore.setState({ page: 4 });
+    useDocStore.getState().deletePagesAfter(3);
+    expect(useDocStore.getState().tabs[0].pages).toHaveLength(4);
+
+    useDocStore.setState({ page: 1 });
+    useDocStore.getState().deletePagesBefore(0);
+    expect(useDocStore.getState().tabs[0].pages).toHaveLength(4);
+    expect(useDocStore.getState().history["doc-bookmarks"]).toBeUndefined();
+  });
+});
+
+describe("page reordering", () => {
+  beforeEach(() => {
+    useDocStore.setState({
+      tabs: [tabWith([page("p1"), page("p2"), page("p3")])],
+      activeId: "doc-bookmarks",
+      page: 1,
+      history: {},
+      lastClosedTab: null,
+    });
+  });
+
+  it("moves a page with its bookmark in a single undo step", () => {
+    useDocStore.getState().addBookmark("one");
+    useDocStore.getState().movePage(0, 2);
+
+    const state = useDocStore.getState();
+    expect(state.tabs[0].pages.map((item) => item.id)).toEqual(["p2", "p3", "p1"]);
+    expect(bookmarks()[0]).toMatchObject({ pageIndex: 2, pageId: "p1" });
+    expect(state.history["doc-bookmarks"].past).toHaveLength(1);
+    expect(state.page).toBe(3);
+
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().tabs[0].pages.map((item) => item.id)).toEqual(["p1", "p2", "p3"]);
   });
 });
 
